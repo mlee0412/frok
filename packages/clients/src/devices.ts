@@ -3,24 +3,22 @@ import { safeFetch } from './base';
 export type Device = {
   id: string;
   name: string;
-  type?: 'light' | 'media_player' | 'climate' | 'sensor' | 'other';
+  type?: 'light' | 'media_player' | 'climate' | 'sensor' | 'switch' | 'cover' | 'scene' | 'script' | 'other';
   area?: string;
+  area_id?: string;
   online?: boolean;
+  state?: string;
+  attrs?: Record<string, unknown>;
 };
 
 export async function getDevices(): Promise<Device[]> {
-  const res = await safeFetch<Device[]>('/devices');
-  if (res.ok) return res.data;
+  try {
+    const r = await fetch('/api/devices', { headers: { 'Content-Type': 'application/json' }, cache: 'no-store' });
+    if (r.ok) {
+      const j = await r.json();
+      if (Array.isArray(j)) return j as Device[];
+    }
+  } catch {}
 
-  // demo fallback
-  return [
-    {
-      id: 'dev-001',
-      name: 'Living Room TV',
-      type: 'media_player',
-      area: 'Living Room',
-      online: true,
-    },
-    { id: 'dev-002', name: 'Hue Strip', type: 'light', area: 'Studio', online: true },
-  ];
+  return [];
 }

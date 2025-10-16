@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { getDevices } from '@frok/clients';
+import { headers } from 'next/headers';
 import type { Device } from '@frok/clients';
 
 export const dynamic = 'force-dynamic';
@@ -9,10 +9,16 @@ export const revalidate = 0;
 export default async function DevicesPage({
   searchParams,
 }: {
-  searchParams: { q?: string; type?: string; status?: 'online' | 'offline' | 'all' };
+  searchParams: Promise<{ q?: string; type?: string; status?: 'online' | 'offline' | 'all' }>;
 }) {
-  const { q = '', type = '', status = 'all' } = searchParams;
-  const devices = await getDevices();
+  const { q = '', type = '', status = 'all' } = await searchParams;
+  const h = await headers();
+  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
+  const proto = h.get('x-forwarded-proto') ?? 'http';
+  const base = `${proto}://${host}`;
+  const r = await fetch(`${base}/api/devices`, { cache: 'no-store' });
+  const raw = await r.json().catch(() => []);
+  const devices: Device[] = Array.isArray(raw) ? raw : [];
   const query = (q || '').toLowerCase().trim();
   const typeQuery = (type || '').toLowerCase().trim();
   const filtered = devices.filter((d) => {
@@ -46,6 +52,7 @@ export default async function DevicesPage({
           <option value="media_player">Media Player</option>
           <option value="climate">Climate</option>
           <option value="sensor">Sensor</option>
+          <option value="switch">Switch</option>
           <option value="other">Other</option>
         </select>
         <select name="status" defaultValue={status || 'all'} className="border rounded px-3 py-2 text-sm">

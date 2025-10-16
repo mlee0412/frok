@@ -59,6 +59,56 @@ body {
   font-family: var(--font-sans);
 }
 
+/* --- Neon Theme Enhancements --- */
+button.border {
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
+}
+button.border:hover {
+  border-color: rgba(34,211,238,0.4);
+  background-color: rgba(34,211,238,0.08);
+  box-shadow: 0 0 0 2px rgba(34,211,238,0.08) inset, 0 0 14px rgba(34,211,238,0.12);
+}
+
+/* Larger, neon-styled range sliders */
+.neon-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 10px;
+  background: linear-gradient(90deg, rgba(34,211,238,0.35), rgba(59,130,246,0.35));
+  border-radius: 9999px;
+  outline: none;
+}
+.neon-range:focus { box-shadow: 0 0 0 3px rgba(34,211,238,0.18); }
+.neon-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 9999px;
+  border: 2px solid rgba(34,211,238,0.7);
+  box-shadow: 0 0 10px rgba(34,211,238,0.4);
+  cursor: pointer;
+}
+.neon-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 9999px;
+  border: 2px solid rgba(34,211,238,0.7);
+  box-shadow: 0 0 10px rgba(34,211,238,0.4);
+  cursor: pointer;
+}
+
+/* Horizontal scrollbars with neon styling */
+.scroll-x-neon::-webkit-scrollbar { height: 10px; }
+.scroll-x-neon::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); border-radius: 9999px; }
+.scroll-x-neon::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, rgba(34,211,238,0.35), rgba(59,130,246,0.35));
+  border-radius: 9999px;
+  border: 2px solid rgba(0,0,0,0); /* for padding look */
+}
+
 /* App container utility used by our AppShell */
 .container-app {
   /* Tailwind v4 still supports @apply */
