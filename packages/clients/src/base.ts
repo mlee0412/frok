@@ -7,8 +7,8 @@ const DEFAULT_BASE_URL = '/api'; // Next.js route default. Override via env if n
 /** Resolve API base URL from environment or fall back to Next.js /api */
 export function getApiBaseUrl(): string {
   const envBase =
-    (typeof process !== 'undefined' && (process as any).env?.NEXT_PUBLIC_API_BASE_URL) ||
-    (typeof process !== 'undefined' && (process as any).env?.API_BASE_URL);
+    (typeof process !== 'undefined' && (process.env?.NEXT_PUBLIC_API_BASE_URL || process.env?.API_BASE_URL)) ||
+    undefined;
 
   return (envBase && envBase.trim()) || DEFAULT_BASE_URL;
 }
@@ -28,8 +28,14 @@ export async function safeFetch<T>(path: string, init?: RequestInit): Promise<Re
     }
     const data = (await res.json()) as T;
     return { ok: true, data };
-  } catch (e: any) {
-    return { ok: false, error: String(e?.message || e) };
+  } catch (e: unknown) {
+    const error = (() => {
+      if (e && typeof e === 'object' && 'message' in e && typeof (e as { message?: unknown }).message === 'string') {
+        return (e as { message: string }).message;
+      }
+      try { return JSON.stringify(e); } catch { return String(e); }
+    })();
+    return { ok: false, error };
   }
 }
 

@@ -3,6 +3,9 @@ import { Card } from '@/components/ui/card';
 import { getDevices } from '@frok/clients';
 import type { Device } from '@frok/clients';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function DevicesPage() {
   const devices = await getDevices();
 

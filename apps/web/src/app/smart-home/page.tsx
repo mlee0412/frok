@@ -2,6 +2,9 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { getDevices } from '@frok/clients';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function SmartHomePage() {
   const [ha, devices] = await Promise.all([
     fetch('/api/ping/mcp/home-assistant', { cache: 'no-store' })
