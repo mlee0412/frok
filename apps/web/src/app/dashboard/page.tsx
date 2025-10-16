@@ -68,7 +68,6 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      {/* Side nav provides navigation; quick links removed */}
     </div>
   );
 }

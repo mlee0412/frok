@@ -84,6 +84,8 @@ export default async function SystemPage() {
           <EnvRow name="GITHUB_TOKEN" />
           <EnvRow name="HOME_ASSISTANT_URL" />
           <EnvRow name="HOME_ASSISTANT_TOKEN" />
+          <EnvRow name="HA_BASE_URL" />
+          <EnvRow name="HA_TOKEN" />
         </div>
       </div>
     </div>
