@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@frok/ui/*": ["packages/ui/src/*"],
+      "@frok/utils/*": ["packages/utils/src/*"],
+      "@frok/types": ["packages/types/src/index.ts"],
+      "@frok/types/*": ["packages/types/src/*"],
+      "@frok/config/*": ["packages/config/src/*"],
+      "@frok/db/*": ["packages/db/src/*"],
+      "@frok/clients": ["packages/clients/src/index.ts"],
+      "@frok/clients/*": ["packages/clients/src/*"]
+      /* add more as you create them */
+    }
+  }
+}

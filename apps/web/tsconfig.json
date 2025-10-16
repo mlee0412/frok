@@ -1,0 +1,41 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "noEmit": true,
+    "baseUrl": "src",
+    "paths": {
+      "@/*": [
+        "*"
+      ],
+      "@frok/clients": [
+        "../../../packages/clients/src/index.ts"
+      ],
+      "@frok/clients/*": [
+        "../../../packages/clients/src/*"
+      ],
+      "@frok/types": [
+        "../../../packages/types/src/index.ts"
+      ],
+      "@frok/types/*": [
+        "../../../packages/types/src/*"
+      ]
+    },
+    "allowJs": true,
+    "incremental": true,
+    "isolatedModules": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": [
+    "next-env.d.ts",
+    "src/**/*",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

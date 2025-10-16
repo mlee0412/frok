@@ -1,0 +1,33 @@
+# Node
+node_modules/
+.dist/
+.next/
+out/
+.cache/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+
+# OS/Editors
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Turbo cache
+.turbo/
+
+# Root env files
+.env*

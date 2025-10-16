@@ -1,0 +1,23 @@
+{
+    "name":  "@frok/types",
+    "private":  true,
+    "type":  "module",
+    "scripts":  {
+                    "dev":  "echo no dev script for @frok/types",
+                    "build":  "tsc -p tsconfig.json",
+                    "lint":  "echo \"(add eslint later)\"",
+                    "typecheck":  "tsc -p tsconfig.json --noEmit"
+                },
+    "dependencies":  {
+
+                     },
+    "devDependencies":  {
+                            "typescript":  "^5.6.0"
+                        },
+    "exports":  {
+                    ".":  {
+                              "types":  "./src/index.ts",
+                              "import":  "./src/index.ts"
+                          }
+                }
+}

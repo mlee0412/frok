@@ -1,0 +1,17 @@
+{
+    "name":  "@frok/mcp-home-assistant",
+    "private":  true,
+    "type":  "module",
+    "scripts":  {
+                    "dev":  "echo no dev script for @frok/mcp-home-assistant",
+                    "build":  "tsc -p tsconfig.json",
+                    "lint":  "echo \"(add eslint later)\"",
+                    "typecheck":  "tsc -p tsconfig.json --noEmit"
+                },
+    "dependencies":  {
+
+                     },
+    "devDependencies":  {
+                            "typescript":  "^5.6.0"
+                        }
+}

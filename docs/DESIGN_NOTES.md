@@ -1,0 +1,1 @@
+﻿# Design Notes\n\nUI guidelines, shadcn/ui, Tailwind, dashboard patterns.

@@ -1,0 +1,1 @@
+﻿# Architecture\n\nMonorepo layout and data flow.

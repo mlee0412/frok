@@ -1,0 +1,8 @@
+{
+  "files.eol": "\n",
+  "editor.tabSize": 2,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "python.defaultInterpreterPath": "\\\.venv\\Scripts\\python.exe",
+  "python.analysis.inlayHints.variableTypes": true
+}

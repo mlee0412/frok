@@ -1,0 +1,33 @@
+{
+    "compilerOptions":  {
+                            "module":  "esnext",
+                            "target":  "es2022",
+                            "moduleResolution":  "bundler",
+                            "resolveJsonModule":  true,
+                            "strict":  true,
+                            "baseUrl":  "../..",
+                            "paths":  {
+                                          "@frok/ui/*":  [
+                                                             "packages/ui/src/*"
+                                                         ],
+                                          "@frok/utils/*":  [
+                                                                "packages/utils/src/*"
+                                                            ],
+                                          "@frok/clients/*":  [
+                                                                  "packages/clients/src/*"
+                                                              ],
+                                          "@frok/db/*":  [
+                                                             "packages/db/src/*"
+                                                         ],
+                                          "@frok/clients":  [
+                                                                "packages/clients/src/index.ts"
+                                                            ],
+                                          "@frok/types":  [
+                                                              "packages/types/src/index.ts"
+                                                          ],
+                                          "@frok/types/*":  [
+                                                              "packages/types/src/*"
+                                                          ]
+                                      }
+                        }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "frok",
+  "private": true,
+  "packageManager": "pnpm@10.18.2",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "services/*/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "dev:web": "turbo run dev --filter=@frok/web --parallel",
+    "dev:api": "turbo run dev --filter=@frok/api --parallel",
+    "dev:all": "turbo run dev --filter=@frok/web --filter=@frok/api --parallel",
+    "reset:dev": "powershell -ExecutionPolicy Bypass -File scripts/dev-reset.ps1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.7.2",
+    "tsx": "^4.20.6",
+    "turbo": "^2.5.8",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,1 @@
+﻿export const log = (...a:any[]) => console.log('[FROK]',...a);

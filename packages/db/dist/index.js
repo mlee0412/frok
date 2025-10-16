@@ -1,0 +1,1 @@
+export const db = {}; // add supabase client later
