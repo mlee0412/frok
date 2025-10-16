@@ -38,8 +38,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ tool: s
         return NextResponse.json({ ok: true, detail: `user: ${name}` }, { status: 200 });
       }
       return NextResponse.json({ ok: false, detail: `status ${r.status}` }, { status: 200 });
-    } catch (e: any) {
-      return NextResponse.json({ ok: false, detail: String(e?.message || e) }, { status: 200 });
+    } catch (e: unknown) {
+      const detail = (() => {
+        if (e && typeof e === 'object' && 'message' in e && typeof (e as { message?: unknown }).message === 'string') {
+          return (e as { message: string }).message;
+        }
+        try { return JSON.stringify(e); } catch { return String(e); }
+      })();
+      return NextResponse.json({ ok: false, detail }, { status: 200 });
     }
   }
   const ok = hasEnv(reqs);

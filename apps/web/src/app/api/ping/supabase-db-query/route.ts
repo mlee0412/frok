@@ -22,7 +22,13 @@ export async function GET() {
     }
     const text = await r.text().catch(() => '');
     return NextResponse.json({ ok: false, detail: `status ${r.status}${text ? ` ${text}` : ''}` }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, detail: String(e?.message || e) }, { status: 200 });
+  } catch (e: unknown) {
+    const detail = (() => {
+      if (e && typeof e === 'object' && 'message' in e && typeof (e as { message?: unknown }).message === 'string') {
+        return (e as { message: string }).message;
+      }
+      try { return JSON.stringify(e); } catch { return String(e); }
+    })();
+    return NextResponse.json({ ok: false, detail }, { status: 200 });
   }
 }

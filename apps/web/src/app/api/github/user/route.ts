@@ -15,7 +15,13 @@ export async function GET() {
     if (!r.ok) return NextResponse.json({ ok: false, error: `status ${r.status}` }, { status: 200 });
     const user = await r.json();
     return NextResponse.json({ ok: true, user }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: String(e?.message || e) }, { status: 200 });
+  } catch (e: unknown) {
+    const error = (() => {
+      if (e && typeof e === 'object' && 'message' in e && typeof (e as { message?: unknown }).message === 'string') {
+        return (e as { message: string }).message;
+      }
+      try { return JSON.stringify(e); } catch { return String(e); }
+    })();
+    return NextResponse.json({ ok: false, error }, { status: 200 });
   }
 }
