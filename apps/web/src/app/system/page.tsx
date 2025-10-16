@@ -1,5 +1,6 @@
 import React from 'react';
 import SystemStatus from '@/components/system-status';
+import { headers } from 'next/headers';
 
 const LINKS = [
   { name: 'Web Health', href: '/api/ping' },
@@ -22,10 +23,15 @@ function EnvRow({ name }: { name: string }) {
 }
 
 export default async function SystemPage() {
+  const h = await headers();
+  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
+  const proto = h.get('x-forwarded-proto') ?? 'http';
+  const base = `${proto}://${host}`;
+  const f = (p: string) => fetch(`${base}${p}`, { cache: 'no-store' }).then(r => r.json()).catch(() => null);
   const [userRes, rateRes, reposRes] = await Promise.all([
-    fetch('/api/github/user', { cache: 'no-store' }).then(r => r.json()).catch(() => null),
-    fetch('/api/github/rate_limit', { cache: 'no-store' }).then(r => r.json()).catch(() => null),
-    fetch('/api/github/repos', { cache: 'no-store' }).then(r => r.json()).catch(() => null),
+    f('/api/github/user'),
+    f('/api/github/rate_limit'),
+    f('/api/github/repos'),
   ]);
 
   const ghUser = userRes?.ok ? (userRes.user?.login || userRes.user?.name || '') : '';

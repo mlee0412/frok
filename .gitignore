@@ -31,3 +31,9 @@ Thumbs.db
 
 # Root env files
 .env*
+
+# Build outputs
+**/dist/
+
+# Local env files anywhere
+*.env.local
