@@ -13,6 +13,7 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
+    "test": "vitest run",
     "dev:web": "turbo run dev --filter=@frok/web --parallel",
     "dev:api": "turbo run dev --filter=@frok/api --parallel",
     "dev:all": "turbo run dev --filter=@frok/web --filter=@frok/api --parallel",
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.7.2",
+    "vitest": "^2.1.3",
     "tsx": "^4.20.6",
     "turbo": "^2.5.8",
     "typescript": "^5.9.3"

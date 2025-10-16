@@ -48,6 +48,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ tool: s
       return NextResponse.json({ ok: false, detail }, { status: 200 });
     }
   }
+  if (key === 'home-assistant') {
+    const ok =
+      ((process.env.HOME_ASSISTANT_URL || '').trim().length > 0 && (process.env.HOME_ASSISTANT_TOKEN || '').trim().length > 0) ||
+      ((process.env.HA_BASE_URL || '').trim().length > 0 && (process.env.HA_TOKEN || '').trim().length > 0);
+    return NextResponse.json({ ok, detail: ok ? 'env present' : `missing env for ${key}` }, { status: 200 });
+  }
   const ok = hasEnv(reqs);
   return NextResponse.json({ ok, detail: ok ? 'env present' : `missing env for ${key}` }, { status: 200 });
 }

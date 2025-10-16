@@ -1,1 +1,1 @@
-﻿export const log = (...a:any[]) => console.log('[FROK]',...a);
+export const log = (...a: unknown[]) => console.log('[FROK]', ...a);
