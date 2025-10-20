@@ -1,7 +1,17 @@
 'use client';
 import React from 'react';
 
-// Wire next-themes or your theme system here later.
+import { ThemeProvider as NextThemesProvider } from 'next-themes';
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return (
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="dark"
+      enableSystem
+      disableTransitionOnChange
+    >
+      {children}
+    </NextThemesProvider>
+  );
 }

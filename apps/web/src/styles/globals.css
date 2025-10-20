@@ -1,4 +1,5 @@
 /* Tailwind v4 entry */
+@import '@frok/ui/tokens.css';
 @import 'tailwindcss';
 
 /* ✅ Don’t remove: lets form controls inherit dark mode correctly */
@@ -54,7 +55,11 @@ body,
 }
 
 body {
-  background: var(--background);
+  /* Theme-matching gradient behind token background */
+  background:
+    radial-gradient(1200px 600px at 20% -10%, rgba(34,211,238,0.10), rgba(34,211,238,0) 60%),
+    linear-gradient(135deg, #000000 0%, #020b16 50%, #00111f 100%),
+    var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
 }
@@ -112,7 +117,8 @@ button.border:hover {
 /* App container utility used by our AppShell */
 .container-app {
   /* Tailwind v4 still supports @apply */
-  @apply mx-auto max-w-7xl px-4 md:px-6 lg:px-8;
+  /* Left-aligned, full width up to a max, with padding */
+  @apply max-w-7xl w-full px-4 md:px-6 lg:px-8;
 }
 
 /* --- Animations --- */

@@ -1,0 +1,29 @@
+{
+  "name": "@frok/ui-docs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "storybook": "storybook dev -p 6006",
+    "build": "storybook build"
+  },
+  "dependencies": {
+    "@frok/ui": "workspace:*",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "storybook": "^8.6.14",
+    "@storybook/react": "^8.6.14",
+    "@storybook/react-vite": "^8.6.14",
+    "@storybook/addon-essentials": "^8.6.14",
+    "@storybook/addon-a11y": "^8.6.14",
+    "typescript": "^5",
+    "vite": "^5.4.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "tailwindcss": "^4.1.14",
+    "@tailwindcss/postcss": "^4.1.14",
+    "postcss": "^8.5.6",
+    "autoprefixer": "^10.4.21"
+  }
+}

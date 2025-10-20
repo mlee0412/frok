@@ -2,16 +2,28 @@
     "name":  "@frok/ui",
     "private":  true,
     "type":  "module",
+    "main": "src/index.ts",
+    "types": "src/index.ts",
     "scripts":  {
                     "dev":  "echo no dev script for @frok/ui",
                     "build":  "tsc -p tsconfig.json",
                     "lint":  "echo \"(add eslint later)\"",
                     "typecheck":  "tsc -p tsconfig.json --noEmit"
                 },
+    "exports":  {
+                    ".":  "./src/index.ts",
+                    "./tokens.css":  "./styles/tokens.css"
+                 },
+    "peerDependencies":  {
+                            "react":  "^18.2.0 || ^19.0.0",
+                            "react-dom":  "^18.2.0 || ^19.0.0"
+                         },
     "dependencies":  {
 
                      },
     "devDependencies":  {
-                            "typescript":  "^5.6.0"
+                            "typescript":  "^5.6.0",
+                            "@types/react": "^19",
+                            "@types/react-dom": "^19"
                         }
 }
