@@ -29,14 +29,14 @@ export default function Breadcrumbs() {
   }
 
   return (
-    <div className="border-b border-white/10 bg-white/5/30 supports-[backdrop-filter]:backdrop-blur-sm">
-      <div className="container-app px-4 py-3 text-sm">
+    <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)]/30 supports-[backdrop-filter]:backdrop-blur-sm">
+      <div className="container-app px-4 py-3 text-sm text-[color:var(--color-foreground)]/80">
         {items.map((it, i) => (
           <span key={it.href}>
-            {i > 0 ? <span className="mx-2 text-white/40">/</span> : null}
+            {i > 0 ? <span className="mx-2 text-[color:var(--color-foreground)]/40">/</span> : null}
             <a
               href={it.href}
-              className={i === items.length - 1 ? 'text-white/80' : 'text-cyan-300 hover:underline'}
+              className={i === items.length - 1 ? 'text-[color:var(--color-foreground)]/80' : 'text-[var(--color-primary)] hover:underline'}
               aria-current={i === items.length - 1 ? 'page' : undefined}
             >
               {it.label}

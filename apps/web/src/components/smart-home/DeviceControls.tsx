@@ -163,29 +163,29 @@ export default function DeviceControls({ device }: { device: Device }) {
     return (
       <div className="relative -mx-2 overflow-x-auto scroll-x-neon text-sm">
         <div className="inline-flex items-center gap-2 px-2 min-w-max">
-          <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+          <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
             <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => toggle(device.id, d))}>Toggle</button>
             <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => turnOn(device.id, d))}>On</button>
             <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => turnOff(device.id, d))}>Off</button>
           </div>
           {d === 'light' && (
             <>
-              <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+              <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
                 <span className="text-xs">T</span>
                 <input className="neon-range" type="range" min={0} max={10} step={0.5} value={transition} onChange={(e) => setTransition(Number(e.currentTarget.value))} />
                 <span className="text-xs w-8 text-center">{transition}</span>
               </div>
               {supportsBrightness && (
-              <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+              <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
                 <span className="text-xs">B</span>
                 <input className="neon-range" type="range" min={0} max={100} value={brightness} onChange={(e) => setBrightness(Number(e.currentTarget.value))} />
                 <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => lightSetBrightnessPct(device.id, brightness, transition))}>Set</button>
               </div>
               )}
               {supportsCT && (
-              <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+              <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
                 <span className="text-xs">CT</span>
-                <input type="number" value={colorTemp} onChange={(e) => setColorTemp(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border rounded px-2 py-1 w-24" />
+                <input type="number" value={colorTemp} onChange={(e) => setColorTemp(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-24" />
                 <button disabled={pending || colorTemp === ''} className="border rounded px-2 py-1" onClick={() => colorTemp !== '' && run(() => {
                   let v = Number(colorTemp);
                   const a = device.attrs || {} as any;
@@ -198,25 +198,25 @@ export default function DeviceControls({ device }: { device: Device }) {
               </div>
               )}
               {supportsHS && (
-              <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+              <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
                 <span className="text-xs">HS</span>
-                <input type="number" placeholder="H" value={hsH} onChange={(e) => setHsH(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border rounded px-2 py-1 w-16" />
-                <input type="number" placeholder="S" value={hsS} onChange={(e) => setHsS(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border rounded px-2 py-1 w-16" />
+                <input type="number" placeholder="H" value={hsH} onChange={(e) => setHsH(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-16" />
+                <input type="number" placeholder="S" value={hsS} onChange={(e) => setHsS(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-16" />
                 <button disabled={pending || hsH === '' || hsS === ''} className="border rounded px-2 py-1" onClick={() => hsH !== '' && hsS !== '' && run(() => lightSetHS(device.id, Number(hsH), Number(hsS), transition))}>Set</button>
                 <button disabled={pending} className="border rounded px-2 py-1" onClick={() => setWheelOpen(true)}>Wheel</button>
               </div>
               )}
               {supportsRGB && (
-              <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+              <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
                 <span className="text-xs">RGB</span>
-                <input type="number" placeholder="R" value={rgbR} onChange={(e) => setRgbR(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border rounded px-2 py-1 w-16" />
-                <input type="number" placeholder="G" value={rgbG} onChange={(e) => setRgbG(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border rounded px-2 py-1 w-16" />
-                <input type="number" placeholder="B" value={rgbB} onChange={(e) => setRgbB(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border rounded px-2 py-1 w-16" />
+                <input type="number" placeholder="R" value={rgbR} onChange={(e) => setRgbR(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-16" />
+                <input type="number" placeholder="G" value={rgbG} onChange={(e) => setRgbG(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-16" />
+                <input type="number" placeholder="B" value={rgbB} onChange={(e) => setRgbB(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-16" />
                 <button disabled={pending || rgbR === '' || rgbG === '' || rgbB === ''} className="border rounded px-2 py-1" onClick={() => rgbR !== '' && rgbG !== '' && rgbB !== '' && run(() => lightSetRGB(device.id, Number(rgbR), Number(rgbG), Number(rgbB), transition))}>Set</button>
               </div>
               )}
               {supportsRGB && (
-              <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+              <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
                 <span className="text-xs">Color</span>
                 <input type="color" value={colorHex} onChange={(e) => setColorHex(e.currentTarget.value)} />
                 <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => {
@@ -229,17 +229,17 @@ export default function DeviceControls({ device }: { device: Device }) {
               </div>
               )}
               {supportsXY && (
-              <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+              <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
                 <span className="text-xs">XY</span>
-                <input type="number" step="0.001" placeholder="x" value={xyX} onChange={(e) => setXyX(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border rounded px-2 py-1 w-20" />
-                <input type="number" step="0.001" placeholder="y" value={xyY} onChange={(e) => setXyY(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border rounded px-2 py-1 w-20" />
+                <input type="number" step="0.001" placeholder="x" value={xyX} onChange={(e) => setXyX(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-20" />
+                <input type="number" step="0.001" placeholder="y" value={xyY} onChange={(e) => setXyY(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-20" />
                 <button disabled={pending || xyX === '' || xyY === ''} className="border rounded px-2 py-1" onClick={() => xyX !== '' && xyY !== '' && run(() => lightSetXY(device.id, Number(xyX), Number(xyY), transition))}>Set</button>
               </div>
               )}
               {supportsEffect && (
-                <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+                <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
                   <span className="text-xs">Effect</span>
-                  <select value={effect} onChange={(e) => setEffect(e.currentTarget.value)} className="border rounded px-2 py-1 text-sm">
+                  <select value={effect} onChange={(e) => setEffect(e.currentTarget.value)} className="border border-border rounded px-2 py-1 text-sm">
                     <option value=""></option>
                     {(((device.attrs || {})['effect_list'] as unknown) as string[]).map((ef) => (
                       <option key={ef} value={ef}>{ef}</option>
@@ -250,11 +250,11 @@ export default function DeviceControls({ device }: { device: Device }) {
               )}
             </>
           )}
-          {msg && <span className="text-xs text-gray-500">{msg}</span>}
+          {msg && <span className="text-xs text-foreground/60">{msg}</span>}
         </div>
         {wheelOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="rounded-lg border border-cyan-400/40 bg-neutral-900 p-4 shadow-[0_0_30px_rgba(34,211,238,0.25)]">
+            <div className="rounded-lg border border-primary bg-background p-4 shadow-xl">
               <div className="flex flex-col items-center gap-3">
                 <ColorWheel size={200} h={typeof hsH === 'number' ? hsH : 0} s={typeof hsS === 'number' ? hsS : 100} onChange={(H,S) => { setHsH(H); setHsS(S); }} />
                 <div className="flex items-center gap-2">
@@ -273,26 +273,26 @@ export default function DeviceControls({ device }: { device: Device }) {
     return (
       <div className="relative -mx-2 overflow-x-auto text-sm">
         <div className="inline-flex items-center gap-2 px-2 min-w-max">
-          <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+          <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
             <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => mediaPlayPause(device.id))}>Play/Pause</button>
           </div>
-          <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+          <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
             <span className="text-xs">Vol</span>
             <input type="range" min={0} max={1} step={0.01} value={volume} onChange={(e) => setVolume(Number(e.currentTarget.value))} />
             <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => mediaVolumeSet(device.id, volume))}>Set</button>
           </div>
-          <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+          <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
             <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(async () => { setMuted(!muted); return mediaVolumeMute(device.id, !muted); })}>{muted ? 'Unmute' : 'Mute'}</button>
           </div>
-          <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+          <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
             <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => mediaPrevious(device.id))}>Prev</button>
             <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => mediaNext(device.id))}>Next</button>
           </div>
-          <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+          <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
             <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => mediaTurnOn(device.id))}>Power On</button>
             <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => mediaTurnOff(device.id))}>Power Off</button>
           </div>
-          {msg && <span className="text-xs text-gray-500">{msg}</span>}
+          {msg && <span className="text-xs text-foreground/60">{msg}</span>}
         </div>
       </div>
     );
@@ -305,7 +305,7 @@ export default function DeviceControls({ device }: { device: Device }) {
     return (
       <div className="relative -mx-2 overflow-x-auto text-sm">
         <div className="inline-flex items-center gap-2 px-2 min-w-max">
-          <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+          <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
             <select value={hvac} onChange={(e) => setHvac(e.currentTarget.value)} className="border rounded px-2 py-1 text-sm">
               <option value="">hvac</option>
               {modes.map((m) => (
@@ -315,19 +315,19 @@ export default function DeviceControls({ device }: { device: Device }) {
             <button disabled={pending || !hvac} className="border rounded px-2 py-1" onClick={() => hvac && run(() => climateSetHvacMode(device.id, hvac))}>Set Mode</button>
           </div>
           {!supportsRange && (
-            <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
-              <input type="number" step="0.5" value={temp} onChange={(e) => setTemp(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border rounded px-2 py-1 w-24" placeholder="Temp" />
+            <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
+              <input type="number" step="0.5" value={temp} onChange={(e) => setTemp(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-24" placeholder="Temp" />
               <button disabled={pending || temp === ''} className="border rounded px-2 py-1" onClick={() => temp !== '' && run(() => climateSetTemperature(device.id, Number(temp)))}>Set</button>
             </div>
           )}
           {supportsRange && (
-            <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
-              <input type="number" step="0.5" value={tempLow} onChange={(e) => setTempLow(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border rounded px-2 py-1 w-24" placeholder="Low" />
-              <input type="number" step="0.5" value={tempHigh} onChange={(e) => setTempHigh(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border rounded px-2 py-1 w-24" placeholder="High" />
+            <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
+              <input type="number" step="0.5" value={tempLow} onChange={(e) => setTempLow(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-24" placeholder="Low" />
+              <input type="number" step="0.5" value={tempHigh} onChange={(e) => setTempHigh(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-24" placeholder="High" />
               <button disabled={pending || tempLow === '' || tempHigh === ''} className="border rounded px-2 py-1" onClick={() => tempLow !== '' && tempHigh !== '' && run(() => climateSetTemperatureRange(device.id, Number(tempLow), Number(tempHigh)))}>Set</button>
             </div>
           )}
-          {msg && <span className="text-xs text-gray-500">{msg}</span>}
+          {msg && <span className="text-xs text-foreground/60">{msg}</span>}
         </div>
       </div>
     );
@@ -339,14 +339,14 @@ export default function DeviceControls({ device }: { device: Device }) {
     return (
       <div className="relative -mx-2 overflow-x-auto text-sm">
         <div className="inline-flex items-center gap-2 px-2 min-w-max">
-          <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+          <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
             <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => coverOpen(device.id))}>Open</button>
             <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => coverClose(device.id))}>Close</button>
             {canStop && (
               <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => coverStop(device.id))}>Stop</button>
             )}
           </div>
-          {msg && <span className="text-xs text-gray-500">{msg}</span>}
+          {msg && <span className="text-xs text-foreground/60">{msg}</span>}
         </div>
       </div>
     );
@@ -356,10 +356,10 @@ export default function DeviceControls({ device }: { device: Device }) {
     return (
       <div className="relative -mx-2 overflow-x-auto text-sm">
         <div className="inline-flex items-center gap-2 px-2 min-w-max">
-          <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+          <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
             <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => sceneTurnOn(device.id))}>Activate</button>
           </div>
-          {msg && <span className="text-xs text-gray-500">{msg}</span>}
+          {msg && <span className="text-xs text-foreground/60">{msg}</span>}
         </div>
       </div>
     );
@@ -369,10 +369,10 @@ export default function DeviceControls({ device }: { device: Device }) {
     return (
       <div className="relative -mx-2 overflow-x-auto text-sm">
         <div className="inline-flex items-center gap-2 px-2 min-w-max">
-          <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+          <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
             <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => scriptTurnOn(device.id))}>Run</button>
           </div>
-          {msg && <span className="text-xs text-gray-500">{msg}</span>}
+          {msg && <span className="text-xs text-foreground/60">{msg}</span>}
         </div>
       </div>
     );

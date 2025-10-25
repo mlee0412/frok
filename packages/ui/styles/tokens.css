@@ -7,6 +7,10 @@
   --foreground:#ededed;
   --surface:rgba(255,255,255,0.04);
   --border:rgba(255,255,255,0.1);
+  --success:#22c55e;
+  --danger:#ef4444;
+  --warning:#f59e0b;
+  --info:#06b6d4;
 }
 
 @theme inline{
@@ -15,6 +19,12 @@
   --color-accent: var(--color-accent);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
 }
 
 *:focus-visible{outline:none}

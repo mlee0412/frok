@@ -30,17 +30,32 @@ export function Toaster({ children }: { children?: React.ReactNode }) {
 
   const push = React.useCallback((t: Omit<ToastItem, 'id'>) => {
     const id = Math.random().toString(36).slice(2);
-    const item: ToastItem = { id, duration: 2800, variant: 'default', ...t };
+    const item: ToastItem = {
+      id,
+      ...t,
+      variant: (t as any).variant ?? 'default',
+      duration: typeof (t as any).duration === 'number' ? (t as any).duration : 2800,
+    };
     setItems((prev) => [...prev, item]);
-    if (item.duration && item.duration > 0) {
-      if (timeoutsRef.current[id]) {
+    return id;
+  }, [remove]);
+
+  React.useEffect(() => {
+    // ensure timers are scheduled for current items (handles StrictMode remounts)
+    for (const item of items) {
+      if (item.duration && item.duration > 0 && !timeoutsRef.current[item.id]) {
+        timeoutsRef.current[item.id] = window.setTimeout(() => remove(item.id), item.duration) as unknown as number;
+      }
+    }
+    // clear timers for items that no longer exist
+    const ids = new Set(items.map((i) => i.id));
+    for (const id of Object.keys(timeoutsRef.current)) {
+      if (!ids.has(id)) {
         window.clearTimeout(timeoutsRef.current[id]);
         delete timeoutsRef.current[id];
       }
-      timeoutsRef.current[id] = window.setTimeout(() => remove(id), item.duration) as unknown as number;
     }
-    return id;
-  }, [remove]);
+  }, [items, remove]);
 
   React.useEffect(() => {
     return () => {
@@ -55,7 +70,7 @@ export function Toaster({ children }: { children?: React.ReactNode }) {
     <ToastContext.Provider value={{ push, remove }}>
       {children}
       <div
-        className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 max-w-[92vw] sm:max-w-sm"
+        className="fixed bottom-4 right-4 z-[99999] pointer-events-none flex flex-col gap-2 max-w-[92vw] sm:max-w-sm"
         aria-live="polite"
         aria-atomic="true"
       >
@@ -64,12 +79,13 @@ export function Toaster({ children }: { children?: React.ReactNode }) {
             key={t.id}
             role="status"
             className={[
-              'rounded-md px-3 py-2 shadow-lg border backdrop-blur supports-[backdrop-filter]:bg-white/10',
-              t.variant === 'success' ? 'border-green-400/30 text-green-300' :
-              t.variant === 'error' ? 'border-red-400/30 text-red-300' :
-              t.variant === 'info' ? 'border-cyan-400/30 text-cyan-300' :
-              'border-white/15 text-white/90',
+              'rounded-md px-3 py-2 shadow-lg border backdrop-blur supports-[backdrop-filter]:bg-surface',
+              t.variant === 'success' ? 'border-success/30 text-success' :
+              t.variant === 'error' ? 'border-danger/30 text-danger' :
+              t.variant === 'info' ? 'border-info/30 text-[var(--color-primary)]' :
+              'border-border text-foreground/90',
             ].join(' ')}
+            style={{ pointerEvents: 'auto' }}
           >
             <div className="flex items-start gap-3">
               <div className="text-sm flex-1">{t.message}</div>

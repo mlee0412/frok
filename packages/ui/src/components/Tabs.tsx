@@ -19,7 +19,7 @@ export function Tabs({ items, value, defaultValue, onValueChange, className }: T
   }
   return (
     <div className={['w-full', className].filter(Boolean).join(' ')}>
-      <div role="tablist" className="flex border-b border-white/10 gap-1">
+      <div role="tablist" className="flex border-b border-border gap-1">
         {items.map((it) => (
           <button
             key={it.value}
@@ -29,8 +29,8 @@ export function Tabs({ items, value, defaultValue, onValueChange, className }: T
             className={[
               'px-3 py-2 text-sm rounded-t-md border-b-2',
               active === it.value
-                ? 'text-cyan-300 border-cyan-400/60'
-                : 'text-white/70 border-transparent hover:text-white',
+                ? 'text-primary border-primary/60'
+                : 'text-foreground/70 border-transparent hover:text-foreground',
             ].join(' ')}
           >
             {it.label}

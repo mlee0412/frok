@@ -21,7 +21,7 @@ export default async function DashboardPage() {
     f('/api/ping/supabase-db-query'),
   ]);
 
-  const statClass = (ok: boolean) => ok ? 'text-green-600' : 'text-red-600';
+  const statClass = (ok: boolean) => ok ? 'text-success' : 'text-danger';
   const ok = (x: any) => !!(x && x.ok === true);
 
   return (
@@ -33,12 +33,12 @@ export default async function DashboardPage() {
         <Card className="p-4 space-y-2">
           <div className="font-medium">System</div>
           <div className="text-sm">Overall: <span className={statClass(ok(health))}>{ok(health) ? 'ok' : 'fail'}</span></div>
-          <div className="text-xs text-white/60">{health?.detail ?? ''}</div>
+          <div className="text-xs text-foreground/60">{health?.detail ?? ''}</div>
         </Card>
         <Card className="p-4 space-y-2">
           <div className="font-medium">GitHub</div>
           <div className="text-sm"><span className={statClass(ok(github))}>{ok(github) ? 'ok' : 'missing'}</span></div>
-          <div className="text-xs text-white/60">{github?.detail ?? ''}</div>
+          <div className="text-xs text-foreground/60">{github?.detail ?? ''}</div>
         </Card>
       </div>
 
@@ -46,17 +46,17 @@ export default async function DashboardPage() {
         <Card className="p-4 space-y-1">
           <div className="font-medium">Home Assistant</div>
           <div className={statClass(ok(ha))}>{ok(ha) ? 'ok' : 'missing'}</div>
-          <div className="text-xs text-white/60">{ha?.detail ?? ''}</div>
+          <div className="text-xs text-foreground/60">{ha?.detail ?? ''}</div>
         </Card>
         <Card className="p-4 space-y-1">
           <div className="font-medium">Supabase Auth</div>
           <div className={statClass(ok(supabaseAuth))}>{ok(supabaseAuth) ? 'ok' : 'missing'}</div>
-          <div className="text-xs text-white/60">{supabaseAuth?.detail ?? ''}</div>
+          <div className="text-xs text-foreground/60">{supabaseAuth?.detail ?? ''}</div>
         </Card>
         <Card className="p-4 space-y-1">
           <div className="font-medium">Supabase Query</div>
           <div className={statClass(ok(supabaseQuery))}>{ok(supabaseQuery) ? 'ok' : 'missing'}</div>
-          <div className="text-xs text-white/60">{supabaseQuery?.detail ?? ''}</div>
+          <div className="text-xs text-foreground/60">{supabaseQuery?.detail ?? ''}</div>
         </Card>
       </div>
 

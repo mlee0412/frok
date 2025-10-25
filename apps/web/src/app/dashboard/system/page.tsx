@@ -3,6 +3,7 @@ import React from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Tabs, Card } from '@frok/ui';
 import DevicesTab from './DevicesTab';
+import SystemHealthClient from './SystemHealthClient';
 
 export default function SystemPage() {
   const searchParams = useSearchParams();
@@ -37,7 +38,7 @@ export default function SystemPage() {
       />
       <div>
         {tab === 'health' && (
-          <Card className="p-6">System health placeholder</Card>
+          <SystemHealthClient />
         )}
         {tab === 'devices' && (<DevicesTab />)}
         {tab === 'admin' && (

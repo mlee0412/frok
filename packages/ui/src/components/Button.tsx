@@ -22,11 +22,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     };
     const variants: Record<Variant, string> = {
       primary:
-        'bg-cyan-500/20 text-cyan-300 border-cyan-400/20 hover:bg-cyan-500/25 hover:border-cyan-400/30 focus-visible:ring-[var(--color-ring,#22d3ee)] focus-visible:ring-offset-1 focus-visible:ring-offset-black/20',
+        'bg-[var(--color-surface)] text-[var(--color-primary)] border-[var(--color-primary)] hover:opacity-90 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-black/20',
       outline:
-        'bg-transparent text-white border-white/20 hover:bg-white/5 focus-visible:ring-[var(--color-ring,#22d3ee)] focus-visible:ring-offset-1 focus-visible:ring-offset-black/20',
+        'bg-transparent text-[var(--color-foreground)] border-[var(--color-border)] hover:bg-[var(--color-surface)] focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-black/20',
       ghost:
-        'bg-transparent text-white border-transparent hover:bg-white/5 focus-visible:ring-[var(--color-ring,#22d3ee)] focus-visible:ring-offset-1 focus-visible:ring-offset-black/20',
+        'bg-transparent text-[var(--color-foreground)] border-transparent hover:bg-[var(--color-surface)] focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-black/20',
     };
 
     return (

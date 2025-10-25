@@ -18,7 +18,7 @@ const nav = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <AppShell
-      sideNav={<DashboardNav items={nav} header={<div className="px-4 pb-4 text-cyan-400 font-bold">FROK</div>} footer={<div className="mt-auto px-4 pt-4 text-xs opacity-60">© {new Date().getFullYear()} FROK</div>} />}
+      sideNav={<DashboardNav items={nav} header={<div className="px-4 pb-4 text-primary font-bold">FROK</div>} footer={<div className="mt-auto px-4 pt-4 text-xs opacity-60">© {new Date().getFullYear()} FROK</div>} />}
       header={<Breadcrumbs />}
       footer={<div>© {new Date().getFullYear()} FROK · All systems nominal</div>}
     >

@@ -44,9 +44,9 @@ export default function SystemStatus() {
     <div className="grid gap-3">
       {CHECKS.map((c) => {
         const state = results[c.name] ?? "loading";
-        const color = state === "ok" ? "text-green-600" : state === "fail" ? "text-red-600" : "text-gray-500";
+        const color = state === "ok" ? "text-success" : state === "fail" ? "text-danger" : "text-foreground/60";
         return (
-          <div key={c.name} className="rounded-2xl p-4 border shadow-sm">
+          <div key={c.name} className="rounded-2xl p-4 border border-border shadow-sm">
             <div className="flex justify-between">
               <span className="font-medium">{c.name}</span>
               <span className={color}>{state}</span>

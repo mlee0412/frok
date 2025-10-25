@@ -52,7 +52,7 @@ export default function DashboardQuickActions() {
         <Button size="sm" variant="outline" disabled={pending !== null} onClick={() => router.push('/dashboard/system?tab=health')}>
           System Health
         </Button>
-        <span className="mx-2 h-4 w-px bg-white/10" />
+        <span className="mx-2 h-4 w-px bg-border" />
         <Button size="sm" disabled={pending !== null} onClick={() => lights('on')}>
           {pending === 'all_on' ? 'Working…' : 'All Lights On'}
         </Button>

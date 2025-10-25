@@ -7,3 +7,7 @@ export { Input } from './components/Input';
 export { AppShell } from './components/AppShell';
 export { SideNav } from './components/SideNav';
 export { Toaster, useToast } from './components/Toast';
+export { ChatMessage } from './components/ChatMessage';
+export { ChatInput } from './components/ChatInput';
+export { ChatSidebar } from './components/ChatSidebar';
+export { ThreadHeader } from './components/ThreadHeader';

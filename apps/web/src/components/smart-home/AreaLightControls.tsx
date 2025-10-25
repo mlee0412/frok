@@ -55,45 +55,45 @@ export default function AreaLightControls({ area, devices }: { area: string; dev
       <div className="inline-flex items-center gap-2 px-2 min-w-max">
         <div className="text-sm font-medium pr-2">{area} • Lights</div>
 
-        <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+        <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
           <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => areaId ? lightTurnOnTarget({ area_id: [areaId] }) : turnOn(ids, 'light'))}>All On</button>
           <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => areaId ? callHAService({ domain: 'light', service: 'turn_off', target: { area_id: [areaId] } }) : lightTurnOff(ids))}>All Off</button>
         </div>
 
-        <div className="inline-flex items-center gap-1 rounded-md border border-white/20 bg-white/5 px-2 py-1">
+        <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
           <span className="text-xs">T</span>
           <input className="neon-range" type="range" min={0} max={10} step={0.5} value={transition} onChange={(e) => setTransition(Number(e.currentTarget.value))} />
           <span className="text-xs w-8 text-center">{transition}</span>
         </div>
 
-        <div className="inline-flex items-center gap-1 rounded-md border border-white/20 bg-white/5 px-2 py-1">
+        <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
           <span className="text-xs">B</span>
           <input className="neon-range" type="range" min={0} max={100} value={brightness} onChange={(e) => setBrightness(Number(e.currentTarget.value))} />
           <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => areaId ? lightTurnOnTarget({ area_id: [areaId] }, { brightness_pct: brightness, transition }) : lightSetBrightnessPct(ids, brightness, transition))}>Set</button>
         </div>
 
-        <div className="inline-flex items-center gap-1 rounded-md border border-white/20 bg-white/5 px-2 py-1">
+        <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
           <span className="text-xs">CT</span>
-          <input type="number" value={ct} onChange={(e) => setCt(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border rounded px-2 py-1 w-24" />
+          <input type="number" value={ct} onChange={(e) => setCt(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-24" />
           <button disabled={pending || ct === ''} className="border rounded px-2 py-1" onClick={() => ct !== '' && run(() => areaId ? lightTurnOnTarget({ area_id: [areaId] }, { color_temp: Number(ct), transition }) : lightSetColorTemp(ids, Number(ct), transition))}>Set</button>
         </div>
 
-        <div className="inline-flex items-center gap-1 rounded-md border border-white/20 bg-white/5 px-2 py-1">
+        <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
           <span className="text-xs">HS</span>
-          <input type="number" placeholder="H" value={hsH} onChange={(e) => setHsH(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border rounded px-2 py-1 w-16" />
-          <input type="number" placeholder="S" value={hsS} onChange={(e) => setHsS(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border rounded px-2 py-1 w-16" />
+          <input type="number" placeholder="H" value={hsH} onChange={(e) => setHsH(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-16" />
+          <input type="number" placeholder="S" value={hsS} onChange={(e) => setHsS(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-16" />
           <button disabled={pending || hsH === '' || hsS === ''} className="border rounded px-2 py-1" onClick={() => hsH !== '' && hsS !== '' && run(() => areaId ? lightTurnOnTarget({ area_id: [areaId] }, { hs_color: [Number(hsH), Number(hsS)], transition }) : lightSetHS(ids, Number(hsH), Number(hsS), transition))}>Set</button>
           <button disabled={pending} className="border rounded px-2 py-1" onClick={() => setWheelOpen(true)}>Wheel</button>
         </div>
 
-        <div className="inline-flex items-center gap-1 rounded-md border border-white/20 bg-white/5 px-2 py-1">
+        <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
           <span className="text-xs">XY</span>
-          <input type="number" step="0.001" placeholder="x" value={xyX} onChange={(e) => setXyX(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border rounded px-2 py-1 w-20" />
-          <input type="number" step="0.001" placeholder="y" value={xyY} onChange={(e) => setXyY(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border rounded px-2 py-1 w-20" />
+          <input type="number" step="0.001" placeholder="x" value={xyX} onChange={(e) => setXyX(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-20" />
+          <input type="number" step="0.001" placeholder="y" value={xyY} onChange={(e) => setXyY(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-20" />
           <button disabled={pending || xyX === '' || xyY === ''} className="border rounded px-2 py-1" onClick={() => xyX !== '' && xyY !== '' && run(() => areaId ? lightTurnOnTarget({ area_id: [areaId] }, { xy_color: [Number(xyX), Number(xyY)], transition }) : callHAService({ domain: 'light', service: 'turn_on', entity_id: ids, data: { xy_color: [Number(xyX), Number(xyY)], transition } }))}>Set</button>
         </div>
 
-        <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+        <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
           <span className="text-xs">Color</span>
           <input type="color" value={colorHex} onChange={(e) => setColorHex(e.currentTarget.value)} />
           <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => {
@@ -106,9 +106,9 @@ export default function AreaLightControls({ area, devices }: { area: string; dev
         </div>
 
         {effectList.length > 0 && (
-          <div className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+          <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
             <span className="text-xs">Effect</span>
-            <select value={areaEffect} onChange={(e) => setAreaEffect(e.currentTarget.value)} className="border rounded px-2 py-1 text-sm">
+            <select value={areaEffect} onChange={(e) => setAreaEffect(e.currentTarget.value)} className="border border-border rounded px-2 py-1 text-sm">
               <option value=""></option>
               {effectList.map((ef) => (<option key={ef} value={ef}>{ef}</option>))}
             </select>
@@ -116,11 +116,11 @@ export default function AreaLightControls({ area, devices }: { area: string; dev
           </div>
         )}
 
-        {msg && <span className="text-xs text-gray-500">{msg}</span>}
+        {msg && <span className="text-xs text-foreground/60">{msg}</span>}
       </div>
       {wheelOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="rounded-lg border border-cyan-400/40 bg-neutral-900 p-4 shadow-[0_0_30px_rgba(34,211,238,0.25)]">
+          <div className="rounded-lg border border-primary bg-background p-4 shadow-xl">
             <div className="flex flex-col items-center gap-3">
               <ColorWheel size={220} h={typeof hsH === 'number' ? hsH : 0} s={typeof hsS === 'number' ? hsS : 100} onChange={(H,S) => { setHsH(H); setHsS(S); }} />
               <div className="flex items-center gap-2">

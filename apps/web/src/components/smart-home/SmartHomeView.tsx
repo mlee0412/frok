@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Device } from '@frok/clients';
-import { Card } from '@/components/ui/card';
+import { Card } from '@frok/ui';
 import DeviceControls from '@/components/smart-home/DeviceControls';
 import SyncButtons from '@/components/smart-home/SyncButtons';
 import AreaLightControls from '@/components/smart-home/AreaLightControls';
@@ -107,17 +107,17 @@ export default function SmartHomeView({ initialDevices, haOk, haDetail }: { init
       <div className="grid gap-3 md:grid-cols-2">
         <div className="flex items-center gap-3">
           <div className="font-medium">Home Assistant</div>
-          <span className={`inline-flex items-center gap-1 text-xs rounded-full px-2 py-0.5 border ${haOk ? 'border-green-500/40 text-green-400 bg-green-500/10' : 'border-red-500/40 text-red-400 bg-red-500/10'}`}>{haOk ? 'OK' : 'Fail'}</span>
+          <span className={`inline-flex items-center gap-1 text-xs rounded-full px-2 py-0.5 border ${haOk ? 'border-success/40 text-success bg-success/10' : 'border-danger/40 text-danger bg-danger/10'}`}>{haOk ? 'OK' : 'Fail'}</span>
         </div>
-        <div className="text-sm text-gray-500 md:text-right">{haDetail || ''}</div>
+        <div className="text-sm text-foreground/60 md:text-right">{haDetail || ''}</div>
         <div className="text-sm">Devices: {devices.length}</div>
         <div className="text-sm md:text-right">Lights: {counts.light || 0} • Media: {counts.media_player || 0} • Climate: {counts.climate || 0} • Sensors: {counts.sensor || 0} • Switches: {counts.switch || 0} • Covers: {counts.cover || 0}</div>
         <div className="text-sm">On: {lightsOn} • Playing: {mediaPlaying} • Covers open: {coversOpen} • Heating: {heating} • Cooling: {cooling}</div>
         <div className="flex items-center gap-3 md:justify-end">
-          <div className="text-sm text-gray-500">{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : ''}</div>
-          <div className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+          <div className="text-sm text-foreground/60">{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : ''}</div>
+          <div className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-2 py-1">
             <span className="text-sm">Poll</span>
-            <select className="border rounded px-2 py-1 text-sm" value={pollMs} onChange={(e) => setPollMs(Number(e.currentTarget.value))}>
+            <select className="border border-border rounded px-2 py-1 text-sm bg-transparent" value={pollMs} onChange={(e) => setPollMs(Number(e.currentTarget.value))}>
               <option value={3000}>3s</option>
               <option value={4000}>4s</option>
               <option value={5000}>5s</option>
@@ -125,7 +125,7 @@ export default function SmartHomeView({ initialDevices, haOk, haDetail }: { init
               <option value={15000}>15s</option>
             </select>
           </div>
-          <div className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-2 py-1">
+          <div className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-2 py-1">
             <button disabled={pendingQuick !== null} className="border rounded px-2 py-1" onClick={() => quick('all_on')}>{pendingQuick === 'all_on' ? '...' : 'All Lights On'}</button>
             <button disabled={pendingQuick !== null} className="border rounded px-2 py-1" onClick={() => quick('all_off')}>{pendingQuick === 'all_off' ? '...' : 'All Lights Off'}</button>
           </div>
@@ -165,7 +165,7 @@ export default function SmartHomeView({ initialDevices, haOk, haDetail }: { init
         
         {areas.map((area) => (
           <div key={area} className="space-y-3">
-            <div className="sticky top-0 z-10 -mx-4 px-4 py-2 bg-white/5 backdrop-blur supports-[backdrop-filter]:bg-white/10 rounded md:rounded-none text-lg font-medium">{area}</div>
+            <div className="sticky top-0 z-10 -mx-4 px-4 py-2 bg-surface/80 backdrop-blur supports-[backdrop-filter]:bg-surface/80 rounded md:rounded-none text-lg font-medium">{area}</div>
             <AreaLightControls area={area} devices={groups.get(area)!} />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {groups.get(area)!.filter((d) => showSet.has(d.type || 'other')).map((d) => (
@@ -173,12 +173,12 @@ export default function SmartHomeView({ initialDevices, haOk, haDetail }: { init
                   <div className="p-4 space-y-3">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
-                        <span className={`inline-block h-2.5 w-2.5 rounded-full ${d.online === false ? 'bg-red-500' : 'bg-green-500'}`}></span>
+                        <span className={`inline-block h-2.5 w-2.5 rounded-full ${d.online === false ? 'bg-danger' : 'bg-success'}`}></span>
                         <div className="font-medium">{d.name}</div>
                       </div>
-                      <span className="text-[10px] uppercase tracking-wide rounded-full px-2 py-0.5 border border-white/10 bg-white/5 text-gray-300">{d.type || 'unknown'}</span>
+                      <span className="text-[10px] uppercase tracking-wide rounded-full px-2 py-0.5 border border-border bg-surface text-foreground/70">{d.type || 'unknown'}</span>
                     </div>
-                    <div className="text-sm text-gray-500">{d.state || ''}</div>
+                    <div className="text-sm text-foreground/60">{d.state || ''}</div>
                     <DeviceControls device={d} />
                   </div>
                 </Card>

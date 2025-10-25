@@ -40,11 +40,11 @@ export default async function GithubPage() {
             <div className="font-medium mb-1">Repos</div>
             <div className="grid gap-1 text-sm">
               {repos.slice(0, 20).map((r) => (
-                <a key={String(r.id)} href={r.url} className="text-cyan-400 hover:underline">
+                <a key={String(r.id)} href={r.url} className="text-primary hover:underline">
                   {r.full_name || r.name || ''}
                 </a>
               ))}
-              {repos.length === 0 && <div className="text-gray-500">none</div>}
+              {repos.length === 0 && <div className="text-foreground/60">none</div>}
             </div>
           </div>
         </Card>

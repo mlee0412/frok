@@ -5,6 +5,6 @@ export type CardProps = React.HTMLAttributes<HTMLDivElement> & {
 };
 
 export function Card({ className, ...props }: CardProps) {
-  const base = 'rounded-2xl border border-white/10 bg-white/5 shadow-xl backdrop-blur-sm';
+  const base = 'rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl backdrop-blur-sm';
   return <div className={[base, className].filter(Boolean).join(' ')} {...props} />;
 }

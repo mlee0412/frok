@@ -15,7 +15,7 @@ export default async function DashboardUsersPage() {
         {users.map((u) => (
           <Card key={u.id} className="p-4 space-y-1">
             <div className="font-medium">{u.name}</div>
-            <div className="text-sm text-white/60">{u.role || 'role: n/a'} {u.email ? `• ${u.email}` : ''}</div>
+            <div className="text-sm text-foreground/60">{u.role || 'role: n/a'} {u.email ? `• ${u.email}` : ''}</div>
           </Card>
         ))}
       </div>

@@ -10,8 +10,8 @@ export default function ProfilePage() {
       <h1 className="text-2xl font-semibold">Profile</h1>
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-6">
-          <div className="text-cyan-300 font-semibold mb-2">Welcome</div>
-          <p className="text-white/70">Overview cards will go here (clock, weather, media, etc.).</p>
+          <div className="text-primary font-semibold mb-2">Welcome</div>
+          <p className="text-foreground/70">Overview cards will go here (clock, weather, media, etc.).</p>
           <div className="mt-4"><Button>Primary action</Button></div>
         </Card>
         <Card className="p-6">Recent activity placeholder</Card>

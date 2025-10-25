@@ -16,6 +16,13 @@ export default function DashboardNav({
 }) {
   const pathname = usePathname() || '';
   return (
-    <SideNav items={items} header={header} footer={footer} activeHref={pathname} />
+    <SideNav
+      items={items}
+      header={header}
+      footer={footer}
+      activeHref={pathname}
+      collapsible
+      defaultCollapsed={false}
+    />
   );
 }
