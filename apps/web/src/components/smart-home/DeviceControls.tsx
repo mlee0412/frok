@@ -33,8 +33,20 @@ import {
 function domainFrom(device: Device): 'light' | 'switch' | 'media_player' | 'climate' | 'sensor' | 'cover' | 'scene' | 'script' | 'other' {
   if (device.type) return device.type;
   const id = device.id || '';
-  const d = id.split('.')[0] as any;
-  return d || 'other';
+  const prefix = id.includes('.') ? id.split('.')[0] : '';
+  switch (prefix) {
+    case 'light':
+    case 'switch':
+    case 'media_player':
+    case 'climate':
+    case 'sensor':
+    case 'cover':
+    case 'scene':
+    case 'script':
+      return prefix;
+    default:
+      return 'other';
+  }
 }
 
 export default function DeviceControls({ device }: { device: Device }) {
@@ -134,15 +146,21 @@ export default function DeviceControls({ device }: { device: Device }) {
     return !!m;
   });
 
-  async function run(fn: () => Promise<any>) {
+  async function run(fn: () => Promise<unknown>) {
     setPending(true);
     setMsg(null);
     try {
-      const r = await fn();
-      if (r && 'ok' in r && r.ok) { setMsg('ok'); router.refresh(); }
-      else {
-        const m = r && typeof r === 'object' && 'error' in r && typeof (r as any).error === 'string' ? (r as any).error : 'error';
-        setMsg(m);
+      const r: unknown = await fn();
+      if (typeof r === 'object' && r !== null && 'ok' in (r as Record<string, unknown>)) {
+        const ok = (r as Record<string, unknown>).ok === true;
+        if (ok) { setMsg('ok'); router.refresh(); }
+        else {
+          const errVal = (r as Record<string, unknown>).error;
+          const m = typeof errVal === 'string' ? errVal : 'error';
+          setMsg(m);
+        }
+      } else {
+        setMsg('ok');
       }
     } catch {
       setMsg('error');
@@ -152,14 +170,17 @@ export default function DeviceControls({ device }: { device: Device }) {
   }
 
   if (d === 'light' || d === 'switch') {
-    const aLight = device.attrs || {} as any;
-    const scm = Array.isArray(aLight['supported_color_modes']) ? (aLight['supported_color_modes'] as string[]) : [];
+    const aLight = (device.attrs || {}) as Record<string, unknown>;
+    const scmRaw = aLight['supported_color_modes'];
+    const scm = Array.isArray(scmRaw) ? (scmRaw as unknown[]).filter((x): x is string => typeof x === 'string') : [];
     const supportsBrightness = scm.includes('brightness') || typeof aLight['brightness'] === 'number' || d === 'light';
     const supportsCT = scm.includes('color_temp') || typeof aLight['min_mireds'] === 'number' || typeof aLight['max_mireds'] === 'number' || typeof aLight['color_temp'] === 'number';
     const supportsHS = scm.includes('hs');
     const supportsRGB = scm.includes('rgb') || scm.includes('rgbw') || scm.includes('rgbww');
     const supportsXY = scm.includes('xy');
-    const supportsEffect = Array.isArray(aLight['effect_list']) && (aLight['effect_list'] as string[]).length > 0;
+    const effectListRaw = aLight['effect_list'];
+    const effectList = Array.isArray(effectListRaw) ? (effectListRaw as unknown[]).filter((ef): ef is string => typeof ef === 'string') : [];
+    const supportsEffect = effectList.length > 0;
     return (
       <div className="relative -mx-2 overflow-x-auto scroll-x-neon text-sm">
         <div className="inline-flex items-center gap-2 px-2 min-w-max">
@@ -188,9 +209,9 @@ export default function DeviceControls({ device }: { device: Device }) {
                 <input type="number" value={colorTemp} onChange={(e) => setColorTemp(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-24" />
                 <button disabled={pending || colorTemp === ''} className="border rounded px-2 py-1" onClick={() => colorTemp !== '' && run(() => {
                   let v = Number(colorTemp);
-                  const a = device.attrs || {} as any;
-                  const min = typeof a['min_mireds'] === 'number' ? a['min_mireds'] : undefined;
-                  const max = typeof a['max_mireds'] === 'number' ? a['max_mireds'] : undefined;
+                  const a = (device.attrs || {}) as Record<string, unknown>;
+                  const min = typeof a['min_mireds'] === 'number' ? (a['min_mireds'] as number) : undefined;
+                  const max = typeof a['max_mireds'] === 'number' ? (a['max_mireds'] as number) : undefined;
                   if (typeof min === 'number') v = Math.max(min, v);
                   if (typeof max === 'number') v = Math.min(max, v);
                   return lightSetColorTemp(device.id, v, transition);
@@ -241,7 +262,7 @@ export default function DeviceControls({ device }: { device: Device }) {
                   <span className="text-xs">Effect</span>
                   <select value={effect} onChange={(e) => setEffect(e.currentTarget.value)} className="border border-border rounded px-2 py-1 text-sm">
                     <option value=""></option>
-                    {(((device.attrs || {})['effect_list'] as unknown) as string[]).map((ef) => (
+                    {effectList.map((ef) => (
                       <option key={ef} value={ef}>{ef}</option>
                     ))}
                   </select>
@@ -299,7 +320,7 @@ export default function DeviceControls({ device }: { device: Device }) {
   }
 
   if (d === 'climate') {
-    const a = device.attrs || {} as any;
+    const a = (device.attrs || {}) as Record<string, unknown>;
     const modes = Array.isArray(a['hvac_modes']) ? (a['hvac_modes'] as string[]) : [];
     const supportsRange = typeof a['target_temp_low'] === 'number' && typeof a['target_temp_high'] === 'number';
     return (

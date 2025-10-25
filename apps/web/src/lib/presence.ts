@@ -1,16 +1,18 @@
 import { supabaseClient } from './supabaseClient';
 
+export type PresenceMeta = { typing?: boolean; email?: string };
+
 export type PresenceControls = {
   leave: () => void;
   setTyping: (typing: boolean) => void;
-  getState: () => Record<string, any[]>;
+  getState: () => Record<string, PresenceMeta[]>;
 };
 
 export function joinThreadPresence(
   threadId: string,
   key: string,
-  payload: { typing?: boolean; email?: string } = {},
-  onSync?: (state: Record<string, any[]>) => void,
+  payload: PresenceMeta = {},
+  onSync?: (state: Record<string, PresenceMeta[]>) => void,
 ): PresenceControls {
   const supa = supabaseClient();
   const channel = supa.channel(`presence:chat:${threadId}`, {
@@ -18,7 +20,7 @@ export function joinThreadPresence(
   });
 
   channel.on('presence', { event: 'sync' }, () => {
-    try { onSync?.(channel.presenceState()); } catch {}
+    try { onSync?.(channel.presenceState() as unknown as Record<string, PresenceMeta[]>); } catch {}
   });
 
   channel.subscribe((status) => {
@@ -35,6 +37,6 @@ export function joinThreadPresence(
     setTyping: (typing: boolean) => {
       try { channel.track({ typing }); } catch {}
     },
-    getState: () => channel.presenceState(),
+    getState: () => channel.presenceState() as unknown as Record<string, PresenceMeta[]>,
   };
 }

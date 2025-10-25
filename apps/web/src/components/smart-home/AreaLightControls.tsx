@@ -6,8 +6,6 @@ import { lightTurnOnTarget, turnOn, lightTurnOff, lightSetBrightnessPct, lightSe
 
 export default function AreaLightControls({ area, devices }: { area: string; devices: Device[] }) {
   const lights = devices.filter((d) => d.type === 'light');
-  if (lights.length === 0) return null;
-
   const [pending, setPending] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [brightness, setBrightness] = useState<number>(100);
@@ -36,19 +34,26 @@ export default function AreaLightControls({ area, devices }: { area: string; dev
     setPending(true);
     setMsg(null);
     try {
-      const r: any = await fn();
-      if (r && typeof r === 'object' && 'ok' in r && (r as any).ok === false) {
-        const m = typeof (r as any).error === 'string' ? (r as any).error : 'error';
-        setMsg(m);
+      const r: unknown = await fn();
+      if (typeof r === 'object' && r !== null) {
+        const rec = r as Record<string, unknown>;
+        if ('ok' in rec && rec.ok === false) {
+          const m = typeof rec.error === 'string' ? rec.error : 'error';
+          setMsg(m);
+        } else {
+          setMsg('ok');
+        }
       } else {
         setMsg('ok');
       }
-    } catch (e) {
+    } catch (e: unknown) {
       try { setMsg(JSON.stringify(e)); } catch { setMsg(String(e)); }
     } finally {
       setPending(false);
     }
   }
+
+  if (lights.length === 0) return null;
 
   return (
     <div className="relative -mx-2 overflow-x-auto scroll-x-neon text-sm">
