@@ -14,6 +14,7 @@ import { ToastContainer } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
 import { TTSSettingsModal } from '@/components/TTSSettings';
 import { AgentMemoryModal } from '@/components/AgentMemoryModal';
+import { UserMemoriesModal } from '@/components/UserMemoriesModal';
 
 type Message = {
   id: string;
@@ -77,6 +78,7 @@ export default function AgentPage() {
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const [showTTSSettings, setShowTTSSettings] = React.useState(false);
   const [showMemoryModal, setShowMemoryModal] = React.useState(false);
+  const [showUserMemoriesModal, setShowUserMemoriesModal] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const messagesContainerRef = React.useRef<HTMLDivElement>(null);
@@ -1386,6 +1388,15 @@ export default function AgentPage() {
               🧠
             </button>
 
+            {/* User Memories */}
+            <button
+              onClick={() => setShowUserMemoriesModal(true)}
+              className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition flex items-center gap-2"
+              title="View memories stored by agent"
+            >
+              📚
+            </button>
+
             {/* TTS Settings */}
             <button
               onClick={() => setShowTTSSettings(true)}
@@ -1954,6 +1965,13 @@ export default function AgentPage() {
         <AgentMemoryModal
           agentName={activeThread?.agentName || 'FROK Assistant'}
           onClose={() => setShowMemoryModal(false)}
+        />
+      )}
+
+      {/* User Memories Modal */}
+      {showUserMemoriesModal && (
+        <UserMemoriesModal
+          onClose={() => setShowUserMemoriesModal(false)}
         />
       )}
 
