@@ -7,18 +7,27 @@ import { Card, Tabs } from '@frok/ui';
 import DevicesTab from './DevicesTab';
 import SystemHealthClient from './SystemHealthClient';
 
-const TAB_OPTIONS = [
+const TAB_VALUES = ['health', 'devices', 'admin', 'ui'] as const;
+
+type TabValue = (typeof TAB_VALUES)[number];
+
+const TAB_OPTIONS: Array<{ value: TabValue; label: string }> = [
   { value: 'health', label: 'Health' },
   { value: 'devices', label: 'Devices' },
   { value: 'admin', label: 'Admin' },
   { value: 'ui', label: 'UI Settings' },
-] as const;
+];
 
-type TabValue = (typeof TAB_OPTIONS)[number]['value'];
+function isTabValue(value: string): value is TabValue {
+  return TAB_VALUES.includes(value as TabValue);
+}
 
 function getTabParam(searchParams: URLSearchParams): TabValue {
   const value = searchParams.get('tab');
-  return (TAB_OPTIONS.some((option) => option.value === value) ? value : 'health') as TabValue;
+  if (value && isTabValue(value)) {
+    return value;
+  }
+  return 'health';
 }
 
 export default function SystemPageClient() {
@@ -37,7 +46,10 @@ export default function SystemPageClient() {
   }, [searchParams]);
 
   const handleTabChange = React.useCallback(
-    (value: TabValue) => {
+    (value: string) => {
+      if (!isTabValue(value)) {
+        return;
+      }
       setTab(value);
       const next = new URLSearchParams(searchParams.toString());
       next.set('tab', value);
