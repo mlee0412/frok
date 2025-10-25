@@ -4,6 +4,39 @@ import type { Thread as ChatThread, ThreadUpdate, Message } from './types/chat';
 // Legacy support
 export type Msg = Message;
 
+const DEFAULT_AGENT_ID = 'default';
+
+function normaliseAgentId(agentId: unknown): string {
+  return typeof agentId === 'string' && agentId.trim().length > 0
+    ? agentId
+    : DEFAULT_AGENT_ID;
+}
+
+function mapThreadRow(r: any): ChatThread {
+  return {
+    id: r.id,
+    title: r.title,
+    agentId: normaliseAgentId(r.agent_id),
+    userId: r.user_id,
+    createdAt: new Date(r.created_at).getTime(),
+    updatedAt: new Date(r.updated_at).getTime(),
+    created_at: r.created_at,
+    updated_at: r.updated_at,
+    pinned: r.pinned || false,
+    archived: r.archived || false,
+    deleted_at: r.deleted_at,
+    tags: r.tags || [],
+    folder: r.folder,
+    toolsEnabled: r.tools_enabled || false,
+    enabledTools:
+      r.enabled_tools || ['home_assistant', 'memory', 'web_search', 'tavily_search', 'image_generation'],
+    model: r.model || 'gpt-5',
+    agentStyle: r.agent_style || 'balanced',
+    projectContext: r.project_context,
+    agentName: r.agent_name || 'FROK Assistant',
+  };
+}
+
 export async function getSession() {
   const supa = supabaseClient();
   const { data } = await supa.auth.getSession();
@@ -28,27 +61,7 @@ export async function listThreads(): Promise<ChatThread[]> {
     
   if (error) throw error;
   
-  return (data || []).map((r: any): ChatThread => ({
-    id: r.id,
-    title: r.title,
-    agentId: r.agent_id,
-    userId: r.user_id,
-    createdAt: new Date(r.created_at).getTime(),
-    updatedAt: new Date(r.updated_at).getTime(),
-    created_at: r.created_at,
-    updated_at: r.updated_at,
-    pinned: r.pinned || false,
-    archived: r.archived || false,
-    deleted_at: r.deleted_at,
-    tags: r.tags || [],
-    folder: r.folder,
-    toolsEnabled: r.tools_enabled || false,
-    enabledTools: r.enabled_tools || ['home_assistant', 'memory', 'web_search', 'tavily_search', 'image_generation'],
-    model: r.model || 'gpt-5',
-    agentStyle: r.agent_style || 'balanced',
-    projectContext: r.project_context,
-    agentName: r.agent_name || 'FROK Assistant',
-  }));
+  return (data || []).map(mapThreadRow);
 }
 
 export async function getThreadMessages(threadId: string): Promise<Message[]> {
@@ -201,27 +214,7 @@ export function subscribe(
       const r: any = payload.new;
       if (!r) return;
       
-      onThreadUpsert({
-        id: r.id,
-        title: r.title,
-        agentId: r.agent_id,
-        userId: r.user_id,
-        createdAt: new Date(r.created_at).getTime(),
-        updatedAt: new Date(r.updated_at).getTime(),
-        created_at: r.created_at,
-        updated_at: r.updated_at,
-        pinned: r.pinned || false,
-        archived: r.archived || false,
-        deleted_at: r.deleted_at,
-        tags: r.tags || [],
-        folder: r.folder,
-        toolsEnabled: r.tools_enabled || false,
-        enabledTools: r.enabled_tools || ['home_assistant', 'memory', 'web_search', 'tavily_search', 'image_generation'],
-        model: r.model || 'gpt-5',
-        agentStyle: r.agent_style || 'balanced',
-        projectContext: r.project_context,
-        agentName: r.agent_name || 'FROK Assistant',
-      });
+      onThreadUpsert(mapThreadRow(r));
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, (payload) => {
       const r: any = payload.new;
