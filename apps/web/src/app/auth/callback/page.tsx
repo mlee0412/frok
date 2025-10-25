@@ -1,9 +1,10 @@
 'use client';
 import * as React from 'react';
+import { Suspense } from 'react';
 import { supabaseClient } from '@/lib/supabaseClient';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function CallbackPage() {
+function CallbackInner() {
   const router = useRouter();
   const params = useSearchParams();
   const [status, setStatus] = React.useState<'verifying' | 'done' | 'error'>('verifying');
@@ -67,5 +68,13 @@ export default function CallbackPage() {
         {status === 'error' && <div className="text-danger">{err}</div>}
       </div>
     </div>
+  );
+}
+
+export default function CallbackPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[100dvh] flex items-center justify-center p-6">Verifying…</div>}>
+      <CallbackInner />
+    </Suspense>
   );
 }

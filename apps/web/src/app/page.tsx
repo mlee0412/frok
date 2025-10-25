@@ -1,5 +1,6 @@
 'use client';
 import * as React from 'react';
+import type { Thread as ChatThread } from '@/lib/types/chat';
 import { ChatSidebar, ThreadHeader, ChatMessage, ChatInput } from '@frok/ui';
 import { useChatStore } from '@/store/chat';
 import { getSession, listThreads, getThreadMessages, createThread, updateThreadTitle, updateThreadAgent, updateThreadFlags, deleteThread, insertMessage, updateMessageContent, subscribe } from '@/lib/chatRepo';
@@ -176,7 +177,7 @@ function ChatClient() {
     let unsub: (() => void) | null = null;
     (async () => {
       setUsingSupa(true);
-      const th = await listThreads().catch(() => []);
+      const th: ChatThread[] = await listThreads().catch(() => [] as ChatThread[]);
       if (th.length > 0) {
         const msgMap: Record<string, any[]> = {};
         for (const t of th) {

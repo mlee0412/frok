@@ -1,5 +1,5 @@
 import { supabaseClient } from './supabaseClient';
-import type { Thread, ThreadUpdate, Message } from './types/chat';
+import type { Thread as ChatThread, ThreadUpdate, Message } from './types/chat';
 
 // Legacy support
 export type Msg = Message;
@@ -15,7 +15,7 @@ async function userIdOrAnon(): Promise<string> {
   return (s?.user?.id as string | undefined) ?? '00000000-0000-0000-0000-000000000000';
 }
 
-export async function listThreads(): Promise<Thread[]> {
+export async function listThreads(): Promise<ChatThread[]> {
   const supa = supabaseClient();
   const uid = await userIdOrAnon();
   
@@ -28,7 +28,7 @@ export async function listThreads(): Promise<Thread[]> {
     
   if (error) throw error;
   
-  return (data || []).map((r: any) => ({
+  return (data || []).map((r: any): ChatThread => ({
     id: r.id,
     title: r.title,
     agentId: r.agent_id,
@@ -73,7 +73,7 @@ export async function getThreadMessages(threadId: string): Promise<Message[]> {
   }));
 }
 
-export async function createThread(t: Thread): Promise<void> {
+export async function createThread(t: ChatThread): Promise<void> {
   const supa = supabaseClient();
   const uid = await userIdOrAnon();
   
@@ -192,7 +192,7 @@ export type ChatSubscriptions = {
 };
 
 export function subscribe(
-  onThreadUpsert: (t: Thread) => void,
+  onThreadUpsert: (t: ChatThread) => void,
   onMessageUpsert: (threadId: string, m: Message) => void
 ): ChatSubscriptions {
   const supa = supabaseClient();

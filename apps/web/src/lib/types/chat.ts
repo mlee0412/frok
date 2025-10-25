@@ -16,7 +16,7 @@ export type Message = {
 export type Thread = {
   id: string;
   title: string;
-  agentId?: string;
+  agentId: string;
   userId?: string;
   createdAt?: number;
   updatedAt?: number;

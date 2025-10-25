@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import type { Thread as ChatThread } from '@/lib/types/chat';
 
 export type Msg = { id: string; role: 'user' | 'assistant' | 'system'; content: string };
-export type Thread = { id: string; title: string; agentId: string; pinned?: boolean; archived?: boolean; deleted_at?: string | null; toolsEnabled?: boolean };
+export type Thread = ChatThread;
 
 type ChatState = {
   threads: Thread[];
