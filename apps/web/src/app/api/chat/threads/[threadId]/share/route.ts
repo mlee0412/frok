@@ -3,11 +3,12 @@ import { getSupabaseServer } from '@/lib/supabase/server';
 
 export async function POST(
   req: Request,
-  { params }: { params: { threadId: string } }
+  context: { params: Promise<{ threadId: string }> }
 ) {
   try {
     const body = await req.json();
     const { expiresInDays } = body;
+    const { threadId } = await context.params;
 
     const supabase = getSupabaseServer();
     
@@ -23,7 +24,7 @@ export async function POST(
     const { data, error } = await supabase
       .from('shared_threads')
       .insert({
-        thread_id: params.threadId,
+        thread_id: threadId,
         share_token: shareToken,
         expires_at: expiresAt,
       })
@@ -46,15 +47,16 @@ export async function POST(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { threadId: string } }
+  context: { params: Promise<{ threadId: string }> }
 ) {
   try {
+    const { threadId } = await context.params;
     const supabase = getSupabaseServer();
     
     const { error } = await supabase
       .from('shared_threads')
       .delete()
-      .eq('thread_id', params.threadId);
+      .eq('thread_id', threadId);
 
     if (error) throw error;
 

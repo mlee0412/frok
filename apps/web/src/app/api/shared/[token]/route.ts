@@ -3,16 +3,17 @@ import { getSupabaseServer } from '@/lib/supabase/server';
 
 export async function GET(
   req: Request,
-  { params }: { params: { token: string } }
+  context: { params: Promise<{ token: string }> }
 ) {
   try {
+    const { token } = await context.params;
     const supabase = getSupabaseServer();
     
     // Get shared thread info
     const { data: sharedThread, error: shareError } = await supabase
       .from('shared_threads')
       .select('*')
-      .eq('share_token', params.token)
+      .eq('share_token', token)
       .single();
 
     if (shareError || !sharedThread) {

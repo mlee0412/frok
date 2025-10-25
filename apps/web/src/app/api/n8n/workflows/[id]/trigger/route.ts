@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
-  const id = (params?.id || '').trim();
+export async function POST(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const { id: idRaw } = await context.params;
+  const id = (idRaw || '').trim();
   const base = (process.env.N8N_URL || process.env.N8N_BASE_URL || '').trim();
   const key = (process.env.N8N_API_KEY || '').trim();
   if (!base || !key) {

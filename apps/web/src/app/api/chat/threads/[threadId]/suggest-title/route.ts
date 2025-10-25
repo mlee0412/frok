@@ -3,11 +3,12 @@ import OpenAI from 'openai';
 
 export async function POST(
   req: Request,
-  { params }: { params: { threadId: string } }
+  context: { params: Promise<{ threadId: string }> }
 ) {
   try {
     const body = await req.json();
     const { firstMessage } = body;
+    const { threadId } = await context.params; // kept for parity; not used currently
 
     if (!firstMessage) {
       return NextResponse.json(
