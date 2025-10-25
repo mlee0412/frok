@@ -5,8 +5,9 @@ const DEMO_USER_ID = '00000000-0000-0000-0000-000000000000';
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { threadId: string } }
+  context: { params: Promise<{ threadId: string }> }
 ) {
+  const { threadId } = await context.params;
   try {
     const body = await req.json();
     const { title, pinned, archived, tags, folder, enabled_tools, model, agent_style } = body;
@@ -26,7 +27,7 @@ export async function PATCH(
     const { data, error } = await supabase
       .from('chat_threads')
       .update(updates)
-      .eq('id', params.threadId)
+      .eq('id', threadId)
       .eq('user_id', DEMO_USER_ID)
       .select()
       .single();
@@ -45,15 +46,16 @@ export async function PATCH(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { threadId: string } }
+  context: { params: Promise<{ threadId: string }> }
 ) {
+  const { threadId } = await context.params;
   try {
     const supabase = getSupabaseServer();
     
     const { error } = await supabase
       .from('chat_threads')
       .update({ deleted_at: new Date().toISOString() })
-      .eq('id', params.threadId)
+      .eq('id', threadId)
       .eq('user_id', DEMO_USER_ID);
 
     if (error) throw error;
