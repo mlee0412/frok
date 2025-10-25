@@ -114,6 +114,28 @@ export default function ChatKitPage() {
     console.log('ChatKit control ready', control);
   }, [control]);
 
+  const ensureChatKitWebComponent = React.useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    if (customElements.get('openai-chatkit')) return;
+
+    await new Promise<void>((resolve, reject) => {
+      const existingScript = document.querySelector<HTMLScriptElement>('script[data-chatkit-web-component]');
+      if (existingScript) {
+        existingScript.addEventListener('load', () => resolve(), { once: true });
+        existingScript.addEventListener('error', () => reject(new Error('Failed to load ChatKit web component script (cached)')), { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.type = 'module';
+      script.src = 'https://cdn.openai.com/chatkit/chatkit.js';
+      script.dataset.chatkitWebComponent = 'true';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load ChatKit web component script'));
+      document.head.appendChild(script);
+    });
+  }, []);
+
   return (
     <div style={{ height: '100%', minHeight: 600, position: 'relative' }}>
       <ChatKitNoSSR control={control} style={{ height: 600, width: '100%' }} />
@@ -178,9 +200,7 @@ export default function ChatKitPage() {
             console.log('[btn] fallback render click', { hasFallbackRef: !!fallbackRef.current });
             try {
               if (!fallbackRef.current) return;
-              if (!customElements.get('openai-chatkit')) {
-                await import('@openai/chatkit');
-              }
+              await ensureChatKitWebComponent();
               // Create web component fallback
               const el = document.createElement('openai-chatkit') as any;
               el.setOptions({
