@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/useToast';
 import { TTSSettingsModal } from '@/components/TTSSettings';
 import { AgentMemoryModal } from '@/components/AgentMemoryModal';
 import { UserMemoriesModal } from '@/components/UserMemoriesModal';
+import { ChatKitLauncher } from '@/components/ChatKitLauncher';
 
 type Message = {
   id: string;
@@ -91,6 +92,7 @@ export default function AgentPage() {
   const [shareUrl, setShareUrl] = React.useState<string | null>(null);
   const [shareLoading, setShareLoading] = React.useState(false);
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
+  const [density, setDensity] = React.useState<'cozy' | 'compact'>('cozy');
   const [showTTSSettings, setShowTTSSettings] = React.useState(false);
   const [showMemoryModal, setShowMemoryModal] = React.useState(false);
   const [showUserMemoriesModal, setShowUserMemoriesModal] = React.useState(false);
@@ -111,6 +113,15 @@ export default function AgentPage() {
     if (source === 'improved') return 'Enhanced tools';
     if (source === 'basic') return 'Base tools';
     return source;
+  }, []);
+
+  const formatTimestamp = React.useCallback((timestamp: number) => {
+    return new Date(timestamp).toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
   }, []);
 
   // Extract all unique tags and folders
@@ -168,6 +179,23 @@ export default function AgentPage() {
       return b.createdAt - a.createdAt;
     });
   }, [threads, searchQuery, selectedFolder, selectedTags, showArchived]);
+
+  const pinnedThreads = React.useMemo(
+    () => filteredThreads.filter((thread) => thread.pinned),
+    [filteredThreads]
+  );
+
+  const regularThreads = React.useMemo(
+    () => filteredThreads.filter((thread) => !thread.pinned),
+    [filteredThreads]
+  );
+
+  const archivedCount = React.useMemo(
+    () => threads.filter((thread) => thread.archived).length,
+    [threads]
+  );
+
+  const isCompact = density === 'compact';
 
   // Fetch model config and threads on mount
   React.useEffect(() => {
@@ -1042,6 +1070,141 @@ export default function AgentPage() {
     }
   };
 
+  const copyMessageToClipboard = React.useCallback(
+    async (message: Message) => {
+      try {
+        if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(message.content);
+        } else if (typeof document !== 'undefined') {
+          const textarea = document.createElement('textarea');
+          textarea.value = message.content;
+          textarea.setAttribute('readonly', '');
+          textarea.style.position = 'absolute';
+          textarea.style.left = '-9999px';
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        } else {
+          throw new Error('Clipboard unavailable');
+        }
+        showToast('Message copied to clipboard', 'success');
+      } catch (err) {
+        console.error('Failed to copy message:', err);
+        showToast('Failed to copy message', 'error');
+      }
+    },
+    [showToast]
+  );
+
+  const renderThreadCard = (thread: Thread) => {
+    const isActive = activeThreadId === thread.id;
+    const cachedMessages = messageCache[thread.id];
+    const directLastMessage =
+      thread.messages.length > 0
+        ? thread.messages[thread.messages.length - 1]
+        : undefined;
+    const cachedLastMessage =
+      cachedMessages && cachedMessages.length > 0
+        ? cachedMessages[cachedMessages.length - 1]
+        : undefined;
+    const resolvedLastMessage = directLastMessage ?? cachedLastMessage;
+    const lastTimestamp = resolvedLastMessage?.timestamp ?? thread.createdAt;
+    const previewSource = resolvedLastMessage?.content?.trim();
+    const preview = previewSource && previewSource.length > 0 ? previewSource : 'New conversation';
+    const previewSnippet =
+      preview.length > 120 ? `${preview.slice(0, 117)}…` : preview;
+
+    return (
+      <div
+        key={thread.id}
+        onClick={() => setActiveThreadId(thread.id)}
+        className={`group relative cursor-pointer rounded-2xl border px-4 py-3 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
+          isActive
+            ? 'border-sky-500/60 bg-sky-500/10 shadow-lg shadow-sky-900/30'
+            : 'border-white/5 bg-white/5 hover:border-sky-500/40 hover:bg-white/10'
+        }`}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setActiveThreadId(thread.id);
+          }
+        }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1">
+            <div className="flex items-center gap-2 text-sm font-semibold text-white">
+              <span className="truncate">{thread.title}</span>
+              {thread.pinned && <span title="Pinned" className="text-yellow-300">📌</span>}
+              {thread.archived && <span title="Archived" className="text-slate-400">📦</span>}
+              {thread.branchedFrom && (
+                <span className="text-xs text-purple-300" title="Branched conversation">🌿</span>
+              )}
+            </div>
+            <div className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+              {previewSnippet}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-wide text-slate-500">
+              <span>{formatTimestamp(lastTimestamp)}</span>
+              {thread.folder && (
+                <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
+                  📁 {thread.folder}
+                </span>
+              )}
+              {thread.tags && thread.tags.length > 0 && (
+                <span className="line-clamp-1">🏷️ {thread.tags.slice(0, 3).join(', ')}{thread.tags.length > 3 ? '…' : ''}</span>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-1 opacity-0 transition group-hover:opacity-100">
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                setEditingOptionsThreadId(thread.id);
+              }}
+              className="rounded-lg border border-white/10 bg-white/10 px-2 py-1 text-[11px] text-slate-200 hover:border-sky-400/40 hover:text-sky-200"
+              title="Thread options"
+            >
+              🛠️
+            </button>
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                togglePinThread(thread.id);
+              }}
+              className="rounded-lg border border-white/10 bg-white/10 px-2 py-1 text-[11px] text-slate-200 hover:border-yellow-400/40 hover:text-yellow-200"
+              title={thread.pinned ? 'Unpin thread' : 'Pin thread'}
+            >
+              📌
+            </button>
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                toggleArchiveThread(thread.id);
+              }}
+              className="rounded-lg border border-white/10 bg-white/10 px-2 py-1 text-[11px] text-slate-200 hover:border-blue-400/40 hover:text-blue-200"
+              title={thread.archived ? 'Unarchive thread' : 'Archive thread'}
+            >
+              {thread.archived ? '📂' : '📦'}
+            </button>
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                deleteThread(thread.id);
+              }}
+              className="rounded-lg border border-white/10 bg-white/10 px-2 py-1 text-[11px] text-rose-300 hover:border-rose-400/40 hover:text-rose-200"
+              title="Delete thread"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const handleVoiceInput = async () => {
     if (recordingState === 'recording') {
       // Stop recording and transcribe
@@ -1340,317 +1503,320 @@ export default function AgentPage() {
 
   return (
     <ErrorBoundary>
-    <div className="flex h-screen bg-gray-950 text-white overflow-hidden">
+    <div className="relative flex min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
       {/* Mobile Menu Button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="fixed top-4 left-4 z-50 lg:hidden p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition"
+        className="fixed left-4 top-4 z-50 flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/90 px-3 py-2 text-sm font-medium text-slate-200 shadow-lg backdrop-blur transition hover:border-sky-500/40 hover:text-white lg:hidden"
         aria-label="Toggle sidebar"
       >
-        {sidebarOpen ? '✕' : '☰'}
+        <span className="text-base">{sidebarOpen ? '✕' : '☰'}</span>
+        <span className="text-xs uppercase tracking-widest">Menu</span>
       </button>
 
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
           aria-hidden="true"
         />
       )}
 
       {/* Sidebar */}
-      <div className={`
-        w-64 bg-gray-900 border-r border-gray-800 flex flex-col
-        fixed lg:relative inset-y-0 left-0 z-40
-        transform transition-transform duration-300 ease-in-out
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0
-      `}>
-        <div className="p-4 border-b border-gray-800 space-y-3">
-          <button
-            onClick={createNewThread}
-            className="w-full py-2 px-4 bg-sky-500 hover:bg-sky-600 rounded-lg font-medium text-black transition"
-            title="Cmd/Ctrl + K"
-          >
-            + New Chat
-          </button>
-          
-          {/* Search bar */}
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search chats..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-2 pl-9 bg-gray-800 border border-gray-700 rounded-lg text-sm focus:outline-none focus:border-sky-500 transition"
-            />
-            <span className="absolute left-3 top-2.5 text-gray-500">🔍</span>
-            {searchQuery && (
+      <div
+        className={`fixed inset-y-0 left-0 z-40 w-72 transform border-r border-white/10 bg-slate-950/70 backdrop-blur transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex h-full flex-col">
+          <div className="border-b border-white/10 px-5 py-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.3em] text-slate-400">Conversations</p>
+                <h2 className="text-lg font-semibold text-white">Agent workspace</h2>
+              </div>
               <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-2 text-gray-500 hover:text-white"
+                onClick={createNewThread}
+                className="rounded-lg border border-sky-500/60 bg-sky-500/20 px-3 py-1.5 text-sm font-semibold text-sky-100 shadow-sm transition hover:border-sky-400 hover:bg-sky-500/30"
+                title="Cmd/Ctrl + K"
               >
-                ×
+                + New
               </button>
-            )}
-          </div>
-          
-          <div className="text-xs text-gray-500 space-y-1">
-            <div>⌘/Ctrl + K: New Chat</div>
-            <div>⌘/Ctrl + ⇧ + L: Delete Chat</div>
-          </div>
-        </div>
-
-        {/* Folders */}
-        {allFolders.length > 0 && (
-          <div className="px-4 py-2 border-b border-gray-800">
-            <div className="text-xs font-semibold text-gray-400 mb-2">📁 FOLDERS</div>
-            <div className="space-y-1">
-              <button
-                onClick={() => setSelectedFolder(null)}
-                className={`w-full text-left px-2 py-1 rounded text-sm transition ${
-                  !selectedFolder ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800/50'
-                }`}
-              >
-                All Chats
-              </button>
-              {allFolders.map((folder) => (
+            </div>
+            <div className="relative mt-4">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-500">🔍</span>
+              <input
+                type="text"
+                placeholder="Search by title, tag, or content"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-white/5 py-2 pl-9 pr-9 text-sm text-white placeholder:text-slate-500 focus:border-sky-500/60 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+              />
+              {searchQuery && (
                 <button
-                  key={folder}
-                  onClick={() => setSelectedFolder(folder)}
-                  className={`w-full text-left px-2 py-1 rounded text-sm transition ${
-                    selectedFolder === folder ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800/50'
-                  }`}
+                  onClick={() => setSearchQuery('')}
+                  className="absolute inset-y-0 right-3 flex items-center text-slate-400 transition hover:text-white"
+                  aria-label="Clear search"
                 >
-                  {folder}
+                  ✕
                 </button>
-              ))}
+              )}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+              <span className="rounded-full bg-white/5 px-2 py-0.5">⌘K new chat</span>
+              <span className="rounded-full bg-white/5 px-2 py-0.5">⌘⇧L delete chat</span>
+              {showArchived && (
+                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-200">Showing archived</span>
+              )}
             </div>
           </div>
-        )}
-
-        {/* Tags */}
-        {allTags.length > 0 && (
-          <div className="px-4 py-2 border-b border-gray-800">
-            <div className="text-xs font-semibold text-gray-400 mb-2">🏷️ TAGS</div>
-            <div className="flex flex-wrap gap-1">
-              {allTags.map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => {
-                    setSelectedTags((prev) =>
-                      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-                    );
-                  }}
-                  className={`px-2 py-0.5 rounded text-xs transition ${
-                    selectedTags.includes(tag)
-                      ? 'bg-sky-500 text-white'
-                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                  }`}
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Archive toggle */}
-        <div className="px-4 py-2 border-b border-gray-800">
-          <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showArchived}
-              onChange={(e) => setShowArchived(e.target.checked)}
-              className="rounded"
-            />
-            Show Archived
-          </label>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-2">
-          {loadingThreads ? (
-            <ThreadListSkeleton />
-          ) : filteredThreads.length === 0 ? (
-            <div className="text-center text-gray-500 py-8 text-sm">
-              {searchQuery ? 'No chats match your search' : 'No chats yet'}
-            </div>
-          ) : (
-            filteredThreads.map((thread) => (
-            <div
-              key={thread.id}
-              className={`p-3 mb-2 rounded-lg cursor-pointer transition group ${
-                activeThreadId === thread.id
-                  ? 'bg-gray-800'
-                  : 'hover:bg-gray-800/50'
-              }`}
-              onClick={() => setActiveThreadId(thread.id)}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    {thread.pinned && <span className="text-yellow-500" title="Pinned">📌</span>}
-                    {thread.archived && <span className="text-gray-600" title="Archived">📦</span>}
-                    <div className="font-medium truncate">{thread.title}</div>
-                    {thread.branchedFrom && (
-                      <span className="text-xs bg-purple-600/20 text-purple-400 px-1.5 py-0.5 rounded" title="Branched conversation">
-                        🌿
-                      </span>
-                    )}
+          <div className="flex-1 overflow-y-auto px-5 py-4">
+            <div className="space-y-4">
+              {allFolders.length > 0 && (
+                <div>
+                  <p className="mb-2 text-[11px] uppercase tracking-[0.3em] text-slate-500">Folders</p>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => setSelectedFolder(null)}
+                      className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
+                        selectedFolder === null
+                          ? 'border-sky-500/40 bg-sky-500/10 text-white'
+                          : 'border-white/5 bg-white/5 text-slate-300 hover:border-sky-500/30 hover:text-white'
+                      }`}
+                    >
+                      All conversations
+                    </button>
+                    {allFolders.map((folder) => (
+                      <button
+                        key={folder}
+                        onClick={() => setSelectedFolder(folder)}
+                        className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
+                          selectedFolder === folder
+                            ? 'border-sky-500/40 bg-sky-500/10 text-white'
+                            : 'border-white/5 bg-white/5 text-slate-300 hover:border-sky-500/30 hover:text-white'
+                        }`}
+                      >
+                        {folder}
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditingOptionsThreadId(thread.id);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-sky-400 text-xs"
-                    title="Tags & Folder"
-                  >
-                    🏷️
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      togglePinThread(thread.id);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-yellow-500 text-xs"
-                    title={thread.pinned ? 'Unpin' : 'Pin'}
-                  >
-                    📌
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleArchiveThread(thread.id);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-400 text-xs"
-                    title={thread.archived ? 'Unarchive' : 'Archive'}
-                  >
-                    {thread.archived ? '📂' : '📦'}
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteThread(thread.id);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400 text-xs ml-2"
-                  >
-                    ×
-                  </button>
+              )}
+
+              {allTags.length > 0 && (
+                <div>
+                  <p className="mb-2 text-[11px] uppercase tracking-[0.3em] text-slate-500">Tags</p>
+                  <div className="flex flex-wrap gap-2">
+                    {allTags.map((tag) => {
+                      const isSelected = selectedTags.includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          onClick={() => {
+                            setSelectedTags((prev) =>
+                              prev.includes(tag)
+                                ? prev.filter((value) => value !== tag)
+                                : [...prev, tag]
+                            );
+                          }}
+                          className={`rounded-full px-3 py-1 text-xs transition ${
+                            isSelected
+                              ? 'bg-sky-500 text-black shadow shadow-sky-500/30'
+                              : 'bg-white/5 text-slate-300 hover:bg-sky-500/20 hover:text-white'
+                          }`}
+                        >
+                          #{tag}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
+              )}
+
+              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={showArchived}
+                    onChange={(event) => setShowArchived(event.target.checked)}
+                    className="h-4 w-4 rounded border-white/20 bg-slate-900 text-sky-500 focus:ring-sky-500"
+                  />
+                  <span>Show archived ({archivedCount})</span>
+                </label>
+                {(selectedFolder || selectedTags.length > 0 || searchQuery) && (
+                  <button
+                    onClick={() => {
+                      setSelectedFolder(null);
+                      setSelectedTags([]);
+                      setSearchQuery('');
+                    }}
+                    className="text-[11px] font-medium text-sky-300 underline-offset-4 hover:underline"
+                  >
+                    Clear filters
+                  </button>
+                )}
               </div>
-              {thread.folder && (
-                <div className="text-xs text-gray-500 mt-1">
-                  📁 {thread.folder}
-                </div>
-              )}
-              {thread.tags && thread.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {thread.tags.map((tag) => (
-                    <span key={tag} className="text-xs bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <div className="text-xs text-gray-500 mt-1">
-                {thread.messages.length} messages
+
+              <div className="space-y-6">
+                {loadingThreads ? (
+                  <ThreadListSkeleton />
+                ) : filteredThreads.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-10 text-center text-sm text-slate-400">
+                    {searchQuery || selectedTags.length > 0 || selectedFolder
+                      ? 'No conversations match the current filters.'
+                      : 'Create your first conversation to get started.'}
+                  </div>
+                ) : (
+                  <>
+                    {pinnedThreads.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.3em] text-slate-500">
+                          <span>Pinned</span>
+                          <span className="text-slate-600">{pinnedThreads.length}</span>
+                        </div>
+                        <div className="space-y-2">
+                          {pinnedThreads.map((thread) => renderThreadCard(thread))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.3em] text-slate-500">
+                        <span>Recent</span>
+                        <span className="text-slate-600">{regularThreads.length}</span>
+                      </div>
+                      <div className="space-y-2">
+                        {regularThreads.map((thread) => renderThreadCard(thread))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
-            ))
-          )}
+          </div>
         </div>
       </div>
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <div className="p-4 border-b border-gray-800 bg-gray-900 flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold flex items-center gap-2">
-              FROK Agent
-              <span className="inline-flex items-center gap-1 bg-sky-500/20 text-sky-400 text-xs px-2 py-0.5 rounded-full">
-                🔄 Live
-              </span>
-              {exportSuccess && (
-                <span className="inline-flex items-center gap-1 bg-green-500/20 text-green-400 text-xs px-2 py-0.5 rounded-full animate-pulse">
-                  ✓ Exported
+        <div className="border-b border-white/10 bg-slate-950/80 px-6 py-5 backdrop-blur">
+          <div className="flex flex-wrap items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.4em] text-sky-400">
+                <span>Agent Control Room</span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-200">
+                  <span className="h-2 w-2 rounded-full bg-sky-400 animate-pulse"></span>
+                  Live
                 </span>
-              )}
-            </h1>
-            <p className="text-xs text-gray-400 mt-1">
-              {modelName} • 🏠 HA • 🧠 Memory • 🌐 Web • 👁️ Vision
-            </p>
-          </div>
-          
-          {/* Settings, Export and Share buttons */}
-          <div className="flex gap-2">
-            {/* Agent Memory */}
-            <button
-              onClick={() => setShowMemoryModal(true)}
-              className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition flex items-center gap-2"
-              title="Agent Core Memory"
-            >
-              🧠
-            </button>
-
-            {/* User Memories */}
-            <button
-              onClick={() => setShowUserMemoriesModal(true)}
-              className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition flex items-center gap-2"
-              title="View memories stored by agent"
-            >
-              📚
-            </button>
-
-            {/* TTS Settings */}
-            <button
-              onClick={() => setShowTTSSettings(true)}
-              className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition flex items-center gap-2"
-              title="Text-to-Speech Settings"
-            >
-              🔊
-            </button>
-
-            {activeThread && activeThread.messages.length > 0 && (
-              <>
-                <button
-                  onClick={() => setShowShareModal(true)}
-                  className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition flex items-center gap-2"
-                >
-                  🔗 Share
-                </button>
-                
-                <div className="relative export-menu-container">
-                <button
-                  onClick={() => setShowExportMenu(!showExportMenu)}
-                  className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition flex items-center gap-2"
-                >
-                  📥 Export
-                </button>
-              
-              {showExportMenu && (
-                <div className="absolute right-0 top-full mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 min-w-[160px] overflow-hidden">
-                  <button
-                    onClick={handleExportDownload}
-                    className="w-full px-4 py-2 text-left hover:bg-gray-700 transition text-sm flex items-center gap-2"
-                  >
-                    💾 Download MD
-                  </button>
-                  <button
-                    onClick={handleExportCopy}
-                    className="w-full px-4 py-2 text-left hover:bg-gray-700 transition text-sm flex items-center gap-2"
-                  >
-                    📋 Copy MD
-                  </button>
-                </div>
-              )}
               </div>
-              </>
-            )}
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-2xl font-semibold text-white">FROK Agent</h1>
+                {exportSuccess && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-200 animate-pulse">
+                    ✓ Exported
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
+                <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                  🧠 {modelName}
+                </span>
+                {activeThread?.agentStyle && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 capitalize">
+                    🎨 {activeThread.agentStyle}
+                  </span>
+                )}
+                {activeThread?.enabledTools && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                    🧰 {activeThread.enabledTools.length} tools
+                  </span>
+                )}
+                {activeThread?.projectContext && (
+                  <span className="line-clamp-1 max-w-xs text-slate-400">
+                    📋 {activeThread.projectContext}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+              <div className="flex items-center overflow-hidden rounded-xl border border-white/10 bg-white/5 text-xs text-slate-200 shadow-sm">
+                <button
+                  onClick={() => setDensity('cozy')}
+                  className={`px-3 py-1.5 transition ${
+                    !isCompact ? 'bg-sky-500/20 text-white' : 'hover:bg-white/10'
+                  }`}
+                >
+                  Cozy
+                </button>
+                <button
+                  onClick={() => setDensity('compact')}
+                  className={`px-3 py-1.5 transition ${
+                    isCompact ? 'bg-sky-500/20 text-white' : 'hover:bg-white/10'
+                  }`}
+                >
+                  Compact
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => setShowMemoryModal(true)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white"
+                  title="Agent core memory"
+                >
+                  🧠 Memory
+                </button>
+                <button
+                  onClick={() => setShowUserMemoriesModal(true)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white"
+                  title="View stored user memories"
+                >
+                  📚 Notebook
+                </button>
+                <button
+                  onClick={() => setShowTTSSettings(true)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white"
+                  title="Text-to-speech settings"
+                >
+                  🔊 Voice
+                </button>
+                {activeThread && activeThread.messages.length > 0 && (
+                  <>
+                    <button
+                      onClick={() => setShowShareModal(true)}
+                      className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white"
+                    >
+                      🔗 Share
+                    </button>
+                    <div className="relative export-menu-container">
+                      <button
+                        onClick={() => setShowExportMenu(!showExportMenu)}
+                        className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white"
+                      >
+                        📥 Export
+                      </button>
+                      {showExportMenu && (
+                        <div className="absolute right-0 top-full mt-2 min-w-[180px] overflow-hidden rounded-xl border border-white/10 bg-slate-900/95 text-sm shadow-xl">
+                          <button
+                            onClick={handleExportDownload}
+                            className="flex w-full items-center gap-2 px-4 py-2 text-left text-slate-200 transition hover:bg-slate-800"
+                          >
+                            💾 Download Markdown
+                          </button>
+                          <button
+                            onClick={handleExportCopy}
+                            className="flex w-full items-center gap-2 px-4 py-2 text-left text-slate-200 transition hover:bg-slate-800"
+                          >
+                            📋 Copy Markdown
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+                <ChatKitLauncher />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1673,287 +1839,329 @@ export default function AgentPage() {
 
           {activeThread?.messages.map((msg, msgIndex) => {
             const toolSourceLabel = formatToolSource(msg.toolSource);
+            const isAssistant = msg.role === 'assistant';
+            const isEditing = msg.role === 'user' && editingMessageId === msg.id;
+            const bubbleWidthClass = isCompact ? 'max-w-2xl' : 'max-w-3xl';
+            const bubblePaddingClass = isCompact ? 'px-4 py-3' : 'px-5 py-4';
+
+            const metadataBadges: React.ReactNode[] = [];
+            if (toolSourceLabel) {
+              metadataBadges.push(
+                <span
+                  key="tool-source"
+                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1"
+                >
+                  ⚙️ {toolSourceLabel}
+                </span>
+              );
+            }
+            if (msg.toolsUsed && msg.toolsUsed.length > 0) {
+              metadataBadges.push(
+                <span
+                  key="tools"
+                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1"
+                >
+                  🔧 {msg.toolsUsed.join(', ')}
+                </span>
+              );
+            }
+            if (typeof msg.executionTime === 'number') {
+              metadataBadges.push(
+                <span
+                  key="execution"
+                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1"
+                >
+                  ⏱️ {(msg.executionTime / 1000).toFixed(2)}s
+                </span>
+              );
+            }
+
+            const actionButtons: React.ReactNode[] = [
+              <button
+                key="copy"
+                onClick={() => copyMessageToClipboard(msg)}
+                className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-200 transition hover:border-emerald-400/40 hover:bg-emerald-500/20 hover:text-white"
+              >
+                📋 Copy
+              </button>,
+            ];
+
+            if (isAssistant && !msg.isRegenerating) {
+              if (currentMessageId === msg.id && ttsState !== 'idle') {
+                if (ttsState === 'speaking') {
+                  actionButtons.push(
+                    <button
+                      key="pause"
+                      onClick={pause}
+                      className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/20 hover:text-white"
+                      title="Pause voice playback"
+                    >
+                      ⏸️ Pause
+                    </button>
+                  );
+                } else {
+                  actionButtons.push(
+                    <button
+                      key="resume"
+                      onClick={resume}
+                      className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/20 hover:text-white"
+                      title="Resume voice playback"
+                    >
+                      ▶️ Resume
+                    </button>
+                  );
+                }
+                actionButtons.push(
+                  <button
+                    key="stop"
+                    onClick={stop}
+                    className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-200 transition hover:border-rose-400/40 hover:bg-rose-500/20 hover:text-white"
+                    title="Stop voice playback"
+                  >
+                    ⏹️ Stop
+                  </button>
+                );
+              } else {
+                actionButtons.push(
+                  <button
+                    key="tts"
+                    onClick={() => speak(msg.content, msg.id)}
+                    disabled={ttsState !== 'idle'}
+                    className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/20 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-slate-500"
+                    title="Read response aloud"
+                  >
+                    🔊 Listen
+                  </button>
+                );
+              }
+              actionButtons.push(
+                <button
+                  key="regenerate"
+                  onClick={() => regenerateResponse(msgIndex)}
+                  disabled={loading || isStreaming}
+                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/20 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-slate-500"
+                  title="Regenerate response"
+                >
+                  🔄 Regenerate
+                </button>
+              );
+            }
+
+            if (msg.role === 'user' && !isEditing) {
+              actionButtons.push(
+                <button
+                  key="branch"
+                  onClick={() => createBranch(msgIndex)}
+                  disabled={loading || isStreaming}
+                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-200 transition hover:border-purple-400/40 hover:bg-purple-500/20 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-slate-500"
+                  title="Branch conversation from here"
+                >
+                  🌿 Branch
+                </button>
+              );
+              actionButtons.push(
+                <button
+                  key="edit"
+                  onClick={() => startEditMessage(msg.id, msg.content)}
+                  disabled={loading || isStreaming}
+                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/20 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-slate-500"
+                  title="Edit and re-run message"
+                >
+                  ✏️ Edit
+                </button>
+              );
+            }
+
+            const showActionRow = metadataBadges.length > 0 || actionButtons.length > 0;
 
             return (
               <div
                 key={msg.id}
-                className={`flex items-start gap-3 ${
-                  msg.role === 'user' ? 'justify-end' : 'justify-start'
+                className={`group flex items-start gap-3 ${
+                  isAssistant ? 'justify-start' : 'justify-end'
                 }`}
               >
-              {/* Avatar for assistant */}
-              {msg.role === 'assistant' && (
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm mt-1">
-                  AI
-                </div>
-              )}
-              
-              <div
-                className={`max-w-2xl rounded-2xl px-5 py-3.5 relative group shadow-lg ${
-                  msg.role === 'user'
-                    ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-tr-sm'
-                    : 'bg-gray-800 text-gray-100 border border-gray-700 rounded-tl-sm'
-                }`}
-              >
-                {msg.images && msg.images.length > 0 && (
-                  <div className="mb-3 grid grid-cols-2 gap-2">
-                    {msg.images.map((img, i) => (
-                      <div key={i} className="relative rounded-lg overflow-hidden">
-                        <img
-                          src={img.url}
-                          alt={img.name}
-                          className="w-full h-auto object-cover"
-                        />
-                        <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 truncate">
-                          {img.name}
-                        </div>
-                      </div>
-                    ))}
+                {isAssistant && (
+                  <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-sm font-semibold text-white shadow-lg">
+                    AI
                   </div>
                 )}
 
-                {msg.role === 'assistant' && (msg.model || msg.complexity || msg.routing || msg.toolSource) && (
-                  <div className="mb-3 -mt-1 flex flex-wrap gap-2 text-xs text-gray-400">
-                    {msg.routing && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-gray-700 bg-gray-900/70">
-                        🧠 {msg.routing === 'orchestrator' ? 'Orchestrator' : 'Direct'}
+                <div
+                  className={`${bubbleWidthClass} ${bubblePaddingClass} relative rounded-3xl border shadow-xl shadow-slate-900/30 backdrop-blur transition ${
+                    isAssistant
+                      ? 'border-white/10 bg-white/5 text-slate-100 rounded-tl-xl'
+                      : 'border-sky-500/40 bg-gradient-to-br from-sky-500 via-indigo-500 to-blue-600 text-white rounded-tr-xl'
+                  }`}
+                >
+                  <div className="mb-3 flex flex-wrap items-start justify-between gap-3 text-xs">
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.3em]">
+                      <span className={isAssistant ? 'text-sky-200' : 'text-white/80'}>
+                        {isAssistant ? activeThread?.agentName ?? 'FROK Assistant' : 'You'}
                       </span>
-                    )}
-                    {msg.model && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-gray-700 bg-gray-900/70">
-                        🧩 {msg.model}
-                      </span>
-                    )}
-                    {msg.complexity && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-gray-700 bg-gray-900/70 capitalize">
-                        📊 {msg.complexity}
-                      </span>
-                    )}
-                    {toolSourceLabel && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-gray-700 bg-gray-900/70">
-                        🔧 {toolSourceLabel}
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {/* Edit mode for user messages */}
-                {msg.role === 'user' && editingMessageId === msg.id ? (
-                  <div className="space-y-3">
-                    <textarea
-                      value={editContent}
-                      onChange={(e) => setEditContent(e.target.value)}
-                      className="w-full px-4 py-3 bg-gray-900 text-white border border-gray-600 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-none"
-                      rows={4}
-                      autoFocus
-                      placeholder="Edit your message..."
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => saveEditedMessage(msgIndex)}
-                        disabled={!editContent.trim() || loading}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-colors shadow-sm"
-                      >
-                        💾 Save & Re-run
-                      </button>
-                      <button
-                        onClick={cancelEdit}
-                        className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors"
-                      >
-                        ✕ Cancel
-                      </button>
+                      {isAssistant && msg.routing && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-200">
+                          🧠 {msg.routing === 'orchestrator' ? 'Orchestrated' : 'Direct'}
+                        </span>
+                      )}
+                      {isAssistant && msg.model && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-200">
+                          🧩 {msg.model}
+                        </span>
+                      )}
+                      {isAssistant && msg.complexity && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] capitalize text-slate-200">
+                          📊 {msg.complexity}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
+                      {typeof msg.timestamp === 'number' && <span>{formatTimestamp(msg.timestamp)}</span>}
+                      {typeof msg.latencyMs === 'number' && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-200">
+                          ⚡ {(msg.latencyMs / 1000).toFixed(1)}s
+                        </span>
+                      )}
                     </div>
                   </div>
-                ) : (
-                  <MessageContent content={msg.content} role={msg.role} />
-                )}
-                
-                {/* Edit and Branch buttons for user messages */}
-                {msg.role === 'user' && !editingMessageId && (
-                  <div className="absolute -bottom-8 right-0 opacity-0 group-hover:opacity-100 transition flex gap-2">
-                    <button
-                      onClick={() => createBranch(msgIndex)}
-                      disabled={loading || isStreaming}
-                      className="px-3 py-1 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-800 disabled:text-gray-600 rounded-lg text-xs transition flex items-center gap-1"
-                      title="Branch conversation from here"
-                    >
-                      🌿 Branch
-                    </button>
-                    <button
-                      onClick={() => startEditMessage(msg.id, msg.content)}
-                      disabled={loading || isStreaming}
-                      className="px-3 py-1 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-600 rounded-lg text-xs transition flex items-center gap-1"
-                      title="Edit message"
-                    >
-                      ✏️ Edit
-                    </button>
-                  </div>
-                )}
-                
-                {msg.files && msg.files.length > 0 && (
-                  <div className="mt-2 space-y-1">
-                    {msg.files.map((file, i) => (
-                      <div
-                        key={i}
-                        className="text-xs opacity-75 flex items-center gap-1"
-                      >
-                        📎 {file.name}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {/* Tool usage and metadata */}
-                {msg.role === 'assistant' && (msg.toolsUsed || msg.executionTime) && (
-                  <div className="mt-3 pt-2 border-t border-gray-700 flex items-center gap-3 text-xs text-gray-400">
-                    {msg.toolsUsed && msg.toolsUsed.length > 0 && (
-                      <div className="flex items-center gap-1">
-                        <span>🔧</span>
-                        <span>{msg.toolsUsed.join(', ')}</span>
-                      </div>
-                    )}
-                    {msg.executionTime && (
-                      <div className="flex items-center gap-1">
-                        <span>⏱️</span>
-                        <span>{(msg.executionTime / 1000).toFixed(2)}s</span>
-                      </div>
-                    )}
-                  </div>
-                )}
 
-                {/* Message actions (for assistant messages) */}
-                {msg.role === 'assistant' && !msg.isRegenerating && (
-                  <div className="absolute -bottom-8 right-0 opacity-0 group-hover:opacity-100 transition flex gap-2">
-                    {/* TTS Control */}
-                    {currentMessageId === msg.id && ttsState !== 'idle' ? (
-                      <div className="flex gap-1">
-                        {ttsState === 'speaking' ? (
-                          <button
-                            onClick={pause}
-                            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition"
-                            title="Pause"
-                          >
-                            ⏸️
-                          </button>
-                        ) : (
-                          <button
-                            onClick={resume}
-                            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition"
-                            title="Resume"
-                          >
-                            ▶️
-                          </button>
-                        )}
+                  {msg.images && msg.images.length > 0 && (
+                    <div className="mb-3 grid grid-cols-2 gap-2">
+                      {msg.images.map((img, i) => (
+                        <div key={i} className="overflow-hidden rounded-xl border border-white/10">
+                          <img src={img.url} alt={img.name} className="h-full w-full object-cover" />
+                          <div className="bg-black/60 px-2 py-1 text-[10px] text-white">
+                            {img.name}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <textarea
+                        value={editContent}
+                        onChange={(event) => setEditContent(event.target.value)}
+                        className="w-full resize-none rounded-xl border border-white/10 bg-slate-950/80 px-4 py-3 text-sm text-white focus:border-sky-500/60 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                        rows={4}
+                        autoFocus
+                        placeholder="Edit your message..."
+                      />
+                      <div className="flex flex-wrap gap-2">
                         <button
-                          onClick={stop}
-                          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition"
-                          title="Stop"
+                          onClick={() => saveEditedMessage(msgIndex)}
+                          disabled={!editContent.trim() || loading}
+                          className="inline-flex items-center gap-2 rounded-lg border border-sky-400/40 bg-sky-500/20 px-3 py-1.5 text-sm font-medium text-sky-100 transition hover:border-sky-300 hover:bg-sky-500/30 disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-slate-500"
                         >
-                          ⏹️
+                          💾 Save & Re-run
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/10 px-3 py-1.5 text-sm font-medium text-slate-200 transition hover:border-rose-400/40 hover:bg-rose-500/20 hover:text-white"
+                        >
+                          ✕ Cancel
                         </button>
                       </div>
-                    ) : (
-                      <button
-                        onClick={() => speak(msg.content, msg.id)}
-                        disabled={ttsState !== 'idle'}
-                        className="px-3 py-1 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-600 rounded-lg text-xs transition"
-                        title="Read aloud"
-                      >
-                        🔊
-                      </button>
-                    )}
-                    <button
-                      onClick={() => regenerateResponse(msgIndex)}
-                      disabled={loading || isStreaming}
-                      className="px-3 py-1 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-600 rounded-lg text-xs transition flex items-center gap-1"
-                      title="Regenerate response"
-                    >
-                      🔄 Regenerate
-                    </button>
-                  </div>
-                )}
+                    </div>
+                  ) : (
+                    <MessageContent content={msg.content} role={msg.role} />
+                  )}
 
-                {/* Regenerating indicator */}
-                {msg.isRegenerating && (
-                  <div className="mt-2 flex items-center gap-2 text-xs text-sky-400">
-                    <div className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-pulse"></div>
-                    Regenerating...
+                  {msg.files && msg.files.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-200">
+                      {msg.files.map((file, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1"
+                        >
+                          📎 {file.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {msg.role === 'assistant' && msg.isRegenerating && (
+                    <div className="mt-3 flex items-center gap-2 text-xs text-sky-200">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-sky-400"></span>
+                      Regenerating...
+                    </div>
+                  )}
+
+                  {showActionRow && (
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3 text-xs text-slate-300">
+                      <div className="flex flex-wrap gap-2">{metadataBadges}</div>
+                      <div className="flex flex-wrap items-center gap-2 opacity-0 transition group-hover:opacity-100">
+                        {actionButtons}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {!isAssistant && (
+                  <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-sm font-semibold text-white shadow-lg">
+                    U
                   </div>
                 )}
               </div>
-              
-              {/* Avatar for user */}
-              {msg.role === 'user' && (
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm mt-1">
-                  U
-                </div>
-              )}
-            </div>
             );
           })}
           {isStreaming && streamingContent && (
-            <div className="flex items-start gap-3 justify-start">
-              {/* Avatar for streaming assistant */}
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm mt-1">
+            <div className="group flex items-start gap-3 justify-start">
+              <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-sm font-semibold text-white shadow-lg">
                 AI
               </div>
 
-              <div className="max-w-2xl rounded-2xl rounded-tl-sm px-5 py-3.5 bg-gray-800 text-gray-100 border border-gray-700 shadow-lg">
+              <div
+                className={`${isCompact ? 'max-w-2xl px-4 py-3' : 'max-w-3xl px-5 py-4'} rounded-3xl border border-sky-500/40 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950/80 text-slate-100 shadow-xl shadow-slate-900/30 backdrop-blur`}
+              >
                 {streamingMeta && (
-                  <div className="mb-2 flex flex-wrap gap-2 text-xs text-sky-300">
+                  <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-sky-200">
                     {streamingMeta.routing && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-sky-500/40 bg-sky-500/10">
-                        🧠 {streamingMeta.routing === 'orchestrator' ? 'Orchestrator' : 'Direct'}
+                      <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 text-[10px]">
+                        🧠 {streamingMeta.routing === 'orchestrator' ? 'Orchestrated' : 'Direct'}
                       </span>
                     )}
                     {streamingMeta.model && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-sky-500/40 bg-sky-500/10">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 text-[10px]">
                         🧩 {streamingMeta.model}
                       </span>
                     )}
                     {streamingMeta.complexity && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-sky-500/40 bg-sky-500/10 capitalize">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 text-[10px] capitalize">
                         📊 {streamingMeta.complexity}
                       </span>
                     )}
                     {streamingMeta.tools && streamingMeta.tools.length > 0 && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-sky-500/40 bg-sky-500/10">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 text-[10px]">
                         🔧 {streamingMeta.tools.join(', ')}
                       </span>
                     )}
                     {streamingMeta.toolSource && formatToolSource(streamingMeta.toolSource) && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-sky-500/40 bg-sky-500/10">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 text-[10px]">
                         ⚙️ {formatToolSource(streamingMeta.toolSource)}
                       </span>
                     )}
                   </div>
                 )}
                 <MessageContent content={streamingContent} role="assistant" />
-                <div className="mt-2 flex items-center gap-2 text-xs text-sky-400">
-                  <div className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-pulse"></div>
-                  Streaming...
+                <div className="mt-3 flex items-center gap-2 text-xs text-sky-300">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-sky-400"></span>
+                  Streaming…
                 </div>
               </div>
             </div>
           )}
           {loading && !isStreaming && (
-            <div className="flex items-start gap-3 justify-start">
-              {/* Avatar for loading */}
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm mt-1">
+            <div className="group flex items-start gap-3 justify-start">
+              <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-sm font-semibold text-white shadow-lg">
                 AI
               </div>
-              
-              <div className="bg-gray-800 rounded-2xl rounded-tl-sm px-5 py-3.5 border border-gray-700 shadow-lg">
-                <div className="flex gap-1.5">
-                  <div className="w-2 h-2 bg-sky-500 rounded-full animate-bounce" />
-                  <div
-                    className="w-2 h-2 bg-sky-500 rounded-full animate-bounce"
-                    style={{ animationDelay: '0.15s' }}
-                  />
-                  <div
-                    className="w-2 h-2 bg-sky-500 rounded-full animate-bounce"
-                    style={{ animationDelay: '0.3s' }}
-                  />
+
+              <div className={`${isCompact ? 'max-w-2xl px-4 py-3' : 'max-w-3xl px-5 py-4'} rounded-3xl border border-white/10 bg-white/5 text-slate-100 shadow-xl shadow-slate-900/30 backdrop-blur`}> 
+                <div className="flex items-center gap-2 text-xs text-slate-300">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-sky-400"></span>
+                  Preparing response…
                 </div>
               </div>
             </div>
@@ -1963,7 +2171,7 @@ export default function AgentPage() {
           {showScrollButton && (
             <button
               onClick={scrollToBottom}
-              className="fixed bottom-24 right-8 bg-gray-800 hover:bg-gray-700 text-white p-3 rounded-full shadow-lg border border-gray-600 transition-all hover:scale-110 z-10"
+              className="fixed bottom-24 right-8 z-10 rounded-full border border-white/10 bg-slate-950/80 p-3 text-white shadow-xl backdrop-blur transition hover:border-sky-500/40 hover:bg-sky-500/20 hover:text-white hover:shadow-sky-900/40"
               title="Scroll to bottom"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1976,7 +2184,7 @@ export default function AgentPage() {
         </div>
 
         {/* Input Area */}
-        <div className="p-4 border-t border-gray-800 bg-gray-900">
+        <div className="border-t border-white/10 bg-slate-950/80 px-6 py-5 backdrop-blur">
           {/* Quick Actions */}
           <QuickActions
             onAction={handleSuggestedPrompt}
@@ -1990,21 +2198,24 @@ export default function AgentPage() {
               {files.filter(f => f.type.startsWith('image/')).length > 0 && (
                 <div className="grid grid-cols-4 gap-2">
                   {files.filter(f => f.type.startsWith('image/')).map((file, i) => (
-                    <div key={i} className="relative group">
+                    <div
+                      key={i}
+                      className="group relative overflow-hidden rounded-xl border border-white/10"
+                    >
                       <img
                         src={URL.createObjectURL(file)}
                         alt={file.name}
-                        className="w-full h-24 object-cover rounded-lg"
+                        className="h-24 w-full object-cover"
                       />
                       <button
                         onClick={() =>
                           setFiles((prev) => prev.filter((f) => f !== file))
                         }
-                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition"
+                        className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-rose-500/80 text-xs text-white opacity-0 transition hover:bg-rose-500 group-hover:opacity-100"
                       >
                         ×
                       </button>
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 truncate rounded-b-lg">
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-2 py-1 text-[10px] text-white">
                         {file.name}
                       </div>
                     </div>
@@ -2017,14 +2228,14 @@ export default function AgentPage() {
                   {files.filter(f => !f.type.startsWith('image/')).map((file, i) => (
                     <div
                       key={i}
-                      className="bg-gray-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200"
                     >
                       <span>📎 {file.name}</span>
                       <button
                         onClick={() =>
                           setFiles((prev) => prev.filter((f) => f !== file))
                         }
-                        className="text-gray-400 hover:text-red-400"
+                        className="text-slate-400 transition hover:text-rose-300"
                       >
                         ×
                       </button>
@@ -2034,7 +2245,7 @@ export default function AgentPage() {
               )}
             </div>
           )}
-          <div className="flex gap-2">
+          <div className="mt-4 flex gap-3">
             <input
               ref={fileInputRef}
               type="file"
@@ -2050,24 +2261,24 @@ export default function AgentPage() {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={loading || recordingState !== 'idle'}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-850 disabled:text-gray-600 rounded-lg transition group relative"
+              className="group relative inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-slate-500"
               title="Attach images (Vision enabled)"
             >
               🖼️
-              <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+              <span className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded-md border border-white/10 bg-slate-900/90 px-2 py-1 text-[10px] text-white opacity-0 shadow-lg transition group-hover:opacity-100 whitespace-nowrap">
                 Vision enabled
               </span>
             </button>
-            
+
             {/* Voice Input Button */}
             <button
               onClick={handleVoiceInput}
               disabled={loading || recordingState === 'processing'}
-              className={`px-4 py-2 rounded-lg transition relative ${
+              className={`group relative inline-flex items-center justify-center rounded-xl border px-3 py-2 text-sm font-medium transition ${
                 recordingState === 'recording'
-                  ? 'bg-red-500 hover:bg-red-600 animate-pulse'
-                  : 'bg-gray-800 hover:bg-gray-700 disabled:bg-gray-850 disabled:text-gray-600'
-              }`}
+                  ? 'border-rose-500/60 bg-rose-500/20 text-rose-100 animate-pulse'
+                  : 'border-white/10 bg-white/5 text-slate-200 hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white'
+              } disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-slate-500`}
               title={recordingState === 'recording' ? 'Stop recording' : 'Voice input'}
             >
               {recordingState === 'recording' ? (
@@ -2081,7 +2292,7 @@ export default function AgentPage() {
                 '🎤'
               )}
               {recordingState === 'idle' && (
-                <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+                <span className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded-md border border-white/10 bg-slate-900/90 px-2 py-1 text-[10px] text-white opacity-0 shadow-lg transition group-hover:opacity-100 whitespace-nowrap">
                   Voice input
                 </span>
               )}
@@ -2097,13 +2308,13 @@ export default function AgentPage() {
                 }
               }}
               placeholder="Type a message... (Enter to send)"
-              className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-sky-500 transition"
+              className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white placeholder:text-slate-500 focus:border-sky-500/60 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
               disabled={loading}
             />
             {isStreaming ? (
               <button
                 onClick={stopStreaming}
-                className="px-6 py-2 bg-red-500 hover:bg-red-600 rounded-lg font-medium text-white transition"
+                className="rounded-xl border border-rose-500/60 bg-rose-500/20 px-5 py-2 text-sm font-semibold text-rose-100 transition hover:border-rose-400/60 hover:bg-rose-500/30"
               >
                 ⬛ Stop
               </button>
@@ -2111,7 +2322,7 @@ export default function AgentPage() {
               <button
                 onClick={sendMessage}
                 disabled={loading || (!input.trim() && files.length === 0)}
-                className="px-6 py-2 bg-sky-500 hover:bg-sky-600 disabled:bg-gray-700 disabled:text-gray-500 rounded-lg font-medium text-black transition"
+                className="rounded-xl bg-sky-500 px-6 py-2 text-sm font-semibold text-slate-900 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-white/5 disabled:text-slate-500"
               >
                 {loading ? 'Sending...' : 'Send'}
               </button>
@@ -2122,33 +2333,41 @@ export default function AgentPage() {
 
       {/* Share Modal */}
       {showShareModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowShareModal(false)}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur"
+          onClick={() => setShowShareModal(false)}
+        >
           <div
-            className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md w-full mx-4"
-            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-950/90 px-6 py-6 text-slate-100 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
           >
-            <h2 className="text-lg font-semibold mb-4">Share Conversation</h2>
-            
+            <h2 className="text-lg font-semibold">Share Conversation</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Generate a secure link to share this conversation with collaborators.
+            </p>
+
             {shareUrl ? (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Share Link</label>
+              <div className="mt-5 space-y-4">
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
+                    Share link
+                  </label>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={shareUrl}
                       readOnly
-                      className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-sm"
+                      className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
                     />
                     <button
                       onClick={copyShareUrl}
-                      className="px-4 py-2 bg-sky-500 hover:bg-sky-600 rounded transition"
+                      className="rounded-lg border border-sky-400/40 bg-sky-500/20 px-3 py-2 text-sm font-medium text-sky-100 transition hover:border-sky-300 hover:bg-sky-500/30"
                     >
                       📋 Copy
                     </button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Anyone with this link can view this conversation (read-only)
+                  <p className="text-xs text-slate-500">
+                    Anyone with this link can view this conversation in read-only mode.
                   </p>
                 </div>
                 <button
@@ -2156,35 +2375,35 @@ export default function AgentPage() {
                     setShowShareModal(false);
                     setShareUrl(null);
                   }}
-                  className="w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded transition"
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white"
                 >
                   Close
                 </button>
               </div>
             ) : (
-              <div className="space-y-4">
-                <p className="text-sm text-gray-400">
-                  Create a public link to share this conversation with others.
+              <div className="mt-5 space-y-4">
+                <p className="text-sm text-slate-300">
+                  Decide how long your share link should remain available.
                 </p>
                 <div className="space-y-2">
                   <button
                     onClick={() => handleShare()}
                     disabled={shareLoading}
-                    className="w-full px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:bg-gray-700 rounded transition"
+                    className="w-full rounded-lg border border-sky-400/40 bg-sky-500/20 px-4 py-2 text-sm font-medium text-sky-100 transition hover:border-sky-300 hover:bg-sky-500/30 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
                   >
-                    {shareLoading ? 'Creating...' : 'Create Permanent Link'}
+                    {shareLoading ? 'Creating…' : 'Create permanent link'}
                   </button>
                   <button
                     onClick={() => handleShare(7)}
                     disabled={shareLoading}
-                    className="w-full px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:bg-gray-700 rounded transition"
+                    className="w-full rounded-lg border border-sky-400/40 bg-sky-500/20 px-4 py-2 text-sm font-medium text-sky-100 transition hover:border-sky-300 hover:bg-sky-500/30 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
                   >
-                    {shareLoading ? 'Creating...' : 'Create Link (Expires in 7 days)'}
+                    {shareLoading ? 'Creating…' : 'Create link (7-day expiry)'}
                   </button>
                 </div>
                 <button
                   onClick={() => setShowShareModal(false)}
-                  className="w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded transition"
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 transition hover:border-rose-400/40 hover:bg-rose-500/20 hover:text-white"
                 >
                   Cancel
                 </button>
