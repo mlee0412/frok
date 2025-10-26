@@ -14,7 +14,6 @@ export async function GET(req: NextRequest) {
   write('retry: 3000\n\n');
 
   let loopRunning = true;
-  let heartbeatTimer: any;
   // Smoothing state
   let haConsecFail = 0;
   let haLastOk = false;
@@ -125,13 +124,13 @@ export async function GET(req: NextRequest) {
       await new Promise((res) => setTimeout(res, delay));
     }
   })();
-  heartbeatTimer = setInterval(() => write(':\n\n'), 15000);
+  const heartbeatTimer = setInterval(() => write(':\n\n'), 15000);
   // Send initial snapshot ASAP
   tick().catch(() => {});
 
   req.signal.addEventListener('abort', async () => {
     loopRunning = false;
-    try { if (heartbeatTimer) clearInterval(heartbeatTimer); } catch {}
+    try { clearInterval(heartbeatTimer); } catch {}
     try { await writer.close(); } catch {}
   });
 

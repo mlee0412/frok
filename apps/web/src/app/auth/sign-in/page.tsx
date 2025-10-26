@@ -56,7 +56,7 @@ export default function SignInPage() {
           <div className="text-sm text-foreground/70 mt-3">Check your email for the sign-in link.</div>
         )}
         {err && <div className="text-sm text-danger mt-3">{err}</div>}
-        <div className="text-xs text-foreground/60 mt-4">After clicking the link, you'll be redirected back here.</div>
+        <div className="text-xs text-foreground/60 mt-4">After clicking the link, you&apos;ll be redirected back here.</div>
       </div>
     </div>
   );
