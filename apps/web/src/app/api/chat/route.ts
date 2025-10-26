@@ -112,7 +112,7 @@ export async function POST(req: Request) {
         },
       ];
 
-      let messages: any[] = [
+      const messages = [
         { role: 'system', content: sys },
         { role: 'user', content: String(message || '') },
       ];

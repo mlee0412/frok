@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { MessageContent } from '@/components/MessageContent';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
 type Message = {
@@ -122,9 +123,9 @@ export default function SharedThreadPage() {
           </p>
           <p className="mt-2">
             This is a read-only shared conversation. Visit{' '}
-            <a href="/" className="text-sky-400 hover:text-sky-300">
+            <Link href="/" className="text-sky-400 hover:text-sky-300">
               FROK Agent
-            </a>{' '}
+            </Link>{' '}
             to create your own.
           </p>
         </div>

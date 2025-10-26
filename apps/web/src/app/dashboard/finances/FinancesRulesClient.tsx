@@ -137,7 +137,7 @@ export default function FinancesRulesClient() {
           {rules.map((r) => (
             <div key={r.id} className="flex items-center gap-2 text-sm">
               <div className="flex-1">
-                <span className="opacity-60">if description contains</span> <span className="font-mono">"{r.pattern}"</span>
+                <span className="opacity-60">if description contains</span> <span className="font-mono">&quot;{r.pattern}&quot;</span>
                 <span className="opacity-60"> then category → </span>
                 <span className="font-medium">{categories.find((c) => c.id === r.category_id)?.name || r.category_id}</span>
               </div>
