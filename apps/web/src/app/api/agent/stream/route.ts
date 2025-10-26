@@ -1,16 +1,9 @@
-import { Agent, AgentInputItem, Runner, withTrace } from '@openai/agents';
+import { AgentInputItem, Runner, withTrace } from '@openai/agents';
+import { performance } from 'perf_hooks';
+import { createAgentSuite } from '@/lib/agent/orchestrator';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-function supportsReasoning(model: string): boolean {
-  return /(gpt-5|o3|gpt-4\.1|gpt-4o-reasoning)/i.test(model);
-}
-
-function getReasoningEffort(model: string): 'low' | 'medium' | 'high' {
-  if (/(gpt-5|o3)/i.test(model)) return 'high';
-  return 'medium';
-}
 
 export async function POST(req: Request) {
   const encoder = new TextEncoder();
@@ -29,26 +22,7 @@ export async function POST(req: Request) {
         }
 
         await withTrace('FROK Assistant Stream', async () => {
-          const { haSearch, haCall, memoryAdd, memorySearch, webSearch } = await import('@/lib/agent/tools');
-          
-          const MODEL = process.env.OPENAI_AGENT_MODEL || 'gpt-4o-mini';
-          
-          const agent = new Agent({
-            name: 'FROK Assistant',
-            instructions:
-              'Be concise and helpful.\n' +
-              'Use tools only when needed; summarize results back to the user.\n' +
-              'Persistent memory: store important user preferences and context; retrieve when relevant.\n' +
-              'Home Assistant: verify success only when HA returns ok:true with a non-empty result; otherwise ask for clarification.\n' +
-              'Web search: use to find current information online.\n' +
-              'Vision: when images are provided, analyze them carefully and describe what you see.\n' +
-              'Respect data privacy; only access external services when obviously necessary.',
-            model: MODEL,
-            modelSettings: supportsReasoning(MODEL)
-              ? { reasoning: { effort: getReasoningEffort(MODEL) }, store: true }
-              : { store: true },
-            tools: [haSearch, haCall, memoryAdd, memorySearch, webSearch],
-          });
+          const suite = await createAgentSuite();
 
           // Build content with text and images
           const content: any[] = [];
@@ -65,11 +39,33 @@ export async function POST(req: Request) {
           }
 
           const conversationHistory: AgentInputItem[] = [
+            ...suite.primer,
             {
               role: 'user',
               content,
             },
           ];
+
+          const orchestratorTools = [
+            suite.tools.haSearch?.name ?? 'ha_search',
+            suite.tools.haCall?.name ?? 'ha_call',
+            suite.tools.memoryAdd?.name ?? 'memory_add',
+            suite.tools.memorySearch?.name ?? 'memory_search',
+            suite.tools.webSearch?.name ?? 'web_search',
+          ];
+
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                metadata: {
+                  toolset: suite.tools.source,
+                  tools: orchestratorTools,
+                  mode: 'orchestrator',
+                  models: suite.models,
+                },
+              })}\n\n`
+            )
+          );
 
           const runner = new Runner({
             traceMetadata: {
@@ -79,26 +75,35 @@ export async function POST(req: Request) {
           });
 
           // Run agent and get result
-          const result = await runner.run(agent, conversationHistory);
+          const startedAt = performance.now();
+          const result = await runner.run(suite.orchestrator, conversationHistory);
+          const durationMs = Math.round(performance.now() - startedAt);
 
           if (result.finalOutput) {
             // Optimized streaming: larger chunks, no artificial delay
             const output = String(result.finalOutput);
-            
-            // Send in character chunks for smoother streaming (no word boundaries)
-            const chunkSize = 5; // Send 5 characters at a time for balance between smoothness and efficiency
-            
+
+            const chunkSize = 48;
+
             for (let i = 0; i < output.length; i += chunkSize) {
-              const chunk = output.slice(0, Math.min(i + chunkSize, output.length));
+              const delta = output.slice(i, Math.min(i + chunkSize, output.length));
               controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ content: chunk, done: false })}\n\n`)
+                encoder.encode(`data: ${JSON.stringify({ delta, done: false })}\n\n`)
               );
-              // No artificial delay - send as fast as possible
             }
 
-            // Send final complete message
             controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ content: output, done: true })}\n\n`)
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  content: output,
+                  done: true,
+                  metrics: {
+                    durationMs,
+                    model: suite.models.general,
+                    route: 'orchestrator',
+                  },
+                })}\n\n`
+              )
             );
           } else {
             controller.enqueue(

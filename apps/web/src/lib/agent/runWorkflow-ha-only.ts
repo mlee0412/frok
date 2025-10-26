@@ -1,22 +1,14 @@
-import { Agent, AgentInputItem, Runner, withTrace } from '@openai/agents';
+import { AgentInputItem, Runner, withTrace } from '@openai/agents';
+import { createAgentSuite } from './orchestrator';
 
 export type WorkflowInput = { input_as_text: string };
 
 export async function runWorkflowHaOnly(workflow: WorkflowInput) {
-  return await withTrace('FROK Assistant', async () => {
-    const { haSearch, haCall } = await import('./tools');
-    
-    const MODEL = process.env.OPENAI_AGENT_MODEL || 'gpt-4o-mini';
-    
-    const agent = new Agent({
-      name: 'FROK Assistant',
-      instructions: 'Be concise. Use HA tools to search and control devices.',
-      model: MODEL,
-      modelSettings: { store: true },
-      tools: [haSearch, haCall],
-    });
-    
+  return await withTrace('FROK Assistant (Home Assistant only)', async () => {
+    const suite = await createAgentSuite({ preferFastGeneral: true });
+
     const conversationHistory: AgentInputItem[] = [
+      ...suite.primer,
       {
         role: 'user',
         content: [{ type: 'input_text', text: workflow.input_as_text }],
@@ -30,7 +22,7 @@ export async function runWorkflowHaOnly(workflow: WorkflowInput) {
       },
     });
 
-    const result = await runner.run(agent, [...conversationHistory]);
+    const result = await runner.run(suite.home, conversationHistory);
     if (!result.finalOutput) throw new Error('Agent result is undefined');
     return { output_text: String(result.finalOutput) };
   });

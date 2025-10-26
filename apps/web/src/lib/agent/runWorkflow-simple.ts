@@ -1,19 +1,14 @@
-import { Agent, AgentInputItem, Runner, withTrace } from '@openai/agents';
+import { AgentInputItem, Runner, withTrace } from '@openai/agents';
+import { createAgentSuite } from './orchestrator';
 
 export type WorkflowInput = { input_as_text: string };
 
 export async function runWorkflowSimple(workflow: WorkflowInput) {
-  return await withTrace('FROK Assistant', async () => {
-    const MODEL = process.env.OPENAI_AGENT_MODEL || 'gpt-4o-mini';
-    
-    const agent = new Agent({
-      name: 'FROK Assistant',
-      instructions: 'Be concise and helpful.',
-      model: MODEL,
-      modelSettings: { store: true },
-    });
-    
+  return await withTrace('FROK Assistant (simple)', async () => {
+    const suite = await createAgentSuite({ preferFastGeneral: true });
+
     const conversationHistory: AgentInputItem[] = [
+      ...suite.primer,
       {
         role: 'user',
         content: [
@@ -32,7 +27,7 @@ export async function runWorkflowSimple(workflow: WorkflowInput) {
       },
     });
 
-    const result = await runner.run(agent, [...conversationHistory]);
+    const result = await runner.run(suite.general, conversationHistory);
 
     if (!result.finalOutput) {
       throw new Error('Agent result is undefined');

@@ -26,6 +26,12 @@ type Message = {
   toolsUsed?: string[];
   executionTime?: number;
   isRegenerating?: boolean;
+  model?: string;
+  complexity?: 'simple' | 'moderate' | 'complex';
+  routing?: 'direct' | 'orchestrator';
+  latencyMs?: number;
+  toolSource?: string;
+  availableModels?: Record<string, string>;
 };
 
 type Thread = {
@@ -51,17 +57,26 @@ export default function AgentPage() {
   const [input, setInput] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [files, setFiles] = React.useState<File[]>([]);
-  const [modelName, setModelName] = React.useState('gpt-5');
+  const [modelName, setModelName] = React.useState('gpt-5-mini');
   const [loadingThreads, setLoadingThreads] = React.useState(true);
   const [loadingMessages, setLoadingMessages] = React.useState(false);
   
   // Performance: Message cache to avoid reloading on thread switch
   const [messageCache, setMessageCache] = React.useState<Record<string, Message[]>>({});
-  
+
   // Performance: Abort controllers for request deduplication
   const loadingRef = React.useRef<Record<string, AbortController>>({});
   const [streamingContent, setStreamingContent] = React.useState('');
   const [isStreaming, setIsStreaming] = React.useState(false);
+  const [streamingMeta, setStreamingMeta] = React.useState<{
+    model?: string;
+    complexity?: 'simple' | 'moderate' | 'complex';
+    routing?: 'direct' | 'orchestrator';
+    tools?: string[];
+    toolSource?: string;
+    historyLength?: number;
+    models?: Record<string, string>;
+  } | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [showExportMenu, setShowExportMenu] = React.useState(false);
   const [exportSuccess, setExportSuccess] = React.useState(false);
@@ -90,6 +105,13 @@ export default function AgentPage() {
   const { toasts, showToast, dismissToast } = useToast();
 
   const activeThread = threads.find((t) => t.id === activeThreadId);
+
+  const formatToolSource = React.useCallback((source?: string) => {
+    if (!source) return '';
+    if (source === 'improved') return 'Enhanced tools';
+    if (source === 'basic') return 'Base tools';
+    return source;
+  }, []);
 
   // Extract all unique tags and folders
   const allTags = React.useMemo(() => {
@@ -152,7 +174,7 @@ export default function AgentPage() {
     fetch('/api/agent/config')
       .then((res) => res.json())
       .then((data) => setModelName(data.model))
-      .catch(() => setModelName('gpt-5'));
+      .catch(() => setModelName('gpt-5-mini'));
 
     loadThreads();
   }, []);
@@ -174,7 +196,7 @@ export default function AgentPage() {
           pinned: t.pinned || false,
           archived: t.archived || false,
           enabledTools: t.enabled_tools || ['home_assistant', 'memory', 'web_search', 'tavily_search', 'image_generation'],
-          model: t.model || 'gpt-5',
+          model: t.model || 'gpt-5-mini',
           agentStyle: t.agent_style || 'balanced',
         })));
       }
@@ -432,6 +454,7 @@ export default function AgentPage() {
       // Stream agent response with smart routing and conversation history
       setIsStreaming(true);
       setStreamingContent('');
+      setStreamingMeta(null);
       
       abortControllerRef.current = new AbortController();
       
@@ -441,7 +464,7 @@ export default function AgentPage() {
         body: JSON.stringify({ 
           input_as_text: userContent,
           images: images.length > 0 ? images.map(img => img.url) : undefined,
-          model: activeThread?.model || 'gpt-5',
+          model: activeThread?.model || 'gpt-5-mini',
           enabled_tools: activeThread?.enabledTools,
           thread_id: currentThreadId, // Pass thread ID for conversation history
         }),
@@ -455,6 +478,17 @@ export default function AgentPage() {
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let assistantContent = '';
+      let routingMetadata: {
+        model?: string;
+        complexity?: 'simple' | 'moderate' | 'complex';
+        routing?: 'direct' | 'orchestrator';
+        tools?: string[];
+        toolSource?: string;
+        historyLength?: number;
+        models?: Record<string, string>;
+      } | null = null;
+      let runMetrics: { durationMs?: number; model?: string; route?: string } | null = null;
+      let streamedTools: string[] | undefined;
 
       if (reader) {
         while (true) {
@@ -465,25 +499,59 @@ export default function AgentPage() {
           const lines = chunk.split('\n');
 
           for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                if (data.error) {
-                  throw new Error(data.error);
-                }
-                if (data.content) {
-                  assistantContent = data.content;
-                  setStreamingContent(data.content);
-                }
-              } catch (e) {
-                console.error('Parse error:', e);
+            if (!line.startsWith('data: ')) continue;
+
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.error) {
+                throw new Error(data.error);
               }
+
+              if (data.metadata) {
+                routingMetadata = data.metadata;
+                setStreamingMeta({
+                  model: data.metadata.model,
+                  complexity: data.metadata.complexity,
+                  routing: data.metadata.routing,
+                  tools: data.metadata.tools,
+                  toolSource: data.metadata.toolSource,
+                  historyLength: data.metadata.historyLength,
+                  models: data.metadata.models,
+                });
+                continue;
+              }
+
+              if (typeof data.delta === 'string') {
+                assistantContent += data.delta;
+                setStreamingContent(assistantContent);
+                continue;
+              }
+
+              if (data.metrics) {
+                runMetrics = data.metrics;
+              }
+
+              if (Array.isArray(data.tools)) {
+                streamedTools = data.tools;
+              }
+
+              if (typeof data.content === 'string') {
+                assistantContent = data.content;
+                setStreamingContent(data.content);
+              }
+
+              if (data.done) {
+                setStreamingMeta(null);
+              }
+            } catch (e) {
+              console.error('Parse error:', e);
             }
           }
         }
       }
 
       setIsStreaming(false);
+      setStreamingMeta(null);
       setStreamingContent('');
 
       // Save final assistant message to backend
@@ -499,11 +567,21 @@ export default function AgentPage() {
       const assistantJson = await assistantRes.json();
 
       if (assistantJson.ok && assistantJson.message) {
+        const toolList = streamedTools && streamedTools.length > 0 ? streamedTools : routingMetadata?.tools;
+
         const assistantMessage: Message = {
           id: assistantJson.message.id,
           role: 'assistant',
           content: assistantJson.message.content,
           timestamp: new Date(assistantJson.message.created_at).getTime(),
+          toolsUsed: toolList,
+          executionTime: runMetrics?.durationMs,
+          latencyMs: runMetrics?.durationMs,
+          model: routingMetadata?.model,
+          complexity: routingMetadata?.complexity,
+          routing: routingMetadata?.routing,
+          toolSource: routingMetadata?.toolSource,
+          availableModels: routingMetadata?.models,
         };
 
         // Performance: Update both threads and cache
@@ -534,6 +612,7 @@ export default function AgentPage() {
       setLoading(false);
       setIsStreaming(false);
       setStreamingContent('');
+      setStreamingMeta(null);
       abortControllerRef.current = null;
     }
   };
@@ -543,6 +622,7 @@ export default function AgentPage() {
       abortControllerRef.current.abort();
       setIsStreaming(false);
       setStreamingContent('');
+      setStreamingMeta(null);
       setLoading(false);
     }
   };
@@ -587,7 +667,7 @@ export default function AgentPage() {
         body: JSON.stringify({ 
           input_as_text: userMessage.content,
           images: userMessage.images?.map(img => img.url),
-          model: activeThread?.model || 'gpt-5',
+          model: activeThread?.model || 'gpt-5-mini',
           enabled_tools: activeThread?.enabledTools,
           thread_id: activeThreadId, // Pass thread ID for conversation history
         }),
@@ -599,6 +679,17 @@ export default function AgentPage() {
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let newContent = '';
+      let routingMetadata: {
+        model?: string;
+        complexity?: 'simple' | 'moderate' | 'complex';
+        routing?: 'direct' | 'orchestrator';
+        tools?: string[];
+        toolSource?: string;
+        historyLength?: number;
+        models?: Record<string, string>;
+      } | null = null;
+      let runMetrics: { durationMs?: number; model?: string; route?: string } | null = null;
+      let streamedTools: string[] | undefined;
 
       if (reader) {
         while (true) {
@@ -609,42 +700,90 @@ export default function AgentPage() {
           const lines = chunk.split('\n');
 
           for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                if (data.error) throw new Error(data.error);
-                if (data.content) {
-                  newContent = data.content;
-                  setStreamingContent(data.content);
-                  
-                  // Update the message in place
-                  setThreads((prev) =>
-                    prev.map((t) =>
-                      t.id === activeThreadId
-                        ? {
-                            ...t,
-                            messages: t.messages.map((m, i) =>
-                              i === messageIndex
-                                ? { ...m, content: data.content, isRegenerating: true }
-                                : m
-                            ),
-                          }
-                        : t
-                    )
-                  );
-                }
-              } catch (e) {
-                console.error('Parse error:', e);
+            if (!line.startsWith('data: ')) continue;
+
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.error) throw new Error(data.error);
+
+              if (data.metadata) {
+                routingMetadata = data.metadata;
+                setStreamingMeta({
+                  model: data.metadata.model,
+                  complexity: data.metadata.complexity,
+                  routing: data.metadata.routing,
+                  tools: data.metadata.tools,
+                  toolSource: data.metadata.toolSource,
+                  historyLength: data.metadata.historyLength,
+                  models: data.metadata.models,
+                });
+                continue;
               }
+
+              if (typeof data.delta === 'string') {
+                newContent += data.delta;
+                setStreamingContent(newContent);
+
+                setThreads((prev) =>
+                  prev.map((t) =>
+                    t.id === activeThreadId
+                      ? {
+                          ...t,
+                          messages: t.messages.map((m, i) =>
+                            i === messageIndex
+                              ? { ...m, content: newContent, isRegenerating: true }
+                              : m
+                          ),
+                        }
+                      : t
+                  )
+                );
+                continue;
+              }
+
+              if (data.metrics) {
+                runMetrics = data.metrics;
+              }
+
+              if (Array.isArray(data.tools)) {
+                streamedTools = data.tools;
+              }
+
+              if (typeof data.content === 'string') {
+                newContent = data.content;
+                setStreamingContent(data.content);
+
+                setThreads((prev) =>
+                  prev.map((t) =>
+                    t.id === activeThreadId
+                      ? {
+                          ...t,
+                          messages: t.messages.map((m, i) =>
+                            i === messageIndex
+                              ? { ...m, content: data.content, isRegenerating: true }
+                              : m
+                          ),
+                        }
+                      : t
+                  )
+                );
+              }
+
+              if (data.done) {
+                setStreamingMeta(null);
+              }
+            } catch (e) {
+              console.error('Parse error:', e);
             }
           }
         }
       }
 
       setIsStreaming(false);
+      setStreamingMeta(null);
       setStreamingContent('');
 
-      const executionTime = Date.now() - startTime;
+      const metricsDuration = runMetrics?.durationMs ?? Date.now() - startTime;
 
       // Update final message in backend
       await fetch('/api/chat/messages', {
@@ -658,6 +797,8 @@ export default function AgentPage() {
       });
 
       // Update in state with execution time
+      const resolvedTools = streamedTools && streamedTools.length > 0 ? streamedTools : routingMetadata?.tools;
+
       setThreads((prev) =>
         prev.map((t) =>
           t.id === activeThreadId
@@ -665,7 +806,19 @@ export default function AgentPage() {
                 ...t,
                 messages: t.messages.map((m, i) =>
                   i === messageIndex
-                    ? { ...m, content: newContent, isRegenerating: false, executionTime }
+                    ? {
+                        ...m,
+                        content: newContent,
+                        isRegenerating: false,
+                        executionTime: metricsDuration,
+                        latencyMs: metricsDuration,
+                        toolsUsed: resolvedTools || m.toolsUsed,
+                        model: routingMetadata?.model || m.model,
+                        complexity: routingMetadata?.complexity || m.complexity,
+                        routing: routingMetadata?.routing || m.routing,
+                        toolSource: routingMetadata?.toolSource || m.toolSource,
+                        availableModels: routingMetadata?.models || m.availableModels,
+                      }
                     : m
                 ),
               }
@@ -692,6 +845,7 @@ export default function AgentPage() {
       setLoading(false);
       setIsStreaming(false);
       setStreamingContent('');
+      setStreamingMeta(null);
       abortControllerRef.current = null;
     }
   };
@@ -1010,7 +1164,7 @@ export default function AgentPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           input_as_text: newContent,
-          model: activeThread?.model || 'gpt-5',
+          model: activeThread?.model || 'gpt-5-mini',
           enabled_tools: activeThread?.enabledTools,
           thread_id: activeThreadId, // Pass thread ID for conversation history
         }),
@@ -1022,6 +1176,17 @@ export default function AgentPage() {
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let assistantContent = '';
+      let routingMetadata: {
+        model?: string;
+        complexity?: 'simple' | 'moderate' | 'complex';
+        routing?: 'direct' | 'orchestrator';
+        tools?: string[];
+        toolSource?: string;
+        historyLength?: number;
+        models?: Record<string, string>;
+      } | null = null;
+      let runMetrics: { durationMs?: number; model?: string; route?: string } | null = null;
+      let streamedTools: string[] | undefined;
 
       if (reader) {
         while (true) {
@@ -1032,23 +1197,57 @@ export default function AgentPage() {
           const lines = chunk.split('\n');
 
           for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                if (data.error) throw new Error(data.error);
-                if (data.content) {
-                  assistantContent = data.content;
-                  setStreamingContent(data.content);
-                }
-              } catch (e) {
-                console.error('Parse error:', e);
+            if (!line.startsWith('data: ')) continue;
+
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.error) throw new Error(data.error);
+
+              if (data.metadata) {
+                routingMetadata = data.metadata;
+                setStreamingMeta({
+                  model: data.metadata.model,
+                  complexity: data.metadata.complexity,
+                  routing: data.metadata.routing,
+                  tools: data.metadata.tools,
+                  toolSource: data.metadata.toolSource,
+                  historyLength: data.metadata.historyLength,
+                  models: data.metadata.models,
+                });
+                continue;
               }
+
+              if (typeof data.delta === 'string') {
+                assistantContent += data.delta;
+                setStreamingContent(assistantContent);
+                continue;
+              }
+
+              if (data.metrics) {
+                runMetrics = data.metrics;
+              }
+
+              if (Array.isArray(data.tools)) {
+                streamedTools = data.tools;
+              }
+
+              if (typeof data.content === 'string') {
+                assistantContent = data.content;
+                setStreamingContent(data.content);
+              }
+
+              if (data.done) {
+                setStreamingMeta(null);
+              }
+            } catch (e) {
+              console.error('Parse error:', e);
             }
           }
         }
       }
 
       setIsStreaming(false);
+      setStreamingMeta(null);
       setStreamingContent('');
 
       // Save new assistant response
@@ -1064,11 +1263,21 @@ export default function AgentPage() {
       const assistantJson = await assistantRes.json();
 
       if (assistantJson.ok && assistantJson.message) {
+        const toolList = streamedTools && streamedTools.length > 0 ? streamedTools : routingMetadata?.tools;
+
         const assistantMessage: Message = {
           id: assistantJson.message.id,
           role: 'assistant',
           content: assistantJson.message.content,
           timestamp: new Date(assistantJson.message.created_at).getTime(),
+          toolsUsed: toolList,
+          executionTime: runMetrics?.durationMs,
+          latencyMs: runMetrics?.durationMs,
+          model: routingMetadata?.model,
+          complexity: routingMetadata?.complexity,
+          routing: routingMetadata?.routing,
+          toolSource: routingMetadata?.toolSource,
+          availableModels: routingMetadata?.models,
         };
 
         setThreads((prev) =>
@@ -1462,13 +1671,16 @@ export default function AgentPage() {
             </div>
           )}
 
-          {activeThread?.messages.map((msg, msgIndex) => (
-            <div
-              key={msg.id}
-              className={`flex items-start gap-3 ${
-                msg.role === 'user' ? 'justify-end' : 'justify-start'
-              }`}
-            >
+          {activeThread?.messages.map((msg, msgIndex) => {
+            const toolSourceLabel = formatToolSource(msg.toolSource);
+
+            return (
+              <div
+                key={msg.id}
+                className={`flex items-start gap-3 ${
+                  msg.role === 'user' ? 'justify-end' : 'justify-start'
+                }`}
+              >
               {/* Avatar for assistant */}
               {msg.role === 'assistant' && (
                 <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm mt-1">
@@ -1499,7 +1711,32 @@ export default function AgentPage() {
                     ))}
                   </div>
                 )}
-                
+
+                {msg.role === 'assistant' && (msg.model || msg.complexity || msg.routing || msg.toolSource) && (
+                  <div className="mb-3 -mt-1 flex flex-wrap gap-2 text-xs text-gray-400">
+                    {msg.routing && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-gray-700 bg-gray-900/70">
+                        🧠 {msg.routing === 'orchestrator' ? 'Orchestrator' : 'Direct'}
+                      </span>
+                    )}
+                    {msg.model && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-gray-700 bg-gray-900/70">
+                        🧩 {msg.model}
+                      </span>
+                    )}
+                    {msg.complexity && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-gray-700 bg-gray-900/70 capitalize">
+                        📊 {msg.complexity}
+                      </span>
+                    )}
+                    {toolSourceLabel && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-gray-700 bg-gray-900/70">
+                        🔧 {toolSourceLabel}
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 {/* Edit mode for user messages */}
                 {msg.role === 'user' && editingMessageId === msg.id ? (
                   <div className="space-y-3">
@@ -1652,15 +1889,45 @@ export default function AgentPage() {
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
           {isStreaming && streamingContent && (
             <div className="flex items-start gap-3 justify-start">
               {/* Avatar for streaming assistant */}
               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm mt-1">
                 AI
               </div>
-              
+
               <div className="max-w-2xl rounded-2xl rounded-tl-sm px-5 py-3.5 bg-gray-800 text-gray-100 border border-gray-700 shadow-lg">
+                {streamingMeta && (
+                  <div className="mb-2 flex flex-wrap gap-2 text-xs text-sky-300">
+                    {streamingMeta.routing && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-sky-500/40 bg-sky-500/10">
+                        🧠 {streamingMeta.routing === 'orchestrator' ? 'Orchestrator' : 'Direct'}
+                      </span>
+                    )}
+                    {streamingMeta.model && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-sky-500/40 bg-sky-500/10">
+                        🧩 {streamingMeta.model}
+                      </span>
+                    )}
+                    {streamingMeta.complexity && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-sky-500/40 bg-sky-500/10 capitalize">
+                        📊 {streamingMeta.complexity}
+                      </span>
+                    )}
+                    {streamingMeta.tools && streamingMeta.tools.length > 0 && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-sky-500/40 bg-sky-500/10">
+                        🔧 {streamingMeta.tools.join(', ')}
+                      </span>
+                    )}
+                    {streamingMeta.toolSource && formatToolSource(streamingMeta.toolSource) && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-sky-500/40 bg-sky-500/10">
+                        ⚙️ {formatToolSource(streamingMeta.toolSource)}
+                      </span>
+                    )}
+                  </div>
+                )}
                 <MessageContent content={streamingContent} role="assistant" />
                 <div className="mt-2 flex items-center gap-2 text-xs text-sky-400">
                   <div className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-pulse"></div>

@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'missing_openai_key', detail: 'Set OPENAI_API_KEY in apps/web/.env.local' }, { status: 200 });
   }
   const openai = new OpenAI({ apiKey });
-  const model = agentId === 'fast' ? 'gpt-4o-mini' : 'gpt-4o-mini';
+  const model = agentId === 'fast' ? 'gpt-5-nano' : 'gpt-5-mini';
 
   // Agent: Home Assistant tools (non-streaming, function-calling)
   if (agentId === 'ha' || agentId === 'ha-tools') {

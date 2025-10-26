@@ -28,7 +28,9 @@ const AVAILABLE_TOOLS = [
 ];
 
 const AVAILABLE_MODELS = [
+  { id: 'gpt-5-think', name: 'GPT-5 Think' },
   { id: 'gpt-5', name: 'GPT-5' },
+  { id: 'gpt-5-mini', name: 'GPT-5 Mini' },
   { id: 'gpt-5-nano', name: 'GPT-5 Nano' },
 ];
 
@@ -45,7 +47,7 @@ export function ThreadOptionsMenu({
   currentTags = [],
   currentFolder,
   currentTools = AVAILABLE_TOOLS.map(t => t.id),
-  currentModel = 'gpt-5',
+  currentModel = 'gpt-5-mini',
   currentStyle = 'balanced',
   allTags,
   allFolders,

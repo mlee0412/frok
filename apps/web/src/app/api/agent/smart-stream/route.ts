@@ -1,16 +1,9 @@
 import { Agent, AgentInputItem, Runner, withTrace } from '@openai/agents';
+import { performance } from 'perf_hooks';
+import { createAgentSuite, getReasoningEffort, supportsReasoning } from '@/lib/agent/orchestrator';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-function supportsReasoning(model: string): boolean {
-  return /(gpt-5|o3|gpt-4\.1|gpt-4o-reasoning)/i.test(model);
-}
-
-function getReasoningEffort(model: string): 'low' | 'medium' | 'high' {
-  if (/(gpt-5|o3)/i.test(model)) return 'high';
-  return 'medium';
-}
 
 async function classifyQuery(query: string): Promise<'simple' | 'moderate' | 'complex'> {
   // Ultra-fast pattern matching first
@@ -44,13 +37,39 @@ async function classifyQuery(query: string): Promise<'simple' | 'moderate' | 'co
   return 'moderate';
 }
 
-function selectModelAndTools(complexity: 'simple' | 'moderate' | 'complex', userModel?: string) {
+const FAST_MODEL = process.env.OPENAI_FAST_MODEL ?? 'gpt-5-nano';
+const BALANCED_MODEL = process.env.OPENAI_BALANCED_MODEL ?? process.env.OPENAI_GENERAL_MODEL ?? 'gpt-5-mini';
+const COMPLEX_MODEL = process.env.OPENAI_COMPLEX_MODEL ?? process.env.OPENAI_AGENT_MODEL ?? 'gpt-5-think';
+
+function selectModelAndTools(
+  complexity: 'simple' | 'moderate' | 'complex',
+  userModel?: string
+) {
+  const normalizedPreference = userModel?.toLowerCase();
+
   // User preference overrides (from thread settings)
-  if (userModel === 'gpt-5-nano') {
-    return { model: 'gpt-4o-mini', tools: ['home_assistant', 'web_search'] };
+  if (normalizedPreference === 'gpt-5-nano') {
+    return { model: FAST_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: false };
   }
-  if (userModel === 'gpt-5') {
-    return { model: 'gpt-5', tools: ['home_assistant', 'memory', 'web_search'] };
+
+  if (normalizedPreference === 'gpt-5-mini') {
+    return { model: BALANCED_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: false };
+  }
+
+  if (normalizedPreference === 'gpt-5-think') {
+    return {
+      model: COMPLEX_MODEL,
+      tools: ['home_assistant', 'memory', 'web_search'],
+      orchestrate: true,
+    };
+  }
+
+  if (normalizedPreference === 'gpt-5') {
+    return {
+      model: 'gpt-5',
+      tools: ['home_assistant', 'memory', 'web_search'],
+      orchestrate: complexity !== 'simple',
+    };
   }
 
   // Smart routing based on complexity
@@ -58,24 +77,29 @@ function selectModelAndTools(complexity: 'simple' | 'moderate' | 'complex', user
     case 'simple':
       // Fast model, minimal tools for quick actions
       return {
-        model: 'gpt-4o-mini',
-        tools: ['home_assistant', 'web_search'], // Essential tools only
+        model: FAST_MODEL,
+        tools: ['home_assistant', 'memory', 'web_search'],
+        orchestrate: false,
       };
-    
+
     case 'moderate':
       // Balanced model, most common tools
       return {
-        model: 'gpt-4o',
+        model: BALANCED_MODEL,
         tools: ['home_assistant', 'memory', 'web_search'],
+        orchestrate: false,
       };
-    
+
     case 'complex':
       // Powerful model, all tools available
       return {
-        model: process.env.OPENAI_AGENT_MODEL || 'gpt-4o',
+        model: COMPLEX_MODEL,
         tools: ['home_assistant', 'memory', 'web_search'],
+        orchestrate: true,
       };
   }
+
+  return { model: BALANCED_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: false };
 }
 
 export async function POST(req: Request) {
@@ -91,9 +115,13 @@ export async function POST(req: Request) {
         const enabledTools = body?.enabled_tools; // From thread settings
         const conversationHistory = body?.conversation_history || []; // Previous messages
         const threadId = body?.thread_id; // For loading history from DB
-        
+
+        const send = (payload: Record<string, unknown>) => {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+        };
+
         if (!input_as_text && images.length === 0) {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'input_as_text or images required' })}\n\n`));
+          send({ error: 'input_as_text or images required' });
           controller.close();
           return;
         }
@@ -110,7 +138,7 @@ export async function POST(req: Request) {
               .eq('thread_id', threadId)
               .order('created_at', { ascending: true })
               .limit(20); // Last 20 messages for context
-            
+
             if (messages && messages.length > 0) {
               historyItems = messages.map((msg: any) => {
                 if (msg.role === 'user') {
@@ -137,98 +165,81 @@ export async function POST(req: Request) {
 
         // Smart routing: Classify query complexity
         const complexity = await classifyQuery(input_as_text);
-        const { model, tools: selectedTools } = selectModelAndTools(complexity, userModel);
-
-        // Send metadata about routing decision
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ 
-            metadata: { 
-              complexity, 
-              model,
-              routing: 'smart',
-              historyLength: historyItems.length
-            } 
-          })}\n\n`)
+        const { model: selectedModel, tools: selectedTools, orchestrate } = selectModelAndTools(
+          complexity,
+          userModel
         );
 
+        const loadToolset = async () => {
+          try {
+            const mod = await import('@/lib/agent/tools-improved');
+            return {
+              haSearch: mod.haSearch,
+              haCall: mod.haCall,
+              memoryAdd: mod.memoryAdd,
+              memorySearch: mod.memorySearch,
+              webSearch: mod.webSearch,
+              source: 'improved' as const,
+            };
+          } catch (err) {
+            console.warn('[tools fallback]', err);
+            const mod = await import('@/lib/agent/tools');
+            return {
+              haSearch: mod.haSearch,
+              haCall: mod.haCall,
+              memoryAdd: mod.memoryAdd,
+              memorySearch: mod.memorySearch,
+              webSearch: mod.webSearch,
+              source: 'basic' as const,
+            };
+          }
+        };
+
         await withTrace('FROK Assistant Stream', async () => {
-          // Use improved tools with better performance and accuracy
-          const { haSearch, haCall, memoryAdd, memorySearch, webSearch } = await import('@/lib/agent/tools-improved');
-          
-          // Map both database format (snake_case) and code format (camelCase) to actual tools
+          const suite = orchestrate
+            ? await createAgentSuite({
+                preferFastGeneral: complexity !== 'complex',
+                models: {
+                  general: selectedModel,
+                  router: FAST_MODEL,
+                  home: FAST_MODEL,
+                  memory: FAST_MODEL,
+                  research: process.env.OPENAI_RESEARCH_MODEL ?? BALANCED_MODEL,
+                },
+              })
+            : null;
+
+          const toolset = suite?.tools ?? (await loadToolset());
+
           const toolMap: Record<string, any> = {
-            // Database format (from enabled_tools column)
-            'home_assistant': [haSearch, haCall], // HA uses 2 tools
-            'memory': [memoryAdd, memorySearch], // Memory uses 2 tools
-            'web_search': webSearch,
-            'tavily_search': webSearch, // Same as web_search
-            'image_generation': null, // Not implemented yet
-            
-            // Legacy camelCase format (for backwards compatibility)
-            'haSearch': haSearch,
-            'haCall': haCall,
-            'memoryAdd': memoryAdd,
-            'memorySearch': memorySearch,
-            'webSearch': webSearch,
+            'home_assistant': [toolset.haSearch, toolset.haCall],
+            memory: [toolset.memoryAdd, toolset.memorySearch],
+            web_search: toolset.webSearch,
+            tavily_search: toolset.webSearch,
+            image_generation: null,
+            haSearch: toolset.haSearch,
+            haCall: toolset.haCall,
+            memoryAdd: toolset.memoryAdd,
+            memorySearch: toolset.memorySearch,
+            webSearch: toolset.webSearch,
           };
 
-          // Flatten tool arrays and remove nulls
-          const flattenTools = (names: string[]) => {
-            const tools = names
+          const flattenTools = (names: string[]) =>
+            names
               .map(name => toolMap[name])
               .flat()
               .filter(Boolean);
-            
-            // Log tool selection for debugging
-            console.log('[tools]', {
-              requested: names,
-              loaded: tools.map((t: any) => t?.name || 'unknown'),
-              count: tools.length,
-            });
-            
-            return tools;
-          };
 
-          // Use user's enabled tools if specified, otherwise use smart selection
-          const finalTools = enabledTools && enabledTools.length > 0
-            ? flattenTools(enabledTools)
-            : flattenTools(selectedTools);
+          const requestedToolNames = enabledTools && enabledTools.length > 0 ? enabledTools : selectedTools;
+          const finalTools = flattenTools(requestedToolNames);
+          const finalToolNames = finalTools.map((t: any) => t?.name || 'unknown');
 
-          // Adjust instructions based on complexity
-          let instructions = complexity === 'simple'
-            ? 'Be extremely concise. Execute the requested action directly without explanation unless asked.'
-            : complexity === 'complex'
-            ? 'Be thorough and detailed. Use reasoning effort to provide comprehensive analysis.'
-            : 'Be helpful and concise. Use tools when needed.';
-          
-          // Add HA-specific instructions if tools are available
-          const hasHA = finalTools.some((t: any) => t?.name === 'ha_search' || t?.name === 'ha_call');
-          if (hasHA) {
-            instructions += `\n\nHome Assistant Tools:\n- Use ha_search first to find entity IDs before controlling devices\n- For lights/switches: use domain "light" or "switch" with service "turn_on" or "turn_off"\n- Always report the verification result to confirm success\n- If you get an error, explain it clearly to the user`;
-          }
-
-          const agent = new Agent({
-            name: 'FROK Assistant',
-            instructions,
-            model,
-            modelSettings: supportsReasoning(model)
-              ? { 
-                  reasoning: { 
-                    effort: complexity === 'complex' ? getReasoningEffort(model) : 'low' 
-                  }, 
-                  store: true 
-                }
-              : { store: true },
-            tools: finalTools,
-          });
-
-          // Build current message content with text and images
           const content: any[] = [];
-          
+
           if (input_as_text) {
             content.push({ type: 'input_text', text: input_as_text });
           }
-          
+
           for (const imageUrl of images) {
             content.push({
               type: 'input_image',
@@ -236,14 +247,19 @@ export async function POST(req: Request) {
             });
           }
 
-          // Build full conversation with history + current message
-          const fullConversation: AgentInputItem[] = [
-            ...historyItems,
-            {
-              role: 'user',
-              content,
+          const metadataModel = suite?.models.general ?? selectedModel;
+
+          send({
+            metadata: {
+              complexity,
+              model: metadataModel,
+              routing: orchestrate ? 'orchestrator' : 'direct',
+              historyLength: historyItems.length,
+              tools: finalToolNames,
+              toolSource: suite?.tools.source ?? toolset.source,
+              models: orchestrate ? suite?.models : { general: metadataModel },
             },
-          ];
+          });
 
           const runner = new Runner({
             traceMetadata: {
@@ -252,35 +268,82 @@ export async function POST(req: Request) {
             },
           });
 
-          // Run agent and get result
-          const result = await runner.run(agent, fullConversation);
+          let result: Awaited<ReturnType<typeof runner.run>>;
+          const startedAt = performance.now();
 
-          if (result.finalOutput) {
-            // Optimized streaming: word-based chunks for natural reading
-            const output = String(result.finalOutput);
-            const words = output.split(/(\s+)/); // Split but keep whitespace
-            let accumulated = '';
-            
-            // Stream word by word for smooth, natural appearance
-            for (let i = 0; i < words.length; i++) {
-              accumulated += words[i];
-              
-              // Send update every 3-5 words for optimal performance/smoothness balance
-              if (i % 4 === 0 || i === words.length - 1) {
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({ content: accumulated, done: false })}\n\n`)
-                );
-              }
+          if (orchestrate && suite) {
+            const orchestratedConversation: AgentInputItem[] = [
+              ...suite.primer,
+              ...historyItems,
+              {
+                role: 'user',
+                content,
+              },
+            ];
+
+            result = await runner.run(suite.orchestrator, orchestratedConversation);
+          } else {
+            let instructions =
+              complexity === 'simple'
+                ? 'Be extremely concise. Execute the requested action directly without explanation unless asked.'
+                : complexity === 'complex'
+                ? 'Be thorough and detailed. Use reasoning effort to provide comprehensive analysis.'
+                : 'Be helpful and concise. Use tools when needed.';
+
+            const hasHA = finalTools.some((t: any) => t?.name === 'ha_search' || t?.name === 'ha_call');
+            if (hasHA) {
+              instructions += `\n\nHome Assistant Tools:\n- Use ha_search first to find entity IDs before controlling devices\n- For lights/switches: use domain "light" or "switch" with service "turn_on" or "turn_off"\n- Always report the verification result to confirm success\n- If you get an error, explain it clearly to the user`;
             }
 
-            // Send final complete message
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ content: output, done: true })}\n\n`)
-            );
+            const agent = new Agent({
+              name: 'FROK Assistant',
+              instructions,
+              model: selectedModel,
+              modelSettings: supportsReasoning(selectedModel)
+                ? {
+                    reasoning: {
+                      effort: complexity === 'complex' ? getReasoningEffort(selectedModel) : 'low',
+                    },
+                    store: true,
+                  }
+                : { store: true },
+              tools: finalTools,
+            });
+
+            const directConversation: AgentInputItem[] = [
+              ...historyItems,
+              {
+                role: 'user',
+                content,
+              },
+            ];
+
+            result = await runner.run(agent, directConversation);
+          }
+
+          const durationMs = Math.round(performance.now() - startedAt);
+
+          if (result.finalOutput) {
+            const output = String(result.finalOutput);
+            const chunkSize = 64;
+
+            for (let i = 0; i < output.length; i += chunkSize) {
+              const delta = output.slice(i, Math.min(i + chunkSize, output.length));
+              send({ delta, done: false });
+            }
+
+            send({
+              content: output,
+              done: true,
+              metrics: {
+                durationMs,
+                model: metadataModel,
+                route: orchestrate ? 'orchestrator' : 'direct',
+              },
+              tools: orchestrate ? undefined : finalToolNames,
+            });
           } else {
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ error: 'No response from agent' })}\n\n`)
-            );
+            send({ error: 'No response from agent' });
           }
         });
 
