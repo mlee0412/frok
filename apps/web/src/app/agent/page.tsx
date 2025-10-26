@@ -318,12 +318,41 @@ export default function AgentPage() {
   }, []);
 
   // Performance: Helper to update both threads and cache simultaneously
-  const updateThreadMessages = React.useCallback((threadId: string, messages: Message[]) => {
-    setThreads((prev) =>
-      prev.map((t) => (t.id === threadId ? { ...t, messages } : t))
-    );
-    setMessageCache((prev) => ({ ...prev, [threadId]: messages }));
-  }, []);
+  const updateThreadMessages = React.useCallback(
+    (threadId: string, updater: (prevMessages: Message[]) => Message[]) => {
+      let nextMessages: Message[] | null = null;
+
+      setThreads((prevThreads) => {
+        let threadFound = false;
+
+        const updatedThreads = prevThreads.map((thread) => {
+          if (thread.id !== threadId) return thread;
+
+          threadFound = true;
+          const updatedMessages = updater(thread.messages ?? []);
+          nextMessages = updatedMessages;
+
+          return {
+            ...thread,
+            messages: updatedMessages,
+          };
+        });
+
+        if (!threadFound) {
+          // If the thread isn't present yet, leave the thread list untouched.
+          return prevThreads;
+        }
+
+        return updatedThreads;
+      });
+
+      setMessageCache((prevCache) => {
+        const baseMessages = nextMessages ?? updater(prevCache[threadId] ?? []);
+        return { ...prevCache, [threadId]: baseMessages };
+      });
+    },
+    []
+  );
 
   const startThreadCreation = React.useCallback(() => {
     const tempId = `temp_${Date.now()}`;
@@ -453,16 +482,14 @@ export default function AgentPage() {
         };
 
         // Performance: Update both threads and cache
-        const threadForUpdate =
-          threads.find((t) => t.id === currentThreadId) ||
-          (targetThreadId !== currentThreadId
-            ? threads.find((t) => t.id === targetThreadId)
-            : undefined);
-        const currentMessages = threadForUpdate?.messages || activeThread?.messages || [];
-        updateThreadMessages(currentThreadId, [...currentMessages, userMessage]);
-        
+        let previousMessageCount = 0;
+        updateThreadMessages(currentThreadId, (prevMessages) => {
+          previousMessageCount = prevMessages.length;
+          return [...prevMessages, userMessage];
+        });
+
         // Update title if first message
-        if (currentMessages.length === 0) {
+        if (previousMessageCount === 0) {
           setThreads((prev) =>
             prev.map((t) =>
               t.id === currentThreadId
@@ -473,7 +500,7 @@ export default function AgentPage() {
         }
 
         // Auto-generate smart title if first message
-        if ((threadForUpdate?.messages || activeThread?.messages || []).length === 0) {
+        if (previousMessageCount === 0) {
           // Suggest title in background (non-blocking)
           fetch(`/api/chat/threads/${currentThreadId}/suggest-title`, {
             method: 'POST',
@@ -636,8 +663,10 @@ export default function AgentPage() {
         };
 
         // Performance: Update both threads and cache
-        const currentMessages = activeThread?.messages || [];
-        updateThreadMessages(currentThreadId, [...currentMessages, assistantMessage]);
+        updateThreadMessages(currentThreadId, (prevMessages) => [
+          ...prevMessages,
+          assistantMessage,
+        ]);
       }
     } catch (e: any) {
       console.error('Send message error:', e);
