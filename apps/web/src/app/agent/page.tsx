@@ -325,8 +325,7 @@ export default function AgentPage() {
     setMessageCache((prev) => ({ ...prev, [threadId]: messages }));
   }, []);
 
-  const createNewThread = React.useCallback(async () => {
-    // Optimistic update
+  const startThreadCreation = React.useCallback(() => {
     const tempId = `temp_${Date.now()}`;
     const optimisticThread: Thread = {
       id: tempId,
@@ -334,46 +333,55 @@ export default function AgentPage() {
       messages: [],
       createdAt: Date.now(),
     };
-    
+
     setThreads((prev) => [optimisticThread, ...prev]);
     setActiveThreadId(tempId);
-    
-    try {
-      const res = await fetch('/api/chat/threads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'New Chat' }),
-      });
-      const json = await res.json();
 
-      if (json.ok && json.thread) {
-        const newThread: Thread = {
-          id: json.thread.id,
-          title: json.thread.title,
-          messages: [],
-          createdAt: new Date(json.thread.created_at).getTime(),
-          tags: [],
-          pinned: false,
-          archived: false,
-        };
-        
-        // Replace optimistic thread with real one
-        setThreads((prev) => prev.map((t) => (t.id === tempId ? newThread : t)));
-        setActiveThreadId(newThread.id);
-      } else {
-        // Rollback on error
+    const threadIdPromise = (async () => {
+      try {
+        const res = await fetch('/api/chat/threads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: 'New Chat' }),
+        });
+        const json = await res.json();
+
+        if (json.ok && json.thread) {
+          const newThread: Thread = {
+            id: json.thread.id,
+            title: json.thread.title,
+            messages: [],
+            createdAt: new Date(json.thread.created_at).getTime(),
+            tags: [],
+            pinned: false,
+            archived: false,
+          };
+
+          setThreads((prev) => prev.map((t) => (t.id === tempId ? newThread : t)));
+          setActiveThreadId(newThread.id);
+          return newThread.id as string;
+        }
+
         setThreads((prev) => prev.filter((t) => t.id !== tempId));
         setActiveThreadId(null);
         showToast('Failed to create new chat', 'error');
+        throw new Error('Failed to create new chat');
+      } catch (e) {
+        console.error('Failed to create thread:', e);
+        setThreads((prev) => prev.filter((t) => t.id !== tempId));
+        setActiveThreadId(null);
+        showToast('Failed to create new chat', 'error');
+        throw e;
       }
-    } catch (e) {
-      console.error('Failed to create thread:', e);
-      // Rollback on error
-      setThreads((prev) => prev.filter((t) => t.id !== tempId));
-      setActiveThreadId(null);
-      showToast('Failed to create new chat', 'error');
-    }
+    })();
+
+    return { optimisticId: tempId, threadIdPromise };
   }, [showToast]);
+
+  const createNewThread = React.useCallback(async () => {
+    const { threadIdPromise } = startThreadCreation();
+    return threadIdPromise;
+  }, [startThreadCreation]);
 
   const handleSuggestedPrompt = (prompt: string) => {
     setInput(prompt);
@@ -387,11 +395,21 @@ export default function AgentPage() {
     if (!input.trim() && files.length === 0) return;
     
     let currentThreadId = activeThreadId;
+    let optimisticThreadId = activeThreadId;
+    let threadIdPromise: Promise<string> | null = null;
+
     if (!currentThreadId) {
-      await createNewThread();
-      currentThreadId = threads[0]?.id;
-      if (!currentThreadId) return;
+      const creation = startThreadCreation();
+      optimisticThreadId = creation.optimisticId;
+      threadIdPromise = creation.threadIdPromise;
     }
+
+    const targetThreadId = currentThreadId ?? optimisticThreadId;
+    if (!targetThreadId) return;
+
+    const resolvedThreadId = threadIdPromise ? await threadIdPromise : targetThreadId;
+    if (!resolvedThreadId) return;
+    currentThreadId = resolvedThreadId;
 
     const userContent = input;
     const userFiles = files;
@@ -435,7 +453,12 @@ export default function AgentPage() {
         };
 
         // Performance: Update both threads and cache
-        const currentMessages = activeThread?.messages || [];
+        const threadForUpdate =
+          threads.find((t) => t.id === currentThreadId) ||
+          (targetThreadId !== currentThreadId
+            ? threads.find((t) => t.id === targetThreadId)
+            : undefined);
+        const currentMessages = threadForUpdate?.messages || activeThread?.messages || [];
         updateThreadMessages(currentThreadId, [...currentMessages, userMessage]);
         
         // Update title if first message
@@ -450,7 +473,7 @@ export default function AgentPage() {
         }
 
         // Auto-generate smart title if first message
-        if (activeThread?.messages.length === 0) {
+        if ((threadForUpdate?.messages || activeThread?.messages || []).length === 0) {
           // Suggest title in background (non-blocking)
           fetch(`/api/chat/threads/${currentThreadId}/suggest-title`, {
             method: 'POST',
