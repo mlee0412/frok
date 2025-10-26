@@ -1,16 +1,8 @@
-import { Agent, AgentInputItem, Runner, withTrace } from '@openai/agents';
+import { AgentInputItem, Runner, withTrace } from '@openai/agents';
+import { createAgentSuite } from '@/lib/agent/orchestrator';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-function supportsReasoning(model: string): boolean {
-  return /(gpt-5|o3|gpt-4\.1|gpt-4o-reasoning)/i.test(model);
-}
-
-function getReasoningEffort(model: string): 'low' | 'medium' | 'high' {
-  if (/(gpt-5|o3)/i.test(model)) return 'high';
-  return 'medium';
-}
 
 export async function POST(req: Request) {
   const encoder = new TextEncoder();
@@ -29,26 +21,7 @@ export async function POST(req: Request) {
         }
 
         await withTrace('FROK Assistant Stream', async () => {
-          const { haSearch, haCall, memoryAdd, memorySearch, webSearch } = await import('@/lib/agent/tools');
-          
-          const MODEL = process.env.OPENAI_AGENT_MODEL || 'gpt-4o-mini';
-          
-          const agent = new Agent({
-            name: 'FROK Assistant',
-            instructions:
-              'Be concise and helpful.\n' +
-              'Use tools only when needed; summarize results back to the user.\n' +
-              'Persistent memory: store important user preferences and context; retrieve when relevant.\n' +
-              'Home Assistant: verify success only when HA returns ok:true with a non-empty result; otherwise ask for clarification.\n' +
-              'Web search: use to find current information online.\n' +
-              'Vision: when images are provided, analyze them carefully and describe what you see.\n' +
-              'Respect data privacy; only access external services when obviously necessary.',
-            model: MODEL,
-            modelSettings: supportsReasoning(MODEL)
-              ? { reasoning: { effort: getReasoningEffort(MODEL) }, store: true }
-              : { store: true },
-            tools: [haSearch, haCall, memoryAdd, memorySearch, webSearch],
-          });
+          const suite = await createAgentSuite();
 
           // Build content with text and images
           const content: any[] = [];
@@ -65,11 +38,18 @@ export async function POST(req: Request) {
           }
 
           const conversationHistory: AgentInputItem[] = [
+            ...suite.primer,
             {
               role: 'user',
               content,
             },
           ];
+
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ metadata: { toolset: suite.tools.source, mode: 'orchestrator' } })}\n\n`
+            )
+          );
 
           const runner = new Runner({
             traceMetadata: {
@@ -79,7 +59,7 @@ export async function POST(req: Request) {
           });
 
           // Run agent and get result
-          const result = await runner.run(agent, conversationHistory);
+          const result = await runner.run(suite.orchestrator, conversationHistory);
 
           if (result.finalOutput) {
             // Optimized streaming: larger chunks, no artificial delay

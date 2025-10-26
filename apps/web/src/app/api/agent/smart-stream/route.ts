@@ -1,16 +1,8 @@
 import { Agent, AgentInputItem, Runner, withTrace } from '@openai/agents';
+import { getReasoningEffort, supportsReasoning } from '@/lib/agent/orchestrator';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-function supportsReasoning(model: string): boolean {
-  return /(gpt-5|o3|gpt-4\.1|gpt-4o-reasoning)/i.test(model);
-}
-
-function getReasoningEffort(model: string): 'low' | 'medium' | 'high' {
-  if (/(gpt-5|o3)/i.test(model)) return 'high';
-  return 'medium';
-}
 
 async function classifyQuery(query: string): Promise<'simple' | 'moderate' | 'complex'> {
   // Ultra-fast pattern matching first
