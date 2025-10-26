@@ -33,7 +33,7 @@ export type Thread = {
   // Configuration
   toolsEnabled?: boolean; // Legacy, kept for backwards compatibility
   enabledTools?: string[]; // New: ['home_assistant', 'memory', 'web_search', 'tavily_search', 'image_generation']
-  model?: string; // 'gpt-5' or 'gpt-5-nano'
+  model?: string; // gpt-5-think | gpt-5 | gpt-5-mini | gpt-5-nano
   agentStyle?: string; // 'balanced', 'concise', 'detailed', 'technical', 'casual'
   
   // Context

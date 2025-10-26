@@ -37,9 +37,9 @@ async function classifyQuery(query: string): Promise<'simple' | 'moderate' | 'co
   return 'moderate';
 }
 
-const FAST_MODEL = process.env.OPENAI_FAST_MODEL ?? 'gpt-4.1-mini';
-const BALANCED_MODEL = process.env.OPENAI_BALANCED_MODEL ?? process.env.OPENAI_GENERAL_MODEL ?? 'gpt-4.1';
-const COMPLEX_MODEL = process.env.OPENAI_COMPLEX_MODEL ?? process.env.OPENAI_AGENT_MODEL ?? BALANCED_MODEL;
+const FAST_MODEL = process.env.OPENAI_FAST_MODEL ?? 'gpt-5-nano';
+const BALANCED_MODEL = process.env.OPENAI_BALANCED_MODEL ?? process.env.OPENAI_GENERAL_MODEL ?? 'gpt-5-mini';
+const COMPLEX_MODEL = process.env.OPENAI_COMPLEX_MODEL ?? process.env.OPENAI_AGENT_MODEL ?? 'gpt-5-think';
 
 function selectModelAndTools(
   complexity: 'simple' | 'moderate' | 'complex',
@@ -50,6 +50,18 @@ function selectModelAndTools(
   // User preference overrides (from thread settings)
   if (normalizedPreference === 'gpt-5-nano') {
     return { model: FAST_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: false };
+  }
+
+  if (normalizedPreference === 'gpt-5-mini') {
+    return { model: BALANCED_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: false };
+  }
+
+  if (normalizedPreference === 'gpt-5-think') {
+    return {
+      model: COMPLEX_MODEL,
+      tools: ['home_assistant', 'memory', 'web_search'],
+      orchestrate: true,
+    };
   }
 
   if (normalizedPreference === 'gpt-5') {

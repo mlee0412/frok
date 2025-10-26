@@ -62,11 +62,15 @@ export type AgentStyle = typeof AGENT_STYLES[number]['id'];
  * Model options
  */
 export const MODEL_OPTIONS = [
-  { id: 'gpt-5', name: 'GPT-5', description: 'Most capable, slower' },
-  { id: 'gpt-5-nano', name: 'GPT-5 Nano', description: 'Faster, more efficient' },
+  { id: 'gpt-5-think', name: 'GPT-5 Think', description: 'Deep reasoning, highest latency' },
+  { id: 'gpt-5', name: 'GPT-5', description: 'Advanced reasoning, slower' },
+  { id: 'gpt-5-mini', name: 'GPT-5 Mini', description: 'Balanced default with strong quality' },
+  { id: 'gpt-5-nano', name: 'GPT-5 Nano', description: 'Fastest responses, lightweight' },
 ] as const;
 
 export type ModelId = typeof MODEL_OPTIONS[number]['id'];
+
+const ALLOWED_MODEL_IDS = MODEL_OPTIONS.map(option => option.id);
 
 /**
  * Create a new thread with default values
@@ -85,7 +89,7 @@ export function createDefaultThread(overrides?: Partial<Thread>): Thread {
     folder: undefined,
     toolsEnabled: true,
     enabledTools: [...DEFAULT_ENABLED_TOOLS],
-    model: 'gpt-5',
+    model: 'gpt-5-mini',
     agentStyle: 'balanced',
     projectContext: undefined,
     agentName: 'FROK Assistant',
@@ -199,7 +203,7 @@ export function validateThread(thread: Partial<Thread>): { valid: boolean; error
     errors.push('At least one tool must be enabled');
   }
 
-  if (thread.model && !['gpt-5', 'gpt-5-nano'].includes(thread.model)) {
+  if (thread.model && !ALLOWED_MODEL_IDS.includes(thread.model as ModelId)) {
     errors.push('Invalid model selection');
   }
 

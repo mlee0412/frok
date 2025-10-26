@@ -30,7 +30,7 @@ function mapThreadRow(r: any): ChatThread {
     toolsEnabled: r.tools_enabled || false,
     enabledTools:
       r.enabled_tools || ['home_assistant', 'memory', 'web_search', 'tavily_search', 'image_generation'],
-    model: r.model || 'gpt-5',
+    model: r.model || 'gpt-5-mini',
     agentStyle: r.agent_style || 'balanced',
     projectContext: r.project_context,
     agentName: r.agent_name || 'FROK Assistant',
@@ -102,7 +102,7 @@ export async function createThread(t: ChatThread): Promise<void> {
     tags: t.tags || [],
     folder: t.folder || null,
     enabled_tools: t.enabledTools || ['home_assistant', 'memory', 'web_search', 'tavily_search', 'image_generation'],
-    model: t.model || 'gpt-5',
+    model: t.model || 'gpt-5-mini',
     agent_style: t.agentStyle || 'balanced',
     project_context: t.projectContext || null,
     agent_name: t.agentName || 'FROK Assistant',

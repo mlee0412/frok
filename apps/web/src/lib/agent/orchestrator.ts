@@ -1,9 +1,9 @@
 import { Agent, type AgentInputItem, type InputGuardrail, type OutputGuardrail, type Tool } from '@openai/agents';
 
-const FAST_MODEL_FALLBACK = process.env.OPENAI_FAST_MODEL ?? 'gpt-4.1-mini';
-const BALANCED_MODEL_FALLBACK = process.env.OPENAI_GENERAL_MODEL ?? 'gpt-4.1';
+const FAST_MODEL_FALLBACK = process.env.OPENAI_FAST_MODEL ?? 'gpt-5-nano';
+const BALANCED_MODEL_FALLBACK = process.env.OPENAI_GENERAL_MODEL ?? 'gpt-5-mini';
 const COMPLEX_MODEL_FALLBACK =
-  process.env.OPENAI_COMPLEX_MODEL ?? process.env.OPENAI_AGENT_MODEL ?? BALANCED_MODEL_FALLBACK;
+  process.env.OPENAI_COMPLEX_MODEL ?? process.env.OPENAI_AGENT_MODEL ?? 'gpt-5-think';
 
 type AgentTool = Tool<unknown>;
 
@@ -47,7 +47,10 @@ export interface AgentSuiteOptions {
 export function supportsReasoning(model: string): boolean {
   const normalized = model.toLowerCase();
 
-  if (normalized.includes('gpt-5')) return true;
+  if (normalized === 'gpt-5') return true;
+  if (normalized.startsWith('gpt-5-')) {
+    return /think|reason|pro/.test(normalized);
+  }
   if (normalized.startsWith('o3')) return true;
   if (normalized === 'gpt-4.1' || normalized.startsWith('gpt-4.1-reasoning')) return true;
   if (normalized.includes('gpt-4o-reasoning')) return true;
@@ -57,7 +60,7 @@ export function supportsReasoning(model: string): boolean {
 
 export function getReasoningEffort(model: string): 'low' | 'medium' | 'high' {
   const normalized = model.toLowerCase();
-  if (normalized.includes('gpt-5') || normalized.startsWith('o3')) {
+  if (normalized === 'gpt-5' || /think|reason|pro/.test(normalized) || normalized.startsWith('o3')) {
     return 'high';
   }
 

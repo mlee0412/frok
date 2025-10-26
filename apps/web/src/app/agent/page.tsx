@@ -57,7 +57,7 @@ export default function AgentPage() {
   const [input, setInput] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [files, setFiles] = React.useState<File[]>([]);
-  const [modelName, setModelName] = React.useState('gpt-5');
+  const [modelName, setModelName] = React.useState('gpt-5-mini');
   const [loadingThreads, setLoadingThreads] = React.useState(true);
   const [loadingMessages, setLoadingMessages] = React.useState(false);
   
@@ -174,7 +174,7 @@ export default function AgentPage() {
     fetch('/api/agent/config')
       .then((res) => res.json())
       .then((data) => setModelName(data.model))
-      .catch(() => setModelName('gpt-5'));
+      .catch(() => setModelName('gpt-5-mini'));
 
     loadThreads();
   }, []);
@@ -196,7 +196,7 @@ export default function AgentPage() {
           pinned: t.pinned || false,
           archived: t.archived || false,
           enabledTools: t.enabled_tools || ['home_assistant', 'memory', 'web_search', 'tavily_search', 'image_generation'],
-          model: t.model || 'gpt-5',
+          model: t.model || 'gpt-5-mini',
           agentStyle: t.agent_style || 'balanced',
         })));
       }
@@ -464,7 +464,7 @@ export default function AgentPage() {
         body: JSON.stringify({ 
           input_as_text: userContent,
           images: images.length > 0 ? images.map(img => img.url) : undefined,
-          model: activeThread?.model || 'gpt-5',
+          model: activeThread?.model || 'gpt-5-mini',
           enabled_tools: activeThread?.enabledTools,
           thread_id: currentThreadId, // Pass thread ID for conversation history
         }),
@@ -667,7 +667,7 @@ export default function AgentPage() {
         body: JSON.stringify({ 
           input_as_text: userMessage.content,
           images: userMessage.images?.map(img => img.url),
-          model: activeThread?.model || 'gpt-5',
+          model: activeThread?.model || 'gpt-5-mini',
           enabled_tools: activeThread?.enabledTools,
           thread_id: activeThreadId, // Pass thread ID for conversation history
         }),
@@ -1164,7 +1164,7 @@ export default function AgentPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           input_as_text: newContent,
-          model: activeThread?.model || 'gpt-5',
+          model: activeThread?.model || 'gpt-5-mini',
           enabled_tools: activeThread?.enabledTools,
           thread_id: activeThreadId, // Pass thread ID for conversation history
         }),
