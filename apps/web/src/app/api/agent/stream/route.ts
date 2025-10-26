@@ -1,4 +1,5 @@
 import { AgentInputItem, Runner, withTrace } from '@openai/agents';
+import { performance } from 'perf_hooks';
 import { createAgentSuite } from '@/lib/agent/orchestrator';
 
 export const runtime = 'nodejs';
@@ -45,9 +46,24 @@ export async function POST(req: Request) {
             },
           ];
 
+          const orchestratorTools = [
+            suite.tools.haSearch?.name ?? 'ha_search',
+            suite.tools.haCall?.name ?? 'ha_call',
+            suite.tools.memoryAdd?.name ?? 'memory_add',
+            suite.tools.memorySearch?.name ?? 'memory_search',
+            suite.tools.webSearch?.name ?? 'web_search',
+          ];
+
           controller.enqueue(
             encoder.encode(
-              `data: ${JSON.stringify({ metadata: { toolset: suite.tools.source, mode: 'orchestrator' } })}\n\n`
+              `data: ${JSON.stringify({
+                metadata: {
+                  toolset: suite.tools.source,
+                  tools: orchestratorTools,
+                  mode: 'orchestrator',
+                  models: suite.models,
+                },
+              })}\n\n`
             )
           );
 
@@ -59,26 +75,35 @@ export async function POST(req: Request) {
           });
 
           // Run agent and get result
+          const startedAt = performance.now();
           const result = await runner.run(suite.orchestrator, conversationHistory);
+          const durationMs = Math.round(performance.now() - startedAt);
 
           if (result.finalOutput) {
             // Optimized streaming: larger chunks, no artificial delay
             const output = String(result.finalOutput);
-            
-            // Send in character chunks for smoother streaming (no word boundaries)
-            const chunkSize = 5; // Send 5 characters at a time for balance between smoothness and efficiency
-            
+
+            const chunkSize = 48;
+
             for (let i = 0; i < output.length; i += chunkSize) {
-              const chunk = output.slice(0, Math.min(i + chunkSize, output.length));
+              const delta = output.slice(i, Math.min(i + chunkSize, output.length));
               controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ content: chunk, done: false })}\n\n`)
+                encoder.encode(`data: ${JSON.stringify({ delta, done: false })}\n\n`)
               );
-              // No artificial delay - send as fast as possible
             }
 
-            // Send final complete message
             controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ content: output, done: true })}\n\n`)
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  content: output,
+                  done: true,
+                  metrics: {
+                    durationMs,
+                    model: suite.models.general,
+                    route: 'orchestrator',
+                  },
+                })}\n\n`
+              )
             );
           } else {
             controller.enqueue(

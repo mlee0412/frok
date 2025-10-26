@@ -1,5 +1,10 @@
 import { Agent, type AgentInputItem, type InputGuardrail, type OutputGuardrail, type Tool } from '@openai/agents';
 
+const FAST_MODEL_FALLBACK = process.env.OPENAI_FAST_MODEL ?? 'gpt-4.1-mini';
+const BALANCED_MODEL_FALLBACK = process.env.OPENAI_GENERAL_MODEL ?? 'gpt-4.1';
+const COMPLEX_MODEL_FALLBACK =
+  process.env.OPENAI_COMPLEX_MODEL ?? process.env.OPENAI_AGENT_MODEL ?? BALANCED_MODEL_FALLBACK;
+
 type AgentTool = Tool<unknown>;
 
 export interface LoadedTools {
@@ -19,6 +24,13 @@ export interface AgentSuite {
   general: Agent;
   tools: LoadedTools;
   primer: AgentInputItem[];
+  models: {
+    router: string;
+    home: string;
+    memory: string;
+    research: string;
+    general: string;
+  };
 }
 
 export interface AgentSuiteOptions {
@@ -33,11 +45,22 @@ export interface AgentSuiteOptions {
 }
 
 export function supportsReasoning(model: string): boolean {
-  return /(gpt-5|o3|gpt-4\.1|gpt-4o-reasoning)/i.test(model);
+  const normalized = model.toLowerCase();
+
+  if (normalized.includes('gpt-5')) return true;
+  if (normalized.startsWith('o3')) return true;
+  if (normalized === 'gpt-4.1' || normalized.startsWith('gpt-4.1-reasoning')) return true;
+  if (normalized.includes('gpt-4o-reasoning')) return true;
+
+  return false;
 }
 
 export function getReasoningEffort(model: string): 'low' | 'medium' | 'high' {
-  if (/(gpt-5|o3)/i.test(model)) return 'high';
+  const normalized = model.toLowerCase();
+  if (normalized.includes('gpt-5') || normalized.startsWith('o3')) {
+    return 'high';
+  }
+
   return 'medium';
 }
 
@@ -151,13 +174,13 @@ export async function createAgentSuite(options: AgentSuiteOptions = {}): Promise
   const primer = buildConversationPrimer();
 
   const routerModel =
-    options.models?.router ?? process.env.OPENAI_ROUTER_MODEL ?? process.env.OPENAI_AGENT_MODEL ?? 'gpt-4o-mini';
+    options.models?.router ?? process.env.OPENAI_ROUTER_MODEL ?? FAST_MODEL_FALLBACK;
   const generalModel =
-    options.models?.general ??
-    (options.preferFastGeneral ? routerModel : process.env.OPENAI_AGENT_MODEL ?? 'gpt-4o');
-  const homeModel = options.models?.home ?? routerModel;
-  const memoryModel = options.models?.memory ?? routerModel;
-  const researchModel = options.models?.research ?? process.env.OPENAI_RESEARCH_MODEL ?? generalModel;
+    options.models?.general ?? (options.preferFastGeneral ? BALANCED_MODEL_FALLBACK : COMPLEX_MODEL_FALLBACK);
+  const homeModel = options.models?.home ?? process.env.OPENAI_HOME_MODEL ?? routerModel;
+  const memoryModel = options.models?.memory ?? process.env.OPENAI_MEMORY_MODEL ?? routerModel;
+  const researchModel =
+    options.models?.research ?? process.env.OPENAI_RESEARCH_MODEL ?? BALANCED_MODEL_FALLBACK;
 
   const homeAgent = new Agent({
     name: 'Home Control Specialist',
@@ -242,6 +265,13 @@ export async function createAgentSuite(options: AgentSuiteOptions = {}): Promise
     general: generalAgent,
     tools,
     primer,
+    models: {
+      router: routerModel,
+      home: homeModel,
+      memory: memoryModel,
+      research: researchModel,
+      general: generalModel,
+    },
   };
 }
 
