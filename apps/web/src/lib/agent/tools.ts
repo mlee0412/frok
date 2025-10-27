@@ -1,6 +1,7 @@
 import { tool } from '@openai/agents';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
+import OpenAI from 'openai';
 
 function getHA() {
   const base = (process.env.HOME_ASSISTANT_URL || process.env.HA_BASE_URL || '').trim();
@@ -14,6 +15,17 @@ function getSupabase() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return null;
   return createClient(url, key);
+}
+
+let cachedOpenAI: OpenAI | null = null;
+
+function getOpenAI() {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+  if (!cachedOpenAI) {
+    cachedOpenAI = new OpenAI({ apiKey });
+  }
+  return cachedOpenAI;
 }
 
 // Home Assistant: search entities and areas
@@ -121,10 +133,23 @@ export const memoryAdd = tool({
     const supabase = getSupabase();
     if (!supabase) throw new Error('Supabase config missing');
 
+    const openai = getOpenAI();
+    if (!openai) throw new Error('OpenAI config missing');
+
     const user_id = 'system';
+    const embeddingResponse = await openai.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: content,
+    });
+
+    const embedding = embeddingResponse.data[0]?.embedding;
+    if (!embedding) {
+      throw new Error('Failed to generate embedding for memory');
+    }
+
     const { data, error } = await supabase
       .from('memories')
-      .insert({ user_id, content, tags: tags || [] })
+      .insert({ user_id, content, tags: tags || [], embedding })
       .select('id')
       .single();
 
@@ -145,15 +170,32 @@ export const memorySearch = tool({
     const supabase = getSupabase();
     if (!supabase) throw new Error('Supabase config missing');
 
+    const openai = getOpenAI();
+    if (!openai) throw new Error('OpenAI config missing');
+
     const limit = top_k ?? 5;
     const user_id = 'system';
-    const { data, error } = await supabase
-      .from('memories')
-      .select('id, content, tags, created_at')
-      .eq('user_id', user_id)
-      .ilike('content', `%${query}%`)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    const embeddingResponse = await openai.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: query,
+    });
+
+    const queryEmbedding = embeddingResponse.data[0]?.embedding;
+    if (!queryEmbedding) {
+      throw new Error('Failed to generate embedding for memory search');
+    }
+
+    const rpcInput: Record<string, any> = {
+      query_embedding: queryEmbedding,
+      match_threshold: 0.7,
+      match_count: limit,
+    };
+
+    if (user_id) {
+      rpcInput.user_id = user_id;
+    }
+
+    const { data, error } = await supabase.rpc('match_memories', rpcInput);
 
     if (error) throw new Error(`Memory search failed: ${error.message}`);
 
@@ -161,7 +203,7 @@ export const memorySearch = tool({
       id: m.id,
       content: m.content,
       tags: m.tags || [],
-      score: 1.0,
+      score: m.similarity ?? m.score ?? 0,
       created_at: m.created_at,
     }));
 
