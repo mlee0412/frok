@@ -3,6 +3,15 @@ import * as React from 'react';
 
 type Item = { label: string; href: string };
 
+type SideNavLinkProps = React.ComponentPropsWithoutRef<'a'>;
+
+const DefaultLinkComponent = React.forwardRef<HTMLAnchorElement, SideNavLinkProps>(function DefaultLinkComponent(
+  props,
+  ref,
+) {
+  return <a ref={ref} {...props} />;
+});
+
 export type SideNavProps = {
   items: Item[];
   header?: React.ReactNode;
@@ -12,15 +21,28 @@ export type SideNavProps = {
   collapsible?: boolean;
   defaultCollapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
+  linkComponent?: React.ElementType<SideNavLinkProps>;
 };
 
-export function SideNav({ items, header, footer, activeHref, className, collapsible, defaultCollapsed, onCollapsedChange }: SideNavProps) {
+export function SideNav({
+  items,
+  header,
+  footer,
+  activeHref,
+  className,
+  collapsible,
+  defaultCollapsed,
+  onCollapsedChange,
+  linkComponent,
+}: SideNavProps) {
   const [collapsed, setCollapsed] = React.useState(!!defaultCollapsed);
   const isActive = (href: string) => (
     activeHref && (
       href === '/dashboard' ? activeHref === '/dashboard' : (activeHref === href || activeHref.startsWith(href + '/'))
     )
   );
+
+  const LinkComponent = linkComponent ?? DefaultLinkComponent;
 
   return (
     <aside className={[
@@ -46,24 +68,29 @@ export function SideNav({ items, header, footer, activeHref, className, collapsi
         'flex flex-col space-y-1 w-full',
         collapsed ? 'px-2' : 'px-4',
       ].join(' ')}>
-        {items.map((link) => (
-          <a
-            key={link.href}
-            href={link.href}
-            title={link.label}
-            aria-current={isActive(link.href) ? 'page' : undefined}
-            className={[
-              'rounded-md py-2 text-sm transition border-l-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1',
-              collapsed ? 'px-0 text-center' : 'pl-4 pr-3 text-left',
-              isActive(link.href)
-                ? 'bg-surface text-primary border-l-primary'
-                : 'hover:bg-surface hover:text-primary border-l-transparent text-foreground/80',
-            ].join(' ')}
-          >
-            <span className={collapsed ? 'sr-only' : ''}>{link.label}</span>
-            {collapsed ? <span aria-hidden>•</span> : null}
-          </a>
-        ))}
+        {items.map((link) => {
+          const ariaCurrent = isActive(link.href) ? 'page' : undefined;
+          const linkClasses = [
+            'rounded-md py-2 text-sm transition border-l-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1',
+            collapsed ? 'px-0 text-center' : 'pl-4 pr-3 text-left',
+            ariaCurrent
+              ? 'bg-surface text-primary border-l-primary'
+              : 'hover:bg-surface hover:text-primary border-l-transparent text-foreground/80',
+          ].join(' ');
+
+          return (
+            <LinkComponent
+              key={link.href}
+              href={link.href}
+              title={link.label}
+              aria-current={ariaCurrent}
+              className={linkClasses}
+            >
+              <span className={collapsed ? 'sr-only' : ''}>{link.label}</span>
+              {collapsed ? <span aria-hidden>•</span> : null}
+            </LinkComponent>
+          );
+        })}
       </nav>
       {footer}
     </aside>

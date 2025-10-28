@@ -1,5 +1,6 @@
 'use client';
 import * as React from 'react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SideNav } from '@frok/ui';
 
@@ -15,6 +16,12 @@ export default function DashboardNav({
   footer?: React.ReactNode;
 }) {
   const pathname = usePathname() || '';
+  const LinkComponent = React.useCallback(
+    ({ href = '#', ...rest }: React.ComponentPropsWithoutRef<'a'>) => (
+      <Link href={href} {...rest} />
+    ),
+    [],
+  );
   return (
     <SideNav
       items={items}
@@ -23,6 +30,7 @@ export default function DashboardNav({
       activeHref={pathname}
       collapsible
       defaultCollapsed={false}
+      linkComponent={LinkComponent}
     />
   );
 }
