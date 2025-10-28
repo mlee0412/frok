@@ -4,7 +4,6 @@ import { usePathname } from 'next/navigation';
 
 function labelize(segment: string) {
   const map: Record<string, string> = {
-    smarthome: 'Smart Home',
     'smart-home': 'Smart Home',
     ui: 'UI',
   };

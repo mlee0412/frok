@@ -8,7 +8,7 @@ const nav = [
   { label: 'Profile', href: '/dashboard/profile' },
   { label: 'System', href: '/dashboard/system' },
   { label: 'Users', href: '/dashboard/users' },
-  { label: 'Smart Home', href: '/dashboard/smarthome' },
+  { label: 'Smart Home', href: '/dashboard/smart-home' },
   { label: 'Health', href: '/dashboard/health' },
   { label: 'Development', href: '/dashboard/development' },
   { label: 'Automation', href: '/dashboard/automation' },
