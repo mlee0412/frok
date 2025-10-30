@@ -245,9 +245,10 @@ export default function AgentPage() {
     const loadMessages = async () => {
       // Performance: Check cache first
       if (messageCache[activeThreadId]) {
+        const cachedMessages = messageCache[activeThreadId];
         setThreads((prev) =>
           prev.map((t) =>
-            t.id === activeThreadId ? { ...t, messages: messageCache[activeThreadId] } : t
+            t.id === activeThreadId ? { ...t, messages: cachedMessages } : t
           )
         );
         return; // Cache hit - no API call needed!
