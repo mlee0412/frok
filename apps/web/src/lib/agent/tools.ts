@@ -3,6 +3,43 @@ import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 
+// Home Assistant types
+type HAEntityState = {
+  entity_id: string;
+  state: string;
+  attributes?: {
+    friendly_name?: string;
+    [key: string]: unknown;
+  };
+};
+
+type HAArea = {
+  area_id: string;
+  name: string;
+};
+
+// Tavily API types
+type TavilyResult = {
+  title: string;
+  url: string;
+  content: string;
+};
+
+type TavilyResponse = {
+  answer?: string;
+  results?: TavilyResult[];
+};
+
+// Memory search result type
+type MemorySearchResult = {
+  id: string;
+  content: string;
+  tags: string[];
+  similarity?: number;
+  score?: number;
+  created_at: string;
+};
+
 function getHA() {
   const base = (process.env["HOME_ASSISTANT_URL"] || process.env["HA_BASE_URL"] || '').trim();
   const token = (process.env["HOME_ASSISTANT_TOKEN"] || process.env["HA_TOKEN"] || '').trim();
@@ -49,7 +86,7 @@ export const haSearch = tool({
       cache: 'no-store',
     });
     if (!statesRes.ok) throw new Error(`HA API error: ${statesRes.status}`);
-    const states: any[] = await statesRes.json();
+    const states = await statesRes.json() as HAEntityState[];
 
     // Filter entities
     const entities = states
@@ -73,7 +110,7 @@ export const haSearch = tool({
       headers: { Authorization: `Bearer ${ha.token}` },
       cache: 'no-store',
     });
-    const areas: any[] = areasRes.ok ? await areasRes.json() : [];
+    const areas: HAArea[] = areasRes.ok ? await areasRes.json() as HAArea[] : [];
     const matchingAreas = areas
       .filter((a) => String(a.name || '').toLowerCase().includes(queryLower))
       .slice(0, 10)
@@ -99,7 +136,7 @@ export const haCall = tool({
     const ha = getHA();
     if (!ha) throw new Error('HA config missing');
 
-    const payload: any = { ...(data || {}) };
+    const payload: Record<string, unknown> = { ...(data || {}) };
     if (entity_id) payload.entity_id = entity_id;
     if (area_id) payload.area_id = area_id;
     if (target) payload.target = target;
@@ -185,7 +222,7 @@ export const memorySearch = tool({
       throw new Error('Failed to generate embedding for memory search');
     }
 
-    const rpcInput: Record<string, any> = {
+    const rpcInput: Record<string, unknown> = {
       query_embedding: queryEmbedding,
       match_threshold: 0.7,
       match_count: limit,
@@ -199,7 +236,7 @@ export const memorySearch = tool({
 
     if (error) throw new Error(`Memory search failed: ${error.message}`);
 
-    const results = (data || []).map((m: any) => ({
+    const results = (data as MemorySearchResult[] || []).map((m) => ({
       id: m.id,
       content: m.content,
       tags: m.tags || [],
@@ -238,8 +275,8 @@ export const webSearch = tool({
 
       if (!res.ok) throw new Error(`Tavily API error: ${res.status}`);
 
-      const data: any = await res.json();
-      const results = (data.results || []).map((r: any) => ({
+      const data = await res.json() as TavilyResponse;
+      const results = (data.results || []).map((r) => ({
         title: r.title || '',
         url: r.url || '',
         snippet: r.content || '',

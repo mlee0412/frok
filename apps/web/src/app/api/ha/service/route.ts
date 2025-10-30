@@ -10,7 +10,7 @@ function getHA() {
 export async function POST(req: Request) {
   const ha = getHA();
   if (!ha) return NextResponse.json({ ok: false, error: 'missing_home_assistant_env' }, { status: 400 });
-  let body: any;
+  let body: unknown;
   try {
     body = await req.json();
   } catch {

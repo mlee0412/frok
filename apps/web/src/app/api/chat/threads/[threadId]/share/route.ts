@@ -36,10 +36,11 @@ export async function POST(
     const shareUrl = `${req.headers.get('origin')}/shared/${shareToken}`;
 
     return NextResponse.json({ ok: true, shareUrl, token: shareToken });
-  } catch (e: any) {
-    console.error('[share POST error]', e);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to create share link';
+    console.error('[share POST error]', message);
     return NextResponse.json(
-      { ok: false, error: e?.message || 'Failed to create share link' },
+      { ok: false, error: message },
       { status: 500 }
     );
   }
@@ -61,10 +62,11 @@ export async function DELETE(
     if (error) throw error;
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    console.error('[share DELETE error]', e);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to delete share link';
+    console.error('[share DELETE error]', message);
     return NextResponse.json(
-      { ok: false, error: e?.message || 'Failed to delete share link' },
+      { ok: false, error: message },
       { status: 500 }
     );
   }

@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     }),
   });
 
-  const data: any = await upstream.json().catch(() => ({}));
+  const data = await upstream.json().catch(() => ({})) as Record<string, unknown>;
   if (!upstream.ok) {
     const res = NextResponse.json({ error: data?.error || 'session_create_failed', details: data }, { status: upstream.status });
     if (sessionCookie) res.headers.set('Set-Cookie', sessionCookie);

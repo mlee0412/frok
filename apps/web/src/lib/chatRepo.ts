@@ -2,6 +2,13 @@ import { supabaseClient } from './supabaseClient';
 import type { Thread as ChatThread, ThreadUpdate, Message } from './types/chat';
 import type { ChatThreadRow, ChatMessageRow } from '../types/database';
 
+// Supabase Realtime types
+type RealtimePayload<T> = {
+  new: T;
+  old: T | null;
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+};
+
 // Legacy support
 export type Msg = Message;
 
@@ -130,9 +137,9 @@ export async function updateThreadAgent(id: string, agentId: string): Promise<vo
 export async function updateThread(id: string, updates: ThreadUpdate): Promise<void> {
   const supa = supabaseClient();
   const uid = await userIdOrAnon();
-  
-  const toWrite: any = {};
-  
+
+  const toWrite: Partial<ChatThreadRow> = {};
+
   // Map client fields to database columns
   if (updates.title !== undefined) toWrite.title = updates.title;
   if (updates.agentId !== undefined) toWrite.agent_id = updates.agentId;
@@ -211,14 +218,14 @@ export function subscribe(
 ): ChatSubscriptions {
   const supa = supabaseClient();
   const channel = supa.channel('realtime:chat')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_threads' }, (payload: any) => {
-      const r: any = payload.new;
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_threads' }, (payload: RealtimePayload<ChatThreadRow>) => {
+      const r = payload.new;
       if (!r) return;
 
       onThreadUpsert(mapThreadRow(r));
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, (payload: any) => {
-      const r: any = payload.new;
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, (payload: RealtimePayload<ChatMessageRow>) => {
+      const r = payload.new;
       if (!r) return;
       
       onMessageUpsert(r.thread_id, {
