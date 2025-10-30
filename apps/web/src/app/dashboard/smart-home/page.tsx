@@ -1,7 +1,19 @@
 import React from 'react';
+import dynamic from 'next/dynamic';
 import { headers } from 'next/headers';
 import { Card } from '@frok/ui';
-import SmartHomeView from '@/components/smart-home/SmartHomeView';
+
+// Dynamic import for SmartHomeView (client-heavy component)
+const SmartHomeView = dynamic(() => import('@/components/smart-home/SmartHomeView'), {
+  loading: () => (
+    <div className="animate-pulse space-y-4">
+      <div className="h-20 bg-surface/50 rounded" />
+      <div className="h-32 bg-surface/50 rounded" />
+      <div className="h-32 bg-surface/50 rounded" />
+    </div>
+  ),
+  ssr: false,
+});
 
 // ISR with 15-second revalidation for smart home data
 export const revalidate = 15;

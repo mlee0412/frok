@@ -1,10 +1,28 @@
 import React from 'react';
+import dynamic from 'next/dynamic';
 import { headers } from 'next/headers';
 import { Card } from '@frok/ui';
-import FinancesCharts from './FinancesCharts';
-import FinancesImportClient from './FinancesImportClient';
-import FinancesRulesClient from './FinancesRulesClient';
-import FinancesTransactionsClient from './FinancesTransactionsClient';
+
+// Dynamic imports for heavy finance components
+const FinancesCharts = dynamic(() => import('./FinancesCharts'), {
+  loading: () => <div className="h-32 animate-pulse bg-surface/50 rounded" />,
+  ssr: false,
+});
+
+const FinancesImportClient = dynamic(() => import('./FinancesImportClient'), {
+  loading: () => <div className="h-40 animate-pulse bg-surface/50 rounded" />,
+  ssr: false,
+});
+
+const FinancesRulesClient = dynamic(() => import('./FinancesRulesClient'), {
+  loading: () => <div className="h-40 animate-pulse bg-surface/50 rounded" />,
+  ssr: false,
+});
+
+const FinancesTransactionsClient = dynamic(() => import('./FinancesTransactionsClient'), {
+  loading: () => <div className="h-96 animate-pulse bg-surface/50 rounded" />,
+  ssr: false,
+});
 
 // ISR with 60-second revalidation for financial data
 export const revalidate = 60;
