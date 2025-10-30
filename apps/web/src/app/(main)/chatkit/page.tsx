@@ -153,9 +153,9 @@ export default function ChatKitPage() {
               const token = j?.client_secret ?? null;
               setStatus(token ? 'ok' : 'error');
               if (!token) setMessage(typeof j?.error === 'string' ? j.error : 'missing client_secret');
-            } catch (e: any) {
+            } catch (error: unknown) {
               setStatus('error');
-              setMessage(e?.message || 'request failed');
+              setMessage(error instanceof Error ? error.message : 'request failed');
             }
           }}
           style={{ marginTop: 6, background: '#0ea5e9', color: '#000', borderRadius: 4, padding: '4px 8px' }}

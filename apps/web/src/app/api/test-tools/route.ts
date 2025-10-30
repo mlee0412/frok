@@ -5,8 +5,8 @@ export async function GET() {
     // Try to import tools
     const { haSearch, haCall, memoryAdd, memorySearch, webSearch } = await import('@/lib/agent/tools');
     
-    return NextResponse.json({ 
-      ok: true, 
+    return NextResponse.json({
+      ok: true,
       tools: [
         haSearch.name,
         haCall.name,
@@ -15,12 +15,12 @@ export async function GET() {
         webSearch.name
       ]
     });
-  } catch (e: any) {
-    console.error('[test-tools error]', e);
-    return NextResponse.json({ 
-      ok: false, 
-      error: e?.message || String(e),
-      stack: e?.stack 
+  } catch (error: unknown) {
+    console.error('[test-tools error]', error);
+    return NextResponse.json({
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
     }, { status: 500 });
   }
 }

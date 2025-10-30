@@ -36,7 +36,7 @@ export function ChatKitLauncher() {
         });
 
         const text = await res.text();
-        let json: any;
+        let json: { client_secret?: string; error?: string };
         try {
           json = JSON.parse(text);
         } catch {

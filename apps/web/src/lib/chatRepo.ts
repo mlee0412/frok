@@ -9,6 +9,24 @@ type RealtimePayload<T> = {
   eventType: 'INSERT' | 'UPDATE' | 'DELETE';
 };
 
+// Typed Supabase helpers to avoid 'as any' casts
+type SupabaseClient = ReturnType<typeof supabaseClient>;
+type SupabaseQueryBuilder<T> = {
+  select: (columns?: string) => SupabaseQueryBuilder<T>;
+  insert: (data: Partial<T> | Partial<T>[], options?: { onConflict?: string; ignoreDuplicates?: boolean }) => SupabaseQueryBuilder<T>;
+  update: (data: Partial<T>) => SupabaseQueryBuilder<T>;
+  eq: (column: string, value: unknown) => SupabaseQueryBuilder<T>;
+  is: (column: string, value: unknown) => SupabaseQueryBuilder<T>;
+  order: (column: string, options?: { ascending?: boolean }) => SupabaseQueryBuilder<T>;
+  limit: (count: number) => SupabaseQueryBuilder<T>;
+  single: () => Promise<{ data: T | null; error: { message: string } | null }>;
+};
+
+function supaTable<T>(client: SupabaseClient, table: string): SupabaseQueryBuilder<T> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return client.from(table) as any;
+}
+
 // Legacy support
 export type Msg = Message;
 
@@ -59,8 +77,8 @@ async function userIdOrAnon(): Promise<string> {
 export async function listThreads(): Promise<ChatThread[]> {
   const supa = supabaseClient();
   const uid = await userIdOrAnon();
-  
-  const { data, error } = await (supa.from('chat_threads' as any) as any)
+
+  const { data, error } = await supaTable<ChatThreadRow>(supa, 'chat_threads')
     .select('*')
     .eq('user_id', uid)
     .is('deleted_at', null)
@@ -75,8 +93,8 @@ export async function listThreads(): Promise<ChatThread[]> {
 export async function getThreadMessages(threadId: string): Promise<Message[]> {
   const supa = supabaseClient();
   const uid = await userIdOrAnon();
-  
-  const { data, error } = await (supa.from('chat_messages' as any) as any)
+
+  const { data, error } = await supaTable<ChatMessageRow>(supa, 'chat_messages')
     .select('*')
     .eq('thread_id', threadId)
     .eq('user_id', uid)
@@ -116,21 +134,21 @@ export async function createThread(t: ChatThread): Promise<void> {
     agent_name: t.agentName || 'FROK Assistant',
   };
   
-  const { error } = await (supa.from('chat_threads' as any) as any)
-    .insert(row, { onConflict: 'id', ignoreDuplicates: true } as any);
+  const { error } = await supaTable<ChatThreadRow>(supa, 'chat_threads')
+    .insert(row, { onConflict: 'id', ignoreDuplicates: true });
     
   if (error) throw error;
 }
 
 export async function updateThreadTitle(id: string, title: string): Promise<void> {
   const supa = supabaseClient();
-  const { error } = await (supa.from('chat_threads' as any) as any).update({ title }).eq('id', id);
+  const { error } = await supaTable<ChatThreadRow>(supa, 'chat_threads').update({ title }).eq('id', id);
   if (error) throw error;
 }
 
 export async function updateThreadAgent(id: string, agentId: string): Promise<void> {
   const supa = supabaseClient();
-  const { error } = await (supa.from('chat_threads' as any) as any).update({ agent_id: agentId }).eq('id', id);
+  const { error } = await supaTable<ChatThreadRow>(supa, 'chat_threads').update({ agent_id: agentId }).eq('id', id);
   if (error) throw error;
 }
 
@@ -155,7 +173,7 @@ export async function updateThread(id: string, updates: ThreadUpdate): Promise<v
   if (updates.projectContext !== undefined) toWrite.project_context = updates.projectContext;
   if (updates.agentName !== undefined) toWrite.agent_name = updates.agentName;
   
-  const { error } = await (supa.from('chat_threads' as any) as any)
+  const { error } = await supaTable<ChatThreadRow>(supa, 'chat_threads')
     .update(toWrite)
     .eq('id', id)
     .eq('user_id', uid);
@@ -171,8 +189,8 @@ export async function updateThreadFlags(id: string, flags: { pinned?: boolean; a
 export async function deleteThread(id: string): Promise<void> {
   const supa = supabaseClient();
   const uid = await userIdOrAnon();
-  
-  const { error } = await (supa.from('chat_threads' as any) as any)
+
+  const { error } = await supaTable<ChatThreadRow>(supa, 'chat_threads')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
     .eq('user_id', uid);
@@ -183,8 +201,8 @@ export async function deleteThread(id: string): Promise<void> {
 export async function insertMessage(threadId: string, msg: Message): Promise<void> {
   const supa = supabaseClient();
   const uid = await userIdOrAnon();
-  
-  const { error } = await (supa.from('chat_messages' as any) as any).insert({
+
+  const { error } = await supaTable<ChatMessageRow>(supa, 'chat_messages').insert({
     id: msg.id,
     thread_id: threadId,
     role: msg.role,
@@ -199,8 +217,8 @@ export async function insertMessage(threadId: string, msg: Message): Promise<voi
 export async function updateMessageContent(id: string, content: string): Promise<void> {
   const supa = supabaseClient();
   const uid = await userIdOrAnon();
-  
-  const { error } = await (supa.from('chat_messages' as any) as any)
+
+  const { error } = await supaTable<ChatMessageRow>(supa, 'chat_messages')
     .update({ content })
     .eq('id', id)
     .eq('user_id', uid);

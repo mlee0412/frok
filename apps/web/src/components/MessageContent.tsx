@@ -29,7 +29,7 @@ export const MessageContent = React.memo(function MessageContent({ content, role
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
-            code({ node, className, children, ...props }: any) {
+            code({ className, children, ...props }) {
               const inline = !className?.startsWith('language-');
               return !inline ? (
                 <div className="relative">

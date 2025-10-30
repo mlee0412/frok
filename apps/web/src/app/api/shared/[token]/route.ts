@@ -70,10 +70,10 @@ export async function GET(
         created_at: thread.created_at,
       },
     });
-  } catch (e: any) {
-    console.error('[shared GET error]', e);
+  } catch (error: unknown) {
+    console.error('[shared GET error]', error);
     return NextResponse.json(
-      { ok: false, error: e?.message || 'Failed to load shared conversation' },
+      { ok: false, error: error instanceof Error ? error.message : 'Failed to load shared conversation' },
       { status: 500 }
     );
   }

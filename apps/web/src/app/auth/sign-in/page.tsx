@@ -21,8 +21,8 @@ export default function SignInPage() {
       });
       if (error) throw error;
       setStatus('sent');
-    } catch (e: any) {
-      setErr(e?.message || 'Failed to send magic link');
+    } catch (error: unknown) {
+      setErr(error instanceof Error ? error.message : 'Failed to send magic link');
       setStatus('error');
     }
   }

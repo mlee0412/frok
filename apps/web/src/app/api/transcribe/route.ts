@@ -31,10 +31,10 @@ export async function POST(req: Request) {
       ok: true,
       text: transcription.text,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[transcribe error]', error);
     return NextResponse.json(
-      { ok: false, error: error?.message || 'Transcription failed' },
+      { ok: false, error: error instanceof Error ? error.message : 'Transcription failed' },
       { status: 500 }
     );
   }

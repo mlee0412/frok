@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { supabaseClient } from './supabaseClient';
 
 export function useAuth() {
@@ -8,11 +9,11 @@ export function useAuth() {
 
   useEffect(() => {
     let mounted = true;
-    supa.auth.getSession().then(({ data }: { data: { session: any } }) => {
+    supa.auth.getSession().then(({ data }) => {
       if (!mounted) return;
       setEmail(data.session?.user?.email ?? null);
     });
-    const { data: sub } = supa.auth.onAuthStateChange((_event: any, session: any) => {
+    const { data: sub } = supa.auth.onAuthStateChange((_event, session: Session | null) => {
       setEmail(session?.user?.email ?? null);
     });
     return () => {

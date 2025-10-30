@@ -11,6 +11,7 @@ import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ThreadListSkeleton, MessageSkeleton } from '@/components/LoadingSkeleton';
 import { useToast, Toaster } from '@frok/ui';
+import type { ChatThreadRow, ChatMessageRow } from '@/types/database';
 
 // Lazy load heavy modal components
 const ThreadOptionsMenu = dynamic(() => import('@/components/ThreadOptionsMenu').then(mod => ({ default: mod.ThreadOptionsMenu })), {
@@ -217,13 +218,13 @@ export default function AgentPage() {
       const res = await fetch('/api/chat/threads');
       const json = await res.json();
       if (json.ok && json.threads) {
-        setThreads(json.threads.map((t: any) => ({
+        setThreads(json.threads.map((t: ChatThreadRow) => ({
           id: t.id,
-          title: t.title,
+          title: t.title ?? 'Untitled',
           messages: [],
           createdAt: new Date(t.created_at).getTime(),
           tags: t.tags || [],
-          folder: t.folder,
+          folder: t.folder ?? undefined,
           pinned: t.pinned || false,
           archived: t.archived || false,
           enabledTools: t.enabled_tools || ['home_assistant', 'memory', 'web_search', 'tavily_search', 'image_generation'],
@@ -271,7 +272,7 @@ export default function AgentPage() {
         const json = await res.json();
 
         if (json.ok && json.messages) {
-          const messages = json.messages.map((m: any) => ({
+          const messages = json.messages.map((m: ChatMessageRow) => ({
             id: m.id,
             role: m.role,
             content: m.content,
@@ -288,12 +289,12 @@ export default function AgentPage() {
             )
           );
         }
-      } catch (e: any) {
-        if (e.name === 'AbortError') {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === 'AbortError') {
           // Request was cancelled - this is expected, ignore
           return;
         }
-        console.error('Failed to load messages:', e);
+        console.error('Failed to load messages:', error);
       } finally {
         setLoadingMessages(false);
         delete loadingRef.current[activeThreadId];
@@ -672,15 +673,15 @@ export default function AgentPage() {
           assistantMessage,
         ]);
       }
-    } catch (e: any) {
-      console.error('Send message error:', e);
-      
+    } catch (error: unknown) {
+      console.error('Send message error:', error);
+
       // Don't show error if it was aborted by user
-      if (e.name !== 'AbortError') {
+      if (!(error instanceof Error && error.name === 'AbortError')) {
         const errorMessage: Message = {
           id: `msg_${Date.now()}`,
           role: 'assistant',
-          content: `Error: ${e?.message || 'Request failed'}`,
+          content: `Error: ${error instanceof Error ? error.message : 'Request failed'}`,
           timestamp: Date.now(),
         };
 
@@ -909,9 +910,9 @@ export default function AgentPage() {
             : t
         )
       );
-    } catch (e: any) {
-      console.error('Regenerate error:', e);
-      
+    } catch (error: unknown) {
+      console.error('Regenerate error:', error);
+
       // Restore original message on error
       setThreads((prev) =>
         prev.map((t) =>
@@ -1112,7 +1113,8 @@ export default function AgentPage() {
       } else {
         toast.error('Failed to create share link: ' + json.error);
       }
-    } catch (e: any) {
+    } catch (error: unknown) {
+      console.error('Share link error:', error);
       toast.error('Failed to create share link');
     } finally {
       setShareLoading(false);
@@ -1270,9 +1272,9 @@ export default function AgentPage() {
           const transcription = await transcribeAudio(audioBlob);
           setInput(transcription);
           toast.success('Audio transcribed successfully!');
-        } catch (e: any) {
-          console.error('Transcription error:', e);
-          toast.error('Failed to transcribe audio: ' + e.message);
+        } catch (error: unknown) {
+          console.error('Transcription error:', error);
+          toast.error('Failed to transcribe audio: ' + (error instanceof Error ? error.message : 'Unknown error'));
         }
       }
     } else {
@@ -1507,8 +1509,8 @@ export default function AgentPage() {
           )
         );
       }
-    } catch (e: any) {
-      console.error('Edit message error:', e);
+    } catch (error: unknown) {
+      console.error('Edit message error:', error);
     } finally {
       setLoading(false);
       setIsStreaming(false);

@@ -108,7 +108,7 @@ export function useVoiceRecorder() {
 
       setRecordingState('idle');
       return data.text;
-    } catch (error: any) {
+    } catch (error: unknown) {
       setRecordingState('idle');
       throw error;
     }
