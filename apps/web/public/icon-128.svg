@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="128" height="128" fill="#3b82f6"/>
+
+  <!-- Rounded corners for modern look -->
+  <rect width="128" height="128" rx="19.2" fill="#3b82f6"/>
+
+  <!-- Gradient overlay for depth -->
+  <defs>
+    <linearGradient id="gradient-128" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#60a5fa;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#1e40af;stop-opacity:0.3" />
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="19.2" fill="url(#gradient-128)"/>
+
+  <!-- Text -->
+  <text
+    x="50%"
+    y="74.66666666666667"
+    font-family="system-ui, -apple-system, sans-serif"
+    font-size="32"
+    font-weight="700"
+    fill="white"
+    text-anchor="middle"
+    dominant-baseline="middle"
+  >FROK</text>
+
+  <!-- Subtle border for definition -->
+  <rect
+    width="126"
+    height="126"
+    x="1"
+    y="1"
+    rx="19.2"
+    fill="none"
+    stroke="rgba(255,255,255,0.2)"
+    stroke-width="2"
+  />
+</svg>
