@@ -1,4 +1,4 @@
-import{I as p}from"./ThreadHeader-DRiUrM1e.js";import"./jsx-runtime-BjG_zV1W.js";import"./index-BfiH1CDa.js";import"./_commonjsHelpers-Cpj98o6Y.js";const u={title:"Primitives/Input",component:p,argTypes:{placeholder:{control:"text"},disabled:{control:"boolean"}}},r={args:{placeholder:"Type here..."}},e={args:{placeholder:"Play with controls"}};var o,a,s;r.parameters={...r.parameters,docs:{...(o=r.parameters)==null?void 0:o.docs,source:{originalSource:`{
+import{I as p}from"./ThreadHeader-Cn6pGfek.js";import"./jsx-runtime-BjG_zV1W.js";import"./index-BfiH1CDa.js";import"./_commonjsHelpers-Cpj98o6Y.js";const u={title:"Primitives/Input",component:p,argTypes:{placeholder:{control:"text"},disabled:{control:"boolean"}}},r={args:{placeholder:"Type here..."}},e={args:{placeholder:"Play with controls"}};var o,a,s;r.parameters={...r.parameters,docs:{...(o=r.parameters)==null?void 0:o.docs,source:{originalSource:`{
   args: {
     placeholder: 'Type here...'
   }

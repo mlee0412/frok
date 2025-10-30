@@ -1,0 +1,5 @@
+import{j as e}from"./jsx-runtime-BjG_zV1W.js";import{e as c,u as i,C as l,B as s}from"./ThreadHeader-Cn6pGfek.js";import"./index-BfiH1CDa.js";import"./_commonjsHelpers-Cpj98o6Y.js";const h={title:"Feedback/Toaster"};function d(){const r=i();return e.jsx("div",{className:"space-y-4",children:e.jsxs(l,{className:"p-4 space-x-2",children:[e.jsx(s,{onClick:()=>r.show("Hello from Toaster"),children:"Default"}),e.jsx(s,{variant:"outline",onClick:()=>r.success("Saved!"),children:"Success"}),e.jsx(s,{variant:"outline",onClick:()=>r.error("Something went wrong"),children:"Error"}),e.jsx(s,{variant:"outline",onClick:()=>r.info("FYI: Check the logs"),children:"Info"})]})})}const o={render:()=>e.jsx(c,{children:e.jsx(d,{})})};var a,t,n;o.parameters={...o.parameters,docs:{...(a=o.parameters)==null?void 0:a.docs,source:{originalSource:`{
+  render: () => <Toaster>\r
+      <Demo />\r
+    </Toaster>
+}`,...(n=(t=o.parameters)==null?void 0:t.docs)==null?void 0:n.source}}};const j=["Basic"];export{o as Basic,j as __namedExportsOrder,h as default};

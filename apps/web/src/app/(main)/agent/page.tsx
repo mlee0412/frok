@@ -87,7 +87,6 @@ export default function AgentPage() {
   const [exportSuccess, setExportSuccess] = React.useState(false);
   const [editingMessageId, setEditingMessageId] = React.useState<string | null>(null);
   const [editContent, setEditContent] = React.useState('');
-  const [showTagModal, setShowTagModal] = React.useState(false);
   const [editingOptionsThreadId, setEditingOptionsThreadId] = React.useState<string | null>(null);
   const [selectedFolder, setSelectedFolder] = React.useState<string | null>(null);
   const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
