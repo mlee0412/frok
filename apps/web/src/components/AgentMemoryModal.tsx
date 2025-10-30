@@ -29,8 +29,8 @@ export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) 
 
     try {
       await addMemoryMutation.mutateAsync({
-        agent_name: agentName,
-        memory_type: newMemory.type,
+        agentName: agentName,
+        memoryType: newMemory.type,
         content: newMemory.content.trim(),
         importance: newMemory.importance,
       });
