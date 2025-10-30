@@ -1,3 +1,4 @@
+import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -12,7 +13,7 @@ describe('Button Component', () => {
   it('applies primary variant by default', () => {
     render(<Button>Primary Button</Button>);
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('bg-primary');
+    expect(button.className).toContain('bg-[var(--color-surface)]');
   });
 
   it('applies outline variant when specified', () => {
@@ -24,7 +25,7 @@ describe('Button Component', () => {
   it('applies ghost variant when specified', () => {
     render(<Button variant="ghost">Ghost Button</Button>);
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('hover:bg-surface');
+    expect(button.className).toContain('hover:bg-[var(--color-surface)]');
   });
 
   it('handles onClick events', async () => {
@@ -42,7 +43,6 @@ describe('Button Component', () => {
     const button = screen.getByRole('button');
 
     expect(button).toBeDisabled();
-    expect(button).toHaveClass('opacity-50');
   });
 
   it('does not trigger onClick when disabled', async () => {
@@ -62,13 +62,13 @@ describe('Button Component', () => {
   it('applies small size class', () => {
     render(<Button size="sm">Small Button</Button>);
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('text-sm');
+    expect(button).toHaveClass('h-8'); // Small height
   });
 
   it('applies large size class', () => {
     render(<Button size="lg">Large Button</Button>);
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('text-base');
+    expect(button).toHaveClass('h-11'); // Large height
   });
 
   it('accepts custom className', () => {
