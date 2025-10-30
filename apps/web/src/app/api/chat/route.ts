@@ -122,7 +122,9 @@ export async function POST(req: Request) {
       for (let i = 0; i < 5; i++) {
         const res = await openai.chat.completions.create({ model, messages, tools, tool_choice: 'auto' });
         const choice = res.choices?.[0] as ChatCompletion.Choice | undefined;
-        const msg = choice?.message || {};
+        const msg = choice?.message;
+        if (!msg) break;
+
         const tcs = msg.tool_calls || [];
         if (tcs.length) {
           // IMPORTANT: add the assistant message that requested tool_calls first
