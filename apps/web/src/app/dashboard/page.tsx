@@ -3,15 +3,15 @@ import { headers } from 'next/headers';
 import { Card } from '@frok/ui';
 import DashboardQuickActions from './DashboardQuickActions';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// ISR with 30-second revalidation for better performance
+export const revalidate = 30;
 
 export default async function DashboardPage() {
   const h = await headers();
   const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
   const proto = h.get('x-forwarded-proto') ?? 'http';
   const base = `${proto}://${host}`;
-  const f = (p: string) => fetch(`${base}${p}`, { cache: 'no-store' }).then(r => r.json()).catch(() => null);
+  const f = (p: string) => fetch(`${base}${p}`, { next: { revalidate: 30 } }).then(r => r.json()).catch(() => null);
 
   const [health, github, ha, supabaseAuth, supabaseQuery] = await Promise.all([
     f('/api/ping'),
@@ -22,7 +22,7 @@ export default async function DashboardPage() {
   ]);
 
   const statClass = (ok: boolean) => ok ? 'text-success' : 'text-danger';
-  const ok = (x: any) => !!(x && x.ok === true);
+  const ok = (x: unknown) => !!(x && typeof x === 'object' && x !== null && 'ok' in x && x.ok === true);
 
   return (
     <div className="p-6 space-y-8">

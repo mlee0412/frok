@@ -6,15 +6,15 @@ import FinancesImportClient from './FinancesImportClient';
 import FinancesRulesClient from './FinancesRulesClient';
 import FinancesTransactionsClient from './FinancesTransactionsClient';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// ISR with 60-second revalidation for financial data
+export const revalidate = 60;
 
 export default async function DashboardFinancesPage() {
   const h = await headers();
   const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
   const proto = h.get('x-forwarded-proto') ?? 'http';
   const base = `${proto}://${host}`;
-  const f = (p: string) => fetch(`${base}${p}`, { cache: 'no-store' }).then(r => r.json()).catch(() => null);
+  const f = (p: string) => fetch(`${base}${p}`, { next: { revalidate: 60 } }).then(r => r.json()).catch(() => null);
 
   const [summary, transactions] = await Promise.all([
     f('/api/finances/summary'),

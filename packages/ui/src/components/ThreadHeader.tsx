@@ -4,6 +4,8 @@ import { Button } from './Button';
 
 export type Agent = { id: string; name: string };
 
+export type NavLink = { label: string; href: string };
+
 export type ThreadHeaderProps = {
   title?: string;
   agentId?: string;
@@ -19,18 +21,56 @@ export type ThreadHeaderProps = {
   toolsEnabled?: boolean;
   onToggleTools?: (enabled: boolean) => void;
   className?: string;
+  navLinks?: NavLink[];
+  linkComponent?: React.ElementType;
 };
 
-export function ThreadHeader({ title = 'New chat', agentId, agents = [], onChangeAgent, className, userEmail, onSignIn, onSignOut, editableTitle, onRename, onlineCount = 0, typingLabel, toolsEnabled, onToggleTools }: ThreadHeaderProps) {
+export function ThreadHeader({ title = 'New chat', agentId, agents = [], onChangeAgent, className, userEmail, onSignIn, onSignOut, editableTitle, onRename, onlineCount = 0, typingLabel, toolsEnabled, onToggleTools, navLinks = [], linkComponent }: ThreadHeaderProps) {
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(title);
+  const [navOpen, setNavOpen] = React.useState(false);
+
   React.useEffect(() => { setDraft(title); }, [title]);
+
+  const LinkComponent = linkComponent || 'a';
+
   return (
     <div className={[
       'w-full border-b border-border bg-surface/60 backdrop-blur-sm',
       className,
     ].filter(Boolean).join(' ')}>
       <div className="container-app px-3 py-2 flex items-center gap-3">
+        {/* Navigation Menu Button */}
+        {navLinks.length > 0 && (
+          <div className="relative">
+            <button
+              onClick={() => setNavOpen(!navOpen)}
+              className="p-1 rounded-md hover:bg-surface transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+              aria-label="Open navigation menu"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            {navOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setNavOpen(false)} />
+                <div className="absolute left-0 top-full mt-1 w-48 bg-background border border-border rounded-lg shadow-xl z-50 py-2">
+                  {navLinks.map((link) => (
+                    <LinkComponent
+                      key={link.href}
+                      href={link.href}
+                      className="block px-4 py-2 text-sm hover:bg-surface transition"
+                      onClick={() => setNavOpen(false)}
+                    >
+                      {link.label}
+                    </LinkComponent>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           {editing ? (
             <div className="flex items-center gap-2">

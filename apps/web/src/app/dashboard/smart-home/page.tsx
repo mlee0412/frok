@@ -3,15 +3,15 @@ import { headers } from 'next/headers';
 import { Card } from '@frok/ui';
 import SmartHomeView from '@/components/smart-home/SmartHomeView';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// ISR with 15-second revalidation for smart home data
+export const revalidate = 15;
 
 export default async function SmartHomePage() {
   const h = await headers();
   const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
   const proto = h.get('x-forwarded-proto') ?? 'http';
   const base = `${proto}://${host}`;
-  const f = (p: string) => fetch(`${base}${p}`, { cache: 'no-store' });
+  const f = (p: string) => fetch(`${base}${p}`, { next: { revalidate: 15 } });
   const [haRes, devRes] = await Promise.all([
     f('/api/ping/mcp/home-assistant'),
     f('/api/devices'),

@@ -11,3 +11,5 @@ export { ChatMessage } from './components/ChatMessage';
 export { ChatInput } from './components/ChatInput';
 export { ChatSidebar } from './components/ChatSidebar';
 export { ThreadHeader } from './components/ThreadHeader';
+export { ConfirmDialog, useConfirmDialog } from './components/ConfirmDialog';
+export { Form, FormField } from './components/Form';

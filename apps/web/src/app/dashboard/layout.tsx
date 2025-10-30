@@ -4,6 +4,8 @@ import DashboardNav from './DashboardNav';
 import Breadcrumbs from './Breadcrumbs';
 
 const nav = [
+  { label: '← Agent', href: '/agent' },
+  { label: '─────────', href: '#', disabled: true },
   { label: 'Dashboard', href: '/dashboard' },
   { label: 'Profile', href: '/dashboard/profile' },
   { label: 'System', href: '/dashboard/system' },

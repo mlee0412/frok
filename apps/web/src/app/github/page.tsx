@@ -1,6 +1,6 @@
 import React from 'react';
 import { headers } from 'next/headers';
-import { Card } from '@/components/ui/card';
+import { Card } from '@frok/ui';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

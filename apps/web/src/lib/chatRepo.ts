@@ -1,5 +1,6 @@
 import { supabaseClient } from './supabaseClient';
 import type { Thread as ChatThread, ThreadUpdate, Message } from './types/chat';
+import type { ChatThreadRow, ChatMessageRow } from '../types/database';
 
 // Legacy support
 export type Msg = Message;
@@ -12,7 +13,7 @@ function normaliseAgentId(agentId: unknown): string {
     : DEFAULT_AGENT_ID;
 }
 
-function mapThreadRow(r: any): ChatThread {
+function mapThreadRow(r: ChatThreadRow): ChatThread {
   return {
     id: r.id,
     title: r.title,
@@ -77,7 +78,7 @@ export async function getThreadMessages(threadId: string): Promise<Message[]> {
     
   if (error) throw error;
   
-  return (data || []).map((r: any) => ({
+  return (data || []).map((r: ChatMessageRow) => ({
     id: r.id,
     role: r.role,
     content: r.content,
@@ -90,7 +91,7 @@ export async function createThread(t: ChatThread): Promise<void> {
   const supa = supabaseClient();
   const uid = await userIdOrAnon();
   
-  const row: any = {
+  const row: Partial<ChatThreadRow> = {
     id: t.id,
     title: t.title || 'New Chat',
     agent_id: t.agentId || 'default',

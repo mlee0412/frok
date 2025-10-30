@@ -19,6 +19,16 @@
       "@frok/clients": ["packages/clients/src/index.ts"],
       "@frok/clients/*": ["packages/clients/src/*"]
       /* add more as you create them */
-    }
+    },
+    /* Enhanced type safety */
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "allowUnusedLabels": false,
+    "allowUnreachableCode": false,
+    "forceConsistentCasingInFileNames": true
   }
 }

@@ -1,6 +1,7 @@
 'use client';
 import * as React from 'react';
 import { Button } from './Button';
+import { ConfirmDialog } from './ConfirmDialog';
 
 export type Thread = { id: string; title: string; pinned?: boolean; archived?: boolean; deleted_at?: string | null };
 
@@ -20,6 +21,7 @@ export type ChatSidebarProps = {
 };
 
 export function ChatSidebar({ threads, currentId, onSelect, onNew, search, onSearch, showArchived, onToggleShowArchived, onPin, onArchive, onDelete, className }: ChatSidebarProps) {
+  const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null);
   return (
     <aside className={[
       'w-64 h-[100dvh] sticky top-0 border-r border-border bg-surface/60 backdrop-blur-sm flex flex-col',
@@ -59,7 +61,7 @@ export function ChatSidebar({ threads, currentId, onSelect, onNew, search, onSea
               <div className="flex items-center gap-1 text-xs">
                 <button type="button" className="border rounded px-1 py-0.5" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPin?.(t.id, !t.pinned); }}>{t.pinned ? 'Unpin' : 'Pin'}</button>
                 <button type="button" className="border rounded px-1 py-0.5" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onArchive?.(t.id, !t.archived); }}>{t.archived ? 'Unarchive' : 'Archive'}</button>
-                <button type="button" className="border rounded px-1 py-0.5" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete?.(t.id); }}>Del</button>
+                <button type="button" className="border rounded px-1 py-0.5 hover:border-red-500 hover:text-red-500 transition" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirmId(t.id); }}>Del</button>
               </div>
             </div>
           </div>
@@ -68,6 +70,21 @@ export function ChatSidebar({ threads, currentId, onSelect, onNew, search, onSea
           <div className="text-xs text-foreground/60 p-3">No threads yet.</div>
         )}
       </nav>
+      <ConfirmDialog
+        open={deleteConfirmId !== null}
+        onOpenChange={(open) => !open && setDeleteConfirmId(null)}
+        title="Delete Conversation"
+        description="Are you sure you want to delete this conversation? This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => {
+          if (deleteConfirmId) {
+            onDelete?.(deleteConfirmId);
+            setDeleteConfirmId(null);
+          }
+        }}
+      />
     </aside>
   );
 }
