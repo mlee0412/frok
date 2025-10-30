@@ -66,12 +66,12 @@ export async function POST(req: Request) {
 
   const data = await upstream.json().catch(() => ({})) as Record<string, unknown>;
   if (!upstream.ok) {
-    const res = NextResponse.json({ error: data?.error || 'session_refresh_failed', details: data }, { status: upstream.status });
+    const res = NextResponse.json({ error: data?.['error'] || 'session_refresh_failed', details: data }, { status: upstream.status });
     if (sessionCookie) res.headers.set('Set-Cookie', sessionCookie);
     return res;
   }
 
-  const res = NextResponse.json({ client_secret: data?.client_secret ?? null, expires_after: data?.expires_after ?? null }, { status: 200 });
+  const res = NextResponse.json({ client_secret: data?.['client_secret'] ?? null, expires_after: data?.['expires_after'] ?? null }, { status: 200 });
   if (sessionCookie) res.headers.set('Set-Cookie', sessionCookie);
   return res;
 }
