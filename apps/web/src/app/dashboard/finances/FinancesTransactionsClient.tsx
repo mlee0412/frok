@@ -104,7 +104,7 @@ export default function FinancesTransactionsClient() {
       <div className="font-medium mb-3">Transactions</div>
 
       <div className="flex flex-wrap gap-2 items-center mb-3">
-        <Input placeholder="Search description" value={q} onChange={(e: any) => setQ(e.currentTarget.value)} />
+        <Input placeholder="Search description" value={q} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQ(e.currentTarget.value)} />
         <select className="border rounded px-2 py-1 text-sm bg-transparent" value={account} onChange={(e) => setAccount(e.target.value)}>
           <option value="">All accounts</option>
           {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -113,8 +113,8 @@ export default function FinancesTransactionsClient() {
           <option value="">All categories</option>
           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <Input type="date" value={from} onChange={(e: any) => setFrom(e.currentTarget.value)} />
-        <Input type="date" value={to} onChange={(e: any) => setTo(e.currentTarget.value)} />
+        <Input type="date" value={from} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFrom(e.currentTarget.value)} />
+        <Input type="date" value={to} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTo(e.currentTarget.value)} />
         <select className="border rounded px-2 py-1 text-sm bg-transparent" value={String(limit)} onChange={(e) => setLimit(parseInt(e.target.value, 10) || 25)}>
           {['10','25','50','100','200'].map(n => <option key={n} value={n}>{n}/page</option>)}
         </select>

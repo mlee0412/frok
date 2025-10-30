@@ -40,7 +40,7 @@ export default async function DashboardFinancesPage() {
         </Card>
         <Card className="p-4">
           <div className="text-sm text-foreground/60">Charts</div>
-          <FinancesCharts items={items.map((t: any) => ({ posted_at: t.posted_at, amount: t.amount, category: t.category }))} />
+          <FinancesCharts items={items.map((t) => ({ posted_at: t.posted_at, amount: t.amount, category: t.category }))} />
         </Card>
       </div>
 

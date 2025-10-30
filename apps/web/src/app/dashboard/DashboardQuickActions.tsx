@@ -26,7 +26,9 @@ export default function DashboardQuickActions() {
     try {
       const r = await fetch('/api/devices', { cache: 'no-store' });
       const j = await r.json();
-      const ids: string[] = Array.isArray(j) ? j.filter((d: any) => d.type === 'light').map((d: any) => d.id) : [];
+      type HADevice = { type?: string; id?: string };
+      const devices = Array.isArray(j) ? j as HADevice[] : [];
+      const ids: string[] = devices.filter((d) => d.type === 'light').map((d) => d.id || '').filter(Boolean);
       if (ids.length === 0) {
         toast.info('No lights found');
       } else if (action === 'on') {

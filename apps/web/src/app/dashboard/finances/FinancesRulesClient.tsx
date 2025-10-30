@@ -107,7 +107,7 @@ export default function FinancesRulesClient() {
       <Card className="p-4">
         <div className="font-medium mb-2">Categories</div>
         <div className="flex items-center gap-2 mb-3">
-          <Input placeholder="Category name" value={catName} onChange={(e: any) => setCatName(e.currentTarget.value)} />
+          <Input placeholder="Category name" value={catName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCatName(e.currentTarget.value)} />
           <Button size="sm" disabled={!catName.trim() || pending !== null} onClick={addCategory}>{pending === 'add_cat' ? '...' : 'Add'}</Button>
         </div>
         <div className="text-xs text-foreground/60 mb-2">{loading ? 'Loading…' : `${categories.length} categories`}</div>
@@ -125,7 +125,7 @@ export default function FinancesRulesClient() {
       <Card className="p-4 md:col-span-2">
         <div className="font-medium mb-2">Rules</div>
         <div className="flex flex-wrap items-center gap-2 mb-3">
-          <Input placeholder="Pattern (substring)" value={pat} onChange={(e: any) => setPat(e.currentTarget.value)} />
+          <Input placeholder="Pattern (substring)" value={pat} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPat(e.currentTarget.value)} />
           <select className="border border-border rounded px-2 py-1 text-sm bg-transparent" value={catId} onChange={(e) => setCatId(e.currentTarget.value)}>
             <option value="">Select category…</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}

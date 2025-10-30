@@ -2,11 +2,30 @@
 import * as React from 'react';
 import { Card, Button, useToast } from '@frok/ui';
 
+// n8n types
+type N8NWorkflow = {
+  id?: string;
+  _id?: string;
+  name?: string;
+  active?: boolean;
+};
+
+type N8NExecution = {
+  id?: string;
+  _id?: string;
+  workflowId?: string;
+  workflowData?: { name?: string };
+  status?: string;
+  finished?: boolean;
+  startedAt?: string;
+  mode?: string;
+};
+
 export default function AutomationClient() {
   const toast = useToast();
   const [loading, setLoading] = React.useState(true);
-  const [workflows, setWorkflows] = React.useState<any[]>([]);
-  const [executions, setExecutions] = React.useState<any[]>([]);
+  const [workflows, setWorkflows] = React.useState<N8NWorkflow[]>([]);
+  const [executions, setExecutions] = React.useState<N8NExecution[]>([]);
   const [missingEnv, setMissingEnv] = React.useState<string | null>(null);
   const [pendingId, setPendingId] = React.useState<string | null>(null);
 
@@ -73,7 +92,7 @@ export default function AutomationClient() {
           </div>
         ) : (
           <div className="grid gap-2">
-            {workflows.map((w: any) => (
+            {workflows.map((w) => (
               <div key={w.id || w._id || w.name} className="flex items-center justify-between gap-3 border border-border rounded px-3 py-2 bg-surface/50">
                 <div className="text-sm">
                   <div className="font-medium">{w.name || w.id}</div>
@@ -101,7 +120,7 @@ export default function AutomationClient() {
           </div>
         ) : (
           <div className="grid gap-2">
-            {executions.map((ex: any) => (
+            {executions.map((ex) => (
               <div key={ex.id || ex._id} className="flex items-center justify-between gap-3 border border-border rounded px-3 py-2 bg-surface/50">
                 <div className="text-sm">
                   <div className="font-medium">{ex.workflowData?.name || ex.workflowId || ex.id}</div>

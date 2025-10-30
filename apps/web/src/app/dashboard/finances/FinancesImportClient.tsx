@@ -37,7 +37,7 @@ export default function FinancesImportClient() {
       <div className="font-medium mb-3">CSV Import</div>
       <div className="text-xs text-foreground/60 mb-3">Expected headers: date,account,description,amount,currency</div>
       <div className="flex flex-wrap items-center gap-2">
-        <Input type="file" accept=".csv,text/csv" onChange={(e: any) => setFile(e.currentTarget.files?.[0] || null)} />
+        <Input type="file" accept=".csv,text/csv" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFile(e.currentTarget.files?.[0] || null)} />
         <Button size="sm" disabled={!file || pending} onClick={importCsv}>
           {pending ? 'Importing…' : 'Import CSV'}
         </Button>
