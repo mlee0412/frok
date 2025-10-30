@@ -1,5 +1,30 @@
 import { NextResponse } from 'next/server';
 
+// Home Assistant registry types
+type HAArea = {
+  area_id?: string;
+  id?: string;
+  name?: string;
+};
+
+type HADevice = {
+  id?: string;
+  name?: string;
+  name_by_user?: string;
+  manufacturer?: string;
+  model?: string;
+  area_id?: string;
+};
+
+type HAEntity = {
+  entity_id?: string;
+  device_id?: string;
+  area_id?: string;
+  name?: string;
+  original_name?: string;
+  disabled_by?: string;
+};
+
 function getHA() {
   const base = (process.env["HOME_ASSISTANT_URL"] || process.env["HA_BASE_URL"] || '').trim();
   const token = (process.env["HOME_ASSISTANT_TOKEN"] || process.env["HA_TOKEN"] || '').trim();
@@ -24,7 +49,7 @@ async function haFetch<T>(ha: { base: string; token: string }, path: string, ini
   return (await r.json()) as T;
 }
 
-async function sbUpsert(sb: { url: string; key: string }, table: string, rows: any[], onConflict: string) {
+async function sbUpsert(sb: { url: string; key: string }, table: string, rows: Record<string, unknown>[], onConflict: string) {
   const r = await fetch(`${sb.url}/rest/v1/${table}?on_conflict=${encodeURIComponent(onConflict)}`, {
     method: 'POST',
     headers: {
@@ -48,17 +73,17 @@ export async function POST() {
   if (!ha) return NextResponse.json({ ok: false, error: 'missing_home_assistant_env' }, { status: 400 });
   if (!sb) return NextResponse.json({ ok: false, error: 'missing_supabase_service_env' }, { status: 400 });
   try {
-    let areas: any[] = [];
-    let devices: any[] = [];
-    let entities: any[] = [];
+    let areas: HAArea[] = [];
+    let devices: HADevice[] = [];
+    let entities: HAEntity[] = [];
 
-    try { areas = await haFetch<any[]>(ha, '/api/config/area_registry/list', { method: 'POST', body: '{}' }); }
+    try { areas = await haFetch<HAArea[]>(ha, '/api/config/area_registry/list', { method: 'POST', body: '{}' }); }
     catch (e) { if (!(e instanceof Error && e.message.startsWith('status_404'))) throw new Error(`ha_areas_${(e as Error).message}`); }
 
-    try { devices = await haFetch<any[]>(ha, '/api/config/device_registry/list', { method: 'POST', body: '{}' }); }
+    try { devices = await haFetch<HADevice[]>(ha, '/api/config/device_registry/list', { method: 'POST', body: '{}' }); }
     catch (e) { if (!(e instanceof Error && e.message.startsWith('status_404'))) throw new Error(`ha_devices_${(e as Error).message}`); }
 
-    try { entities = await haFetch<any[]>(ha, '/api/config/entity_registry/list', { method: 'POST', body: '{}' }); }
+    try { entities = await haFetch<HAEntity[]>(ha, '/api/config/entity_registry/list', { method: 'POST', body: '{}' }); }
     catch (e) {
       const is404 = e instanceof Error && e.message.startsWith('status_404');
       if (!is404) throw new Error(`ha_entities_${(e as Error).message}`);

@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   const ha = getHA();
   if (!ha) return NextResponse.json({ ok: false, error: 'missing_home_assistant_env' }, { status: 400 });
 
-  let body: any;
+  let body: unknown;
   try {
     body = await req.json();
   } catch {
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   const data = body?.data && typeof body.data === 'object' ? body.data : {};
 
   try {
-    const payload: any = { ...data };
+    const payload: Record<string, unknown> = { ...data } as Record<string, unknown>;
     if (entity_id) payload.entity_id = entity_id;
     if (area_id) payload.area_id = area_id;
     if (target) payload.target = target;
@@ -61,8 +61,9 @@ export async function POST(req: Request) {
 
     const result = await r.json().catch(() => null);
     return NextResponse.json({ ok: true, data: result }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: 'exception', detail: e?.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ ok: false, error: 'exception', detail: message }, { status: 500 });
   }
 }
 

@@ -8,6 +8,23 @@ import { withRateLimit, rateLimitPresets } from '@/lib/api/withRateLimit';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// Type definitions for agent streaming
+type ChatMessage = {
+  role: string;
+  content: string;
+};
+
+type AgentTool = {
+  name?: string;
+  [key: string]: unknown;
+};
+
+type InputContent = {
+  type: 'input_text' | 'input_image';
+  text?: string;
+  source?: string;
+};
+
 async function classifyQuery(query: string): Promise<'simple' | 'moderate' | 'complex'> {
   // Ultra-fast pattern matching first
   const simplePatterns = [
@@ -168,7 +185,7 @@ export async function POST(req: NextRequest) {
               .limit(20); // Last 20 messages for context
 
             if (messages && messages.length > 0) {
-              historyItems = messages.map((msg: any) => {
+              historyItems = messages.map((msg: ChatMessage) => {
                 if (msg.role === 'user') {
                   return {
                     role: 'user' as const,
@@ -259,10 +276,10 @@ export async function POST(req: NextRequest) {
               .filter(Boolean);
 
           const requestedToolNames = enabledTools && enabledTools.length > 0 ? enabledTools : selectedTools;
-          const finalTools = flattenTools(requestedToolNames);
-          const finalToolNames = finalTools.map((t: any) => t?.name || 'unknown');
+          const finalTools = flattenTools(requestedToolNames) as AgentTool[];
+          const finalToolNames = finalTools.map((t) => t?.name || 'unknown');
 
-          const content: any[] = [];
+          const content: InputContent[] = [];
 
           if (input_as_text) {
             content.push({ type: 'input_text', text: input_as_text });
@@ -318,7 +335,7 @@ export async function POST(req: NextRequest) {
                 ? 'Be thorough and detailed. Use reasoning effort to provide comprehensive analysis.'
                 : 'Be helpful and concise. Use tools when needed.';
 
-            const hasHA = finalTools.some((t: any) => t?.name === 'ha_search' || t?.name === 'ha_call');
+            const hasHA = finalTools.some((t) => t?.name === 'ha_search' || t?.name === 'ha_call');
             if (hasHA) {
               instructions += `\n\nHome Assistant Tools:\n- Use ha_search first to find entity IDs before controlling devices\n- For lights/switches: use domain "light" or "switch" with service "turn_on" or "turn_off"\n- Always report the verification result to confirm success\n- If you get an error, explain it clearly to the user`;
             }
@@ -376,10 +393,11 @@ export async function POST(req: NextRequest) {
         });
 
         controller.close();
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[smart-stream error]', error);
+        const message = error instanceof Error ? error.message : 'Stream failed';
         controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ error: error?.message || 'Stream failed' })}\n\n`)
+          encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`)
         );
         controller.close();
       }

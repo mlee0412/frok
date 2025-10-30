@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import type { ChatCompletionMessageParam } from 'openai/resources';
+import type { ChatCompletionMessageParam, ChatCompletionTool, ChatCompletion } from 'openai/resources';
 import { NextResponse } from 'next/server';
 import { supabaseServiceClient } from '@/lib/supabaseServer';
 
@@ -10,10 +10,10 @@ function getHA() {
   return { base: base.replace(/\/$/, ''), token } as const;
 }
 
-async function haServiceCall(args: { domain: string; service: string; entity_id?: string | string[]; target?: any; area_id?: string | string[]; data?: Record<string, unknown> }) {
+async function haServiceCall(args: { domain: string; service: string; entity_id?: string | string[]; target?: Record<string, unknown>; area_id?: string | string[]; data?: Record<string, unknown> }) {
   const ha = getHA();
   if (!ha) return { ok: false, error: 'missing_home_assistant_env' };
-  const payload: any = {};
+  const payload: Record<string, unknown> = {};
   if (typeof args.entity_id !== 'undefined') payload.entity_id = args.entity_id;
   if (args.target) payload.target = args.target;
   if (typeof args.area_id !== 'undefined') {
@@ -34,8 +34,9 @@ async function haServiceCall(args: { domain: string; service: string; entity_id?
     }
     const data = await r.json().catch(() => null);
     return { ok: true, data };
-  } catch (e: any) {
-    return { ok: false, error: e?.message || String(e) };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, error: message };
   }
 }
 
@@ -77,7 +78,7 @@ export async function POST(req: Request) {
     } catch {}
     try {
       const sys = 'You are FROK Home Assistant agent. Use search_ha to discover entity_ids or areas before calling call_ha when needed. Only claim success if call_ha returns ok:true with a non-empty result array; otherwise ask the user to clarify which device/area to control.';
-      const tools: any = [
+      const tools: ChatCompletionTool[] = [
         {
           type: 'function',
           function: {
@@ -119,8 +120,8 @@ export async function POST(req: Request) {
       ];
 
       for (let i = 0; i < 5; i++) {
-        const res = await openai.chat.completions.create({ model, messages, tools, tool_choice: 'auto' as any });
-        const choice: any = res.choices?.[0];
+        const res = await openai.chat.completions.create({ model, messages, tools, tool_choice: 'auto' });
+        const choice = res.choices?.[0] as ChatCompletion.Choice | undefined;
         const msg = choice?.message || {};
         const tcs = msg.tool_calls || [];
         if (tcs.length) {
@@ -137,7 +138,7 @@ export async function POST(req: Request) {
                 target: args.target,
                 data: args.data,
               });
-              messages.push({ role: 'tool', tool_call_id: tc.id, name: 'call_ha', content: JSON.stringify(result) } as any);
+              messages.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(result) });
             } else if (tc.function?.name === 'search_ha') {
               const args = (() => { try { return JSON.parse(tc.function.arguments || '{}'); } catch { return {}; } })();
               const query = String(args.query || '');
@@ -153,7 +154,7 @@ export async function POST(req: Request) {
                 entities: entitiesRes.data || [],
                 error: areasRes.error?.message || entitiesRes.error?.message || undefined,
               };
-              messages.push({ role: 'tool', tool_call_id: tc.id, name: 'search_ha', content: JSON.stringify(result) } as any);
+              messages.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(result) });
             }
           }
           continue; // ask model again

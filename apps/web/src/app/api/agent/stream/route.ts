@@ -8,6 +8,12 @@ import { withRateLimit, rateLimitPresets } from '@/lib/api/withRateLimit';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+type InputContent = {
+  type: 'input_text' | 'input_image';
+  text?: string;
+  source?: string;
+};
+
 export async function POST(req: NextRequest) {
   // Authenticate user
   const auth = await withAuth(req);
@@ -36,7 +42,7 @@ export async function POST(req: NextRequest) {
           const suite = await createAgentSuite();
 
           // Build content with text and images
-          const content: any[] = [];
+          const content: InputContent[] = [];
           
           if (input_as_text) {
             content.push({ type: 'input_text', text: input_as_text });
@@ -124,10 +130,11 @@ export async function POST(req: NextRequest) {
         });
 
         controller.close();
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[stream error]', error);
+        const message = error instanceof Error ? error.message : 'Stream failed';
         controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ error: error?.message || 'Stream failed' })}\n\n`)
+          encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`)
         );
         controller.close();
       }

@@ -1,5 +1,20 @@
 import { NextResponse } from 'next/server';
 
+// Home Assistant API types
+type HAEntityState = {
+  entity_id: string;
+  state: string;
+  attributes?: {
+    friendly_name?: string;
+    [key: string]: unknown;
+  };
+};
+
+type HAArea = {
+  area_id: string;
+  name: string;
+};
+
 function getHA() {
   const base = (process.env["HOME_ASSISTANT_URL"] || process.env["HA_BASE_URL"] || '').trim();
   const token = (process.env["HOME_ASSISTANT_TOKEN"] || process.env["HA_TOKEN"] || '').trim();
@@ -11,7 +26,7 @@ export async function POST(req: Request) {
   const ha = getHA();
   if (!ha) return NextResponse.json({ ok: false, error: 'missing_home_assistant_env' }, { status: 400 });
 
-  let body: any;
+  let body: unknown;
   try {
     body = await req.json();
   } catch {
@@ -34,7 +49,7 @@ export async function POST(req: Request) {
     if (!statesRes.ok) {
       return NextResponse.json({ ok: false, error: `status_${statesRes.status}` }, { status: statesRes.status });
     }
-    const states: any[] = await statesRes.json();
+    const states = await statesRes.json() as HAEntityState[];
 
     // Filter entities by query and optional domain
     const entities = states
@@ -58,7 +73,7 @@ export async function POST(req: Request) {
       headers: { Authorization: `Bearer ${ha.token}` },
       cache: 'no-store',
     });
-    const areas: any[] = areasRes.ok ? await areasRes.json() : [];
+    const areas: HAArea[] = areasRes.ok ? await areasRes.json() as HAArea[] : [];
     const matchingAreas = areas
       .filter((a) => {
         const name = String(a.name || '').toLowerCase();
@@ -71,8 +86,9 @@ export async function POST(req: Request) {
       }));
 
     return NextResponse.json({ ok: true, entities, areas: matchingAreas }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: 'exception', detail: e?.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ ok: false, error: 'exception', detail: message }, { status: 500 });
   }
 }
 

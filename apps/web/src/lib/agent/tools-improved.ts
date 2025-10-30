@@ -1,20 +1,36 @@
 import { tool } from '@openai/agents';
 import { z } from 'zod';
 
+// Home Assistant types
+type HAEntityState = {
+  entity_id: string;
+  state: string;
+  attributes?: {
+    friendly_name?: string;
+    area_name?: string;
+    [key: string]: unknown;
+  };
+};
+
+type HAArea = {
+  area_id: string;
+  name: string;
+};
+
 // Cache for HA states and areas (5 second TTL)
-const cache = new Map<string, { data: any; timestamp: number }>();
+const cache = new Map<string, { data: unknown; timestamp: number }>();
 const CACHE_TTL = 5000;
 
-function getFromCache(key: string): any | null {
+function getFromCache<T = unknown>(key: string): T | null {
   const cached = cache.get(key);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return cached.data;
+    return cached.data as T;
   }
   cache.delete(key);
   return null;
 }
 
-function setCache(key: string, data: any): void {
+function setCache(key: string, data: unknown): void {
   cache.set(key, { data, timestamp: Date.now() });
 }
 
@@ -82,7 +98,7 @@ export const haSearch = tool({
       const domainLower = domain?.toLowerCase();
 
       // Try cache first for states
-      let states: any[] = getFromCache('ha_states');
+      let states = getFromCache<HAEntityState[]>('ha_states');
       if (!states) {
         const statesRes = await fetch(`${ha.base}/api/states`, {
           headers: { Authorization: `Bearer ${ha.token}` },
@@ -134,7 +150,7 @@ export const haSearch = tool({
         }));
 
       // Try cache first for areas
-      let areas: any[] = getFromCache('ha_areas');
+      let areas = getFromCache<HAArea[]>('ha_areas');
       if (!areas) {
         const areasRes = await fetch(`${ha.base}/api/config/area_registry`, {
           headers: { Authorization: `Bearer ${ha.token}` },
@@ -174,11 +190,12 @@ export const haSearch = tool({
         areas: scoredAreas,
         query_processed: query,
       });
-      
-    } catch (error: any) {
+
+    } catch (error: unknown) {
       console.error('[ha_search] Error:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
       return JSON.stringify({
-        error: `Search failed: ${error.message}`,
+        error: `Search failed: ${message}`,
         entities: [],
         areas: [],
       });
@@ -209,7 +226,7 @@ export const haCall = tool({
     }
 
     try {
-      const payload: any = {};
+      const payload: Record<string, unknown> = {};
       
       // Add targeting
       if (entity_id) {
@@ -305,12 +322,13 @@ export const haCall = tool({
         data: result,
         message: `Successfully called ${domain}.${service}`,
       });
-      
-    } catch (error: any) {
+
+    } catch (error: unknown) {
       console.error('[ha_call] Error:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
       return JSON.stringify({
         ok: false,
-        error: `Service call failed: ${error.message}`,
+        error: `Service call failed: ${message}`,
         domain,
         service,
       });

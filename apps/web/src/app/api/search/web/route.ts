@@ -1,7 +1,19 @@
 import { NextResponse } from 'next/server';
 
+// Tavily API response types
+type TavilyResult = {
+  title: string;
+  url: string;
+  content: string;
+};
+
+type TavilyResponse = {
+  answer?: string;
+  results?: TavilyResult[];
+};
+
 export async function POST(req: Request) {
-  let body: any;
+  let body: unknown;
   try {
     body = await req.json();
   } catch {
@@ -35,16 +47,17 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: false, error: `tavily_status_${res.status}` }, { status: 500 });
       }
 
-      const data: any = await res.json();
-      const results = (data.results || []).map((r: any) => ({
+      const data = await res.json() as TavilyResponse;
+      const results = (data.results || []).map((r) => ({
         title: r.title || '',
         url: r.url || '',
         snippet: r.content || '',
       }));
 
       return NextResponse.json({ ok: true, answer: data.answer || null, results }, { status: 200 });
-    } catch (e: any) {
-      return NextResponse.json({ ok: false, error: 'tavily_exception', detail: e?.message }, { status: 500 });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return NextResponse.json({ ok: false, error: 'tavily_exception', detail: message }, { status: 500 });
     }
   }
 
@@ -69,8 +82,9 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ ok: true, answer: null, results }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: 'search_exception', detail: e?.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ ok: false, error: 'search_exception', detail: message }, { status: 500 });
   }
 }
 
