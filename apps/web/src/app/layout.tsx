@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/providers/ThemeProvider';
 import { QueryProvider } from '@/providers/QueryProvider';
 import { Toaster } from '@frok/ui';
 import { WebVitals } from '@/components/WebVitals';
+import { PerformanceMonitor } from '@/components/PerformanceMonitor';
 import { ServiceWorkerProvider } from '@/components/ServiceWorkerProvider';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body>
         <WebVitals />
+        <PerformanceMonitor />
         <ServiceWorkerProvider>
           <ThemeProvider>
             <Toaster>
