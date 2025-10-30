@@ -3,6 +3,7 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Button } from '@frok/ui';
 
 type MessageContentProps = {
   content: string;
@@ -70,13 +71,15 @@ export const MessageContent = React.memo(function MessageContent({ content, role
           {content}
         </ReactMarkdown>
       </div>
-      <button
+      <Button
         onClick={handleCopy}
-        className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-xs"
+        variant="ghost"
+        size="sm"
+        className="absolute top-0 right-0 opacity-0 group-hover:opacity-100"
         title="Copy message"
       >
         {copied ? '✓ Copied' : '📋 Copy'}
-      </button>
+      </Button>
     </div>
   );
 });

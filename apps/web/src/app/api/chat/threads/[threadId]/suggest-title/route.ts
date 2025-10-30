@@ -1,21 +1,45 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/withAuth';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/withRateLimit';
+import { validateBody, validateParams } from '@/lib/api/withValidation';
+import { formatErrorMessage } from '@/lib/errorHandler';
+import { suggestTitleParamSchema } from '@/schemas';
+import { z } from 'zod';
 import OpenAI from 'openai';
 
+const suggestTitleBodySchema = z.object({
+  firstMessage: z.string().min(1).max(10000),
+});
+
 export async function POST(
-  req: Request,
+  req: NextRequest,
   context: { params: Promise<{ threadId: string }> }
 ) {
-  try {
-    const body = await req.json();
-    const { firstMessage } = body;
-    const { threadId } = await context.params; // kept for parity; not used currently
+  // Authenticate user
+  const auth = await withAuth(req);
+  if (!auth.ok) return auth.response;
 
-    if (!firstMessage) {
-      return NextResponse.json(
-        { ok: false, error: 'First message required' },
-        { status: 400 }
-      );
-    }
+  // Apply rate limiting (AI title generation is expensive)
+  const rateLimit = await withRateLimit(req, {
+    ...rateLimitPresets.ai,
+    identifier: () => auth.user.userId,
+  });
+  if (!rateLimit.ok) return rateLimit.response;
+
+  // Validate params
+  const paramsValidation = await validateParams(
+    { params: await context.params },
+    suggestTitleParamSchema
+  );
+  if (!paramsValidation.ok) return paramsValidation.response;
+
+  // Validate body
+  const bodyValidation = await validateBody(req, suggestTitleBodySchema);
+  if (!bodyValidation.ok) return bodyValidation.response;
+
+  try {
+    const { firstMessage } = bodyValidation.data;
+    const { threadId } = paramsValidation.data;
 
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
@@ -41,10 +65,10 @@ export async function POST(
     const suggestedTitle = completion.choices[0]?.message?.content?.trim() || 'New Chat';
 
     return NextResponse.json({ ok: true, title: suggestedTitle });
-  } catch (e: any) {
-    console.error('[suggest-title POST error]', e);
+  } catch (error: unknown) {
+    console.error('[suggest-title POST error]', error);
     return NextResponse.json(
-      { ok: false, error: e?.message || 'Failed to suggest title' },
+      { ok: false, error: formatErrorMessage(error) },
       { status: 500 }
     );
   }

@@ -10,8 +10,7 @@ import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ThreadListSkeleton, MessageSkeleton } from '@/components/LoadingSkeleton';
-import { ToastContainer } from '@/components/Toast';
-import { useToast } from '@/hooks/useToast';
+import { useToast, Toaster } from '@frok/ui';
 
 // Lazy load heavy modal components
 const ThreadOptionsMenu = dynamic(() => import('@/components/ThreadOptionsMenu').then(mod => ({ default: mod.ThreadOptionsMenu })), {
@@ -110,7 +109,7 @@ export default function AgentPage() {
 
   const { recordingState, audioLevel, startRecording, stopRecording, transcribeAudio } = useVoiceRecorder();
   const { ttsState, currentMessageId, settings: ttsSettings, voices: ttsVoices, speak, pause, resume, stop, updateSettings: updateTTSSettings } = useTextToSpeech();
-  const { toasts, showToast, dismissToast } = useToast();
+  const toast = useToast();
 
   const activeThread = threads.find((t) => t.id === activeThreadId);
 
@@ -399,19 +398,19 @@ export default function AgentPage() {
 
         setThreads((prev) => prev.filter((t) => t.id !== tempId));
         setActiveThreadId(null);
-        showToast('Failed to create new chat', 'error');
+        toast.error('Failed to create new chat');
         throw new Error('Failed to create new chat');
       } catch (e) {
         console.error('Failed to create thread:', e);
         setThreads((prev) => prev.filter((t) => t.id !== tempId));
         setActiveThreadId(null);
-        showToast('Failed to create new chat', 'error');
+        toast.error('Failed to create new chat');
         throw e;
       }
     })();
 
     return { optimisticId: tempId, threadIdPromise };
-  }, [showToast]);
+  }, [toast]);
 
   const createNewThread = React.useCallback(async () => {
     const { threadIdPromise } = startThreadCreation();
@@ -1053,10 +1052,10 @@ export default function AgentPage() {
       setThreads((prev) =>
         prev.map((t) => (t.id === threadId ? { ...t, enabledTools: tools } : t))
       );
-      showToast('Tools updated successfully', 'success');
+      toast.success('Tools updated successfully');
     } catch (e) {
       console.error('Failed to update tools:', e);
-      showToast('Failed to update tools', 'error');
+      toast.error('Failed to update tools');
     }
   };
 
@@ -1071,10 +1070,10 @@ export default function AgentPage() {
       setThreads((prev) =>
         prev.map((t) => (t.id === threadId ? { ...t, model } : t))
       );
-      showToast(`Model changed to ${model}`, 'success');
+      toast.success(`Model changed to ${model}`);
     } catch (e) {
       console.error('Failed to update model:', e);
-      showToast('Failed to update model', 'error');
+      toast.error('Failed to update model');
     }
   };
 
@@ -1089,10 +1088,10 @@ export default function AgentPage() {
       setThreads((prev) =>
         prev.map((t) => (t.id === threadId ? { ...t, agentStyle: style } : t))
       );
-      showToast(`Agent style changed to ${style}`, 'success');
+      toast.success(`Agent style changed to ${style}`);
     } catch (e) {
       console.error('Failed to update style:', e);
-      showToast('Failed to update style', 'error');
+      toast.error('Failed to update style');
     }
   };
 
@@ -1110,12 +1109,12 @@ export default function AgentPage() {
 
       if (json.ok) {
         setShareUrl(json.shareUrl);
-        showToast('Share link created successfully!', 'success');
+        toast.success('Share link created successfully!');
       } else {
-        showToast('Failed to create share link: ' + json.error, 'error');
+        toast.error('Failed to create share link: ' + json.error);
       }
     } catch (e: any) {
-      showToast('Failed to create share link', 'error');
+      toast.error('Failed to create share link');
     } finally {
       setShareLoading(false);
     }
@@ -1124,7 +1123,7 @@ export default function AgentPage() {
   const copyShareUrl = () => {
     if (shareUrl) {
       navigator.clipboard.writeText(shareUrl);
-      showToast('Share link copied to clipboard!', 'success');
+      toast.success('Share link copied to clipboard!');
     }
   };
 
@@ -1146,13 +1145,13 @@ export default function AgentPage() {
         } else {
           throw new Error('Clipboard unavailable');
         }
-        showToast('Message copied to clipboard', 'success');
+        toast.success('Message copied to clipboard');
       } catch (err) {
         console.error('Failed to copy message:', err);
-        showToast('Failed to copy message', 'error');
+        toast.error('Failed to copy message');
       }
     },
-    [showToast]
+    [toast]
   );
 
   const renderThreadCard = (thread: Thread) => {
@@ -1271,17 +1270,17 @@ export default function AgentPage() {
         try {
           const transcription = await transcribeAudio(audioBlob);
           setInput(transcription);
-          showToast('Audio transcribed successfully!', 'success');
+          toast.success('Audio transcribed successfully!');
         } catch (e: any) {
           console.error('Transcription error:', e);
-          showToast('Failed to transcribe audio: ' + e.message, 'error');
+          toast.error('Failed to transcribe audio: ' + e.message);
         }
       }
     } else {
       // Start recording
       const success = await startRecording();
       if (!success) {
-        showToast('Failed to access microphone. Please check permissions.', 'error');
+        toast.error('Failed to access microphone. Please check permissions.');
       }
     }
   };
@@ -1560,6 +1559,7 @@ export default function AgentPage() {
   }, [showExportMenu]);
 
   return (
+    <Toaster>
     <ErrorBoundary>
     <div className="relative flex min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
       {/* Mobile Menu Button */}
@@ -2551,7 +2551,7 @@ export default function AgentPage() {
           voices={ttsVoices}
           onUpdate={(newSettings) => {
             updateTTSSettings(newSettings);
-            showToast('TTS settings updated', 'success');
+            toast.success('TTS settings updated');
           }}
           onClose={() => setShowTTSSettings(false)}
         />
@@ -2572,9 +2572,8 @@ export default function AgentPage() {
         />
       )}
 
-      {/* Toast Notifications */}
-      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
     </ErrorBoundary>
+    </Toaster>
   );
 }

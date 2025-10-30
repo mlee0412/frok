@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Button } from '@frok/ui';
 
 type SuggestedPromptsProps = {
   onSelect: (prompt: string) => void;
@@ -50,11 +51,12 @@ export function SuggestedPrompts({ onSelect, disabled }: SuggestedPromptsProps) 
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-3xl mx-auto">
         {STARTER_PROMPTS.map((prompt, i) => (
-          <button
+          <Button
             key={i}
             onClick={() => onSelect(prompt.text)}
             disabled={disabled}
-            className="group flex items-start gap-3 p-4 bg-gray-800 hover:bg-gray-750 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed text-left"
+            variant="ghost"
+            className="group flex items-start gap-3 p-4 bg-gray-800 hover:bg-gray-750 rounded-xl h-auto text-left"
           >
             <span className="text-2xl">{prompt.icon}</span>
             <div className="flex-1 min-w-0">
@@ -63,7 +65,7 @@ export function SuggestedPrompts({ onSelect, disabled }: SuggestedPromptsProps) 
               </p>
               <p className="text-xs text-gray-500 mt-1">{prompt.category}</p>
             </div>
-          </button>
+          </Button>
         ))}
       </div>
     </div>

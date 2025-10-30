@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Button } from '@frok/ui';
 
 type AgentMemory = {
   id: string;
@@ -139,13 +140,14 @@ export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) 
                 rows={2}
               />
             </div>
-            <button
+            <Button
               onClick={addMemory}
               disabled={!newMemory.content.trim()}
-              className="px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:bg-gray-700 disabled:text-gray-500 rounded text-sm"
+              variant="primary"
+              size="sm"
             >
               Add Memory
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -179,12 +181,14 @@ export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) 
                       Added {new Date(memory.created_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <button
+                  <Button
                     onClick={() => deleteMemory(memory.id)}
-                    className="text-gray-400 hover:text-red-400 text-xs"
+                    variant="ghost"
+                    size="sm"
+                    className="text-gray-400 hover:text-red-400"
                   >
                     ✕
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
@@ -193,12 +197,9 @@ export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) 
 
         {/* Close Button */}
         <div className="mt-6 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded transition"
-          >
+          <Button onClick={onClose} variant="outline">
             Close
-          </button>
+          </Button>
         </div>
       </div>
     </div>

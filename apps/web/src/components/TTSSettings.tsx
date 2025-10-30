@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Button } from '@frok/ui';
 import type { TTSSettings } from '@/hooks/useTextToSpeech';
 
 type TTSSettingsProps = {
@@ -84,18 +85,12 @@ export function TTSSettingsModal({
 
         {/* Actions */}
         <div className="flex gap-2 justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded transition"
-          >
+          <Button onClick={onClose} variant="outline">
             Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-4 py-2 bg-sky-500 hover:bg-sky-600 rounded transition"
-          >
+          </Button>
+          <Button onClick={handleSave} variant="primary">
             Save
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Button } from '@frok/ui';
 
 type QuickAction = {
   icon: string;
@@ -52,16 +53,18 @@ export function QuickActions({ onAction, hasMessages, disabled }: QuickActionsPr
   return (
     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-700">
       {visibleActions.map((action, i) => (
-        <button
+        <Button
           key={i}
           onClick={() => onAction(action.prompt)}
           disabled={disabled}
-          className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-850 disabled:text-gray-600 rounded-lg text-sm whitespace-nowrap transition"
+          variant="outline"
+          size="sm"
+          className="whitespace-nowrap"
           title={action.prompt}
         >
           <span>{action.icon}</span>
           <span>{action.label}</span>
-        </button>
+        </Button>
       ))}
     </div>
   );

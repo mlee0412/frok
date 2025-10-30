@@ -1,62 +1,65 @@
-import { NextResponse } from 'next/server';
-import { getSupabaseServer } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/withAuth';
+import { validateBody, validateQuery } from '@/lib/api/withValidation';
+import { formatErrorMessage } from '@/lib/errorHandler';
+import { createMessageSchema, messageListQuerySchema } from '@/schemas';
 
-const DEMO_USER_ID = '00000000-0000-0000-0000-000000000000';
+export async function GET(req: NextRequest) {
+  // Authenticate user
+  const auth = await withAuth(req);
+  if (!auth.ok) return auth.response;
 
-export async function GET(req: Request) {
+  // Validate query parameters
+  const validation = await validateQuery(req, messageListQuerySchema);
+  if (!validation.ok) return validation.response;
+
   try {
-    const { searchParams } = new URL(req.url);
-    const threadId = searchParams.get('thread_id');
+    const { thread_id, limit, offset, since } = validation.data;
 
-    if (!threadId) {
-      return NextResponse.json(
-        { ok: false, error: 'thread_id required' },
-        { status: 400 }
-      );
-    }
-
-    const supabase = getSupabaseServer();
-    
-    const { data, error } = await supabase
+    let query = auth.user.supabase
       .from('chat_messages')
       .select('*')
-      .eq('thread_id', threadId)
-      .eq('user_id', DEMO_USER_ID)
+      .eq('thread_id', thread_id)
+      .eq('user_id', auth.user.userId)
       .order('created_at', { ascending: true });
+
+    if (since) {
+      query = query.gte('created_at', since);
+    }
+
+    const { data, error } = await query.range(offset, offset + limit - 1);
 
     if (error) throw error;
 
     return NextResponse.json({ ok: true, messages: data });
-  } catch (e: any) {
-    console.error('[messages GET error]', e);
+  } catch (error: unknown) {
+    console.error('[messages GET error]', error);
     return NextResponse.json(
-      { ok: false, error: e?.message || 'Failed to fetch messages' },
+      { ok: false, error: formatErrorMessage(error) },
       { status: 500 }
     );
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // Authenticate user
+  const auth = await withAuth(req);
+  if (!auth.ok) return auth.response;
+
+  // Validate request body
+  const validation = await validateBody(req, createMessageSchema);
+  if (!validation.ok) return validation.response;
+
   try {
-    const body = await req.json();
-    const { thread_id, role, content } = body;
+    const { thread_id, role, content } = validation.data;
 
-    if (!thread_id || !role || content === undefined) {
-      return NextResponse.json(
-        { ok: false, error: 'thread_id, role, and content required' },
-        { status: 400 }
-      );
-    }
-
-    const supabase = getSupabaseServer();
-    
     const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-    
-    const { data, error } = await supabase
+
+    const { data, error } = await auth.user.supabase
       .from('chat_messages')
       .insert({
         id: messageId,
-        user_id: DEMO_USER_ID,
+        user_id: auth.user.userId,
         thread_id,
         role,
         content,
@@ -66,13 +69,11 @@ export async function POST(req: Request) {
 
     if (error) throw error;
 
-    // Note: thread updated_at is automatically updated via database trigger
-
     return NextResponse.json({ ok: true, message: data });
-  } catch (e: any) {
-    console.error('[messages POST error]', e);
+  } catch (error: unknown) {
+    console.error('[messages POST error]', error);
     return NextResponse.json(
-      { ok: false, error: e?.message || 'Failed to create message' },
+      { ok: false, error: formatErrorMessage(error) },
       { status: 500 }
     );
   }

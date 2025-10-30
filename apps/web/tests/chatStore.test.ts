@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
-import { useChatStore } from '../src/store/chat';
+import { useChatStore } from '../src/store/chatStore';
 
 // Minimal localStorage stub for persist middleware
 beforeAll(() => {
@@ -15,13 +15,13 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
-  // Reset store state
+  // Reset store state (don't use replace mode to preserve actions)
   (useChatStore as any).setState({
     threads: [{ id: 't1', title: 'Welcome', agentId: 'default' }],
     currentId: 't1',
     messages: { t1: [] },
     creating: false,
-  }, true);
+  }, false);
 });
 
 describe('chat store', () => {

@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { supabaseClient } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
+import { Button } from '@frok/ui';
 
 export default function SignInPage() {
   const [email, setEmail] = React.useState('');
@@ -44,13 +45,13 @@ export default function SignInPage() {
               placeholder="you@example.com"
             />
           </div>
-          <button
+          <Button
             type="submit"
             disabled={status === 'sending' || !email.trim()}
-            className="border rounded px-3 py-2"
+            variant="primary"
           >
             {status === 'sending' ? 'Sending…' : 'Send magic link'}
-          </button>
+          </Button>
         </form>
         {status === 'sent' && (
           <div className="text-sm text-foreground/70 mt-3">Check your email for the sign-in link.</div>

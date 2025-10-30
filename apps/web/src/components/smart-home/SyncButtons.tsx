@@ -1,5 +1,6 @@
 'use client';
 import React, { useState } from 'react';
+import { Button } from '@frok/ui';
 
 export default function SyncButtons() {
   const [pending, setPending] = useState<string | null>(null);
@@ -25,20 +26,22 @@ export default function SyncButtons() {
 
   return (
     <div className="flex flex-wrap gap-2 text-sm">
-      <button
+      <Button
         disabled={!!pending}
-        className="border rounded px-3 py-2"
+        variant="outline"
+        size="sm"
         onClick={() => run('/api/ha/sync/registries', 'registries')}
       >
         {pending === 'registries' ? 'Syncing…' : 'Sync Registries'}
-      </button>
-      <button
+      </Button>
+      <Button
         disabled={!!pending}
-        className="border rounded px-3 py-2"
+        variant="outline"
+        size="sm"
         onClick={() => run('/api/ha/sync/snapshot', 'snapshot')}
       >
         {pending === 'snapshot' ? 'Snapshot…' : 'Take Snapshot'}
-      </button>
+      </Button>
       {msg && <span className="text-xs text-gray-500 break-all">{msg}</span>}
     </div>
   );

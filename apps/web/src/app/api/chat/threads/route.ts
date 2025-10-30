@@ -1,48 +1,56 @@
-import { NextResponse } from 'next/server';
-import { getSupabaseServer } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabase/server';
+import { withAuth } from '@/lib/api/withAuth';
+import { validateBody } from '@/lib/api/withValidation';
+import { formatErrorMessage } from '@/lib/errorHandler';
+import { createThreadSchema } from '@/schemas';
 
-// Temporary user ID for demo (replace with auth later)
-const DEMO_USER_ID = '00000000-0000-0000-0000-000000000000';
+export async function GET(req: NextRequest) {
+  // Authenticate user
+  const auth = await withAuth(req);
+  if (!auth.ok) return auth.response;
 
-export async function GET() {
   try {
-    const supabase = getSupabaseServer();
-    
-    const { data, error } = await supabase
+    const { data, error } = await auth.user.supabase
       .from('chat_threads')
       .select('*')
-      .eq('user_id', DEMO_USER_ID)
+      .eq('user_id', auth.user.userId)
       .is('deleted_at', null)
       .order('updated_at', { ascending: false });
 
     if (error) throw error;
 
     return NextResponse.json({ ok: true, threads: data });
-  } catch (e: any) {
-    console.error('[threads GET error]', e);
+  } catch (error: unknown) {
+    console.error('[threads GET error]', error);
     return NextResponse.json(
-      { ok: false, error: e?.message || 'Failed to fetch threads' },
+      { ok: false, error: formatErrorMessage(error) },
       { status: 500 }
     );
   }
 }
 
-export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    const { title = 'New Chat', agent_id = 'default' } = body;
+export async function POST(req: NextRequest) {
+  // Authenticate user
+  const auth = await withAuth(req);
+  if (!auth.ok) return auth.response;
 
-    const supabase = getSupabaseServer();
-    
+  // Validate request body
+  const validation = await validateBody(req, createThreadSchema);
+  if (!validation.ok) return validation.response;
+
+  try {
+    const { title, agentId } = validation.data;
+
     const threadId = `thread_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-    
-    const { data, error } = await supabase
+
+    const { data, error } = await auth.user.supabase
       .from('chat_threads')
       .insert({
         id: threadId,
-        user_id: DEMO_USER_ID,
-        title,
-        agent_id,
+        user_id: auth.user.userId,
+        title: title || 'New Chat',
+        agent_id: agentId,
         tools_enabled: true,
       })
       .select()
@@ -51,10 +59,10 @@ export async function POST(req: Request) {
     if (error) throw error;
 
     return NextResponse.json({ ok: true, thread: data });
-  } catch (e: any) {
-    console.error('[threads POST error]', e);
+  } catch (error: unknown) {
+    console.error('[threads POST error]', error);
     return NextResponse.json(
-      { ok: false, error: e?.message || 'Failed to create thread' },
+      { ok: false, error: formatErrorMessage(error) },
       { status: 500 }
     );
   }

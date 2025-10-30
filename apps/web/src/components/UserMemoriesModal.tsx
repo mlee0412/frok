@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Button } from '@frok/ui';
 
 type UserMemory = {
   id: string;
@@ -78,12 +79,14 @@ export function UserMemoriesModal({ onClose }: UserMemoriesModalProps) {
               Memories stored by the agent during conversations. These are used to personalize your experience.
             </p>
           </div>
-          <button
+          <Button
             onClick={onClose}
-            className="text-gray-400 hover:text-white text-2xl leading-none"
+            variant="ghost"
+            size="sm"
+            className="text-2xl leading-none"
           >
             ×
-          </button>
+          </Button>
         </div>
 
         {/* Tag Filter */}
@@ -91,28 +94,24 @@ export function UserMemoriesModal({ onClose }: UserMemoriesModalProps) {
           <div className="mb-4">
             <label className="block text-xs text-gray-400 mb-2">Filter by Tag:</label>
             <div className="flex flex-wrap gap-2">
-              <button
+              <Button
                 onClick={() => setSelectedTag(null)}
-                className={`px-3 py-1 rounded-full text-xs transition ${
-                  selectedTag === null
-                    ? 'bg-sky-500 text-white'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                }`}
+                variant={selectedTag === null ? 'primary' : 'outline'}
+                size="sm"
+                className="rounded-full"
               >
                 All ({memories.length})
-              </button>
+              </Button>
               {allTags.map((tag) => (
-                <button
+                <Button
                   key={tag}
                   onClick={() => setSelectedTag(tag)}
-                  className={`px-3 py-1 rounded-full text-xs transition ${
-                    selectedTag === tag
-                      ? 'bg-sky-500 text-white'
-                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                  }`}
+                  variant={selectedTag === tag ? 'primary' : 'outline'}
+                  size="sm"
+                  className="rounded-full"
                 >
                   {tag}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -176,13 +175,15 @@ export function UserMemoriesModal({ onClose }: UserMemoriesModalProps) {
                     </div>
                   </div>
                   
-                  <button
+                  <Button
                     onClick={() => deleteMemory(memory.id)}
-                    className="text-gray-400 hover:text-red-400 text-sm opacity-0 group-hover:opacity-100 transition px-2 py-1 hover:bg-red-500/10 rounded"
+                    variant="ghost"
+                    size="sm"
+                    className="text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 hover:bg-red-500/10"
                     title="Delete memory"
                   >
                     🗑️
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
@@ -207,12 +208,9 @@ export function UserMemoriesModal({ onClose }: UserMemoriesModalProps) {
 
         {/* Close Button */}
         <div className="mt-6 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded transition"
-          >
+          <Button onClick={onClose} variant="outline">
             Close
-          </button>
+          </Button>
         </div>
       </div>
     </div>
