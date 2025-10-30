@@ -1,108 +1,148 @@
-import { NextResponse } from 'next/server';
-import { getSupabaseServer } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/withAuth';
+import { validateQuery } from '@/lib/api/withValidation';
+import { listAgentMemoriesSchema, addAgentMemorySchema, deleteAgentMemorySchema } from '@/schemas';
 
 // GET - Retrieve agent memories
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
+  // Authenticate user
+  const auth = await withAuth(req);
+  if (!auth.ok) return auth.response;
+
   try {
     const { searchParams } = new URL(req.url);
-    const agentName = searchParams.get('agent_name') || 'FROK Assistant';
-    const memoryType = searchParams.get('type');
-    const limit = parseInt(searchParams.get('limit') || '10');
 
-    const supabase = await getSupabaseServer();
-    
+    // Validate query parameters
+    const validation = validateQuery(listAgentMemoriesSchema, req);
+    if (!validation.ok) return validation.response;
+
+    const { agent_name, type, limit } = validation.data;
+    const supabase = auth.user.supabase;
+    const user_id = auth.user.userId;
+
+    // Query agent memories with user isolation
     let query = supabase
       .from('agent_memories')
       .select('*')
-      .eq('agent_name', agentName)
+      .eq('user_id', user_id)  // ← User isolation
+      .eq('agent_name', agent_name)
       .order('importance', { ascending: false })
       .order('updated_at', { ascending: false })
       .limit(limit);
 
-    if (memoryType) {
-      query = query.eq('memory_type', memoryType);
+    if (type) {
+      query = query.eq('memory_type', type);
     }
 
     const { data, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      console.error('[agent memory GET error]', error);
+      throw error;
+    }
 
     return NextResponse.json({ ok: true, memories: data || [] });
-  } catch (e: any) {
-    console.error('[memory GET error]', e);
+  } catch (error: unknown) {
+    console.error('[agent memory GET exception]', error);
     return NextResponse.json(
-      { ok: false, error: e?.message || 'Failed to retrieve memories' },
+      { ok: false, error: error instanceof Error ? error.message : 'Failed to retrieve memories' },
       { status: 500 }
     );
   }
 }
 
 // POST - Add new agent memory
-export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    const { agent_name, memory_type, content, importance, metadata } = body;
+export async function POST(req: NextRequest) {
+  // Authenticate user
+  const auth = await withAuth(req);
+  if (!auth.ok) return auth.response;
 
-    if (!content || !memory_type) {
+  try {
+    // Validate request body
+    const body = await req.json();
+    const parsed = addAgentMemorySchema.safeParse(body);
+
+    if (!parsed.success) {
       return NextResponse.json(
-        { ok: false, error: 'content and memory_type required' },
+        { ok: false, error: 'Invalid request body', details: parsed.error.errors },
         { status: 400 }
       );
     }
 
-    const supabase = await getSupabaseServer();
-    
+    const { agent_name, memory_type, content, importance, metadata } = parsed.data;
+    const supabase = auth.user.supabase;
+    const user_id = auth.user.userId;
+
     const { data, error } = await supabase
       .from('agent_memories')
       .insert({
-        agent_name: agent_name || 'FROK Assistant',
+        user_id,  // ← User isolation
+        agent_name,
         memory_type,
         content,
-        importance: importance || 5,
-        metadata: metadata || {},
+        importance,
+        metadata,
       })
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[agent memory POST error]', error);
+      throw error;
+    }
 
     return NextResponse.json({ ok: true, memory: data });
-  } catch (e: any) {
-    console.error('[memory POST error]', e);
+  } catch (error: unknown) {
+    console.error('[agent memory POST exception]', error);
     return NextResponse.json(
-      { ok: false, error: e?.message || 'Failed to add memory' },
+      { ok: false, error: error instanceof Error ? error.message : 'Failed to add memory' },
       { status: 500 }
     );
   }
 }
 
 // DELETE - Remove agent memory
-export async function DELETE(req: Request) {
+export async function DELETE(req: NextRequest) {
+  // Authenticate user
+  const auth = await withAuth(req);
+  if (!auth.ok) return auth.response;
+
   try {
     const { searchParams } = new URL(req.url);
-    const memoryId = searchParams.get('id');
 
-    if (!memoryId) {
+    // Validate query parameters
+    const parsed = deleteAgentMemorySchema.safeParse({
+      id: searchParams.get('id'),
+    });
+
+    if (!parsed.success) {
       return NextResponse.json(
-        { ok: false, error: 'memory id required' },
+        { ok: false, error: 'Invalid memory ID', details: parsed.error.errors },
         { status: 400 }
       );
     }
 
-    const supabase = await getSupabaseServer();
-    
+    const { id } = parsed.data;
+    const supabase = auth.user.supabase;
+    const user_id = auth.user.userId;
+
+    // Security: Only delete user's own memories
     const { error } = await supabase
       .from('agent_memories')
       .delete()
-      .eq('id', memoryId);
+      .eq('id', id)
+      .eq('user_id', user_id);  // ← User isolation
 
-    if (error) throw error;
+    if (error) {
+      console.error('[agent memory DELETE error]', error);
+      throw error;
+    }
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    console.error('[memory DELETE error]', e);
+  } catch (error: unknown) {
+    console.error('[agent memory DELETE exception]', error);
     return NextResponse.json(
-      { ok: false, error: e?.message || 'Failed to delete memory' },
+      { ok: false, error: error instanceof Error ? error.message : 'Failed to delete memory' },
       { status: 500 }
     );
   }

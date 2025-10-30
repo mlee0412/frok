@@ -1,6 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/withAuth';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Authenticate user (prevent info disclosure)
+  const auth = await withAuth(req);
+  if (!auth.ok) return auth.response;
+
   const model = process.env["OPENAI_AGENT_MODEL"] || 'gpt-5-mini';
 
   return NextResponse.json({

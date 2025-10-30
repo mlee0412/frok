@@ -1,6 +1,9 @@
+import { NextRequest } from 'next/server';
 import { Agent, AgentInputItem, Runner, withTrace } from '@openai/agents';
 import { performance } from 'perf_hooks';
 import { createAgentSuite, getReasoningEffort, supportsReasoning } from '@/lib/agent/orchestrator';
+import { withAuth } from '@/lib/api/withAuth';
+import { withRateLimit } from '@/lib/api/withRateLimit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -104,9 +107,18 @@ function selectModelAndTools(
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // Authenticate user
+  const auth = await withAuth(req);
+  if (!auth.ok) return auth.response;
+
+  // Rate limiting (5 requests per minute for AI operations)
+  const rateLimit = await withRateLimit(req, { preset: 'ai' });
+  if (!rateLimit.ok) return rateLimit.response;
+
+  const user_id = auth.user.userId;
   const encoder = new TextEncoder();
-  
+
   const stream = new ReadableStream({
     async start(controller) {
       try {
@@ -132,8 +144,22 @@ export async function POST(req: Request) {
         let historyItems: AgentInputItem[] = [];
         if (threadId && conversationHistory.length === 0) {
           try {
-            const { getSupabaseServer } = await import('@/lib/supabase/server');
-            const supabase = await getSupabaseServer();
+            const supabase = auth.user.supabase;
+
+            // Security: Verify thread belongs to user
+            const { data: thread } = await supabase
+              .from('chat_threads')
+              .select('id')
+              .eq('id', threadId)
+              .eq('user_id', user_id)
+              .single();
+
+            if (!thread) {
+              send({ error: 'Thread not found or access denied' });
+              controller.close();
+              return;
+            }
+
             const { data: messages } = await supabase
               .from('chat_messages')
               .select('role, content')

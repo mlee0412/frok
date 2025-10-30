@@ -1,20 +1,31 @@
+import { NextRequest } from 'next/server';
 import { AgentInputItem, Runner, withTrace } from '@openai/agents';
 import { performance } from 'perf_hooks';
 import { createAgentSuite } from '@/lib/agent/orchestrator';
+import { withAuth } from '@/lib/api/withAuth';
+import { withRateLimit } from '@/lib/api/withRateLimit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // Authenticate user
+  const auth = await withAuth(req);
+  if (!auth.ok) return auth.response;
+
+  // Rate limiting (5 requests per minute for AI operations)
+  const rateLimit = await withRateLimit(req, { preset: 'ai' });
+  if (!rateLimit.ok) return rateLimit.response;
+
   const encoder = new TextEncoder();
-  
+
   const stream = new ReadableStream({
     async start(controller) {
       try {
         const body = await req.json();
         const input_as_text = String(body?.input_as_text ?? '').trim();
         const images = body?.images || [];
-        
+
         if (!input_as_text && images.length === 0) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'input_as_text or images required' })}\n\n`));
           controller.close();

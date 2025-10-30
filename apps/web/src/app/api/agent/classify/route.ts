@@ -1,10 +1,20 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { withAuth } from '@/lib/api/withAuth';
+import { withRateLimit } from '@/lib/api/withRateLimit';
 
 export const runtime = 'nodejs';
 
 // Fast intent classification
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // Authenticate user
+  const auth = await withAuth(req);
+  if (!auth.ok) return auth.response;
+
+  // Rate limiting (AI preset - 5 req/min)
+  const rateLimit = await withRateLimit(req, { preset: 'ai' });
+  if (!rateLimit.ok) return rateLimit.response;
+
   try {
     const { query } = await req.json();
 
@@ -75,8 +85,8 @@ Respond with JSON only: {"complexity": "simple|moderate|complex", "reason": "bri
       reason: classification.reason || 'AI classification'
     });
 
-  } catch (e: any) {
-    console.error('[classify error]', e);
+  } catch (error: unknown) {
+    console.error('[classify error]', error);
     // Default to moderate on error
     return NextResponse.json({
       complexity: 'moderate',

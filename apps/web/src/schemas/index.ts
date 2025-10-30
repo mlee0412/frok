@@ -9,3 +9,4 @@ export * from './common';
 export * from './chat';
 export * from './finance';
 export * from './memory';
+export * from './agent';
