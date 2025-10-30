@@ -1,15 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@frok/ui';
-
-type AgentMemory = {
-  id: string;
-  memory_type: string;
-  content: string;
-  importance: number;
-  created_at: string;
-};
+import { useAgentMemories, useAddAgentMemory, useDeleteAgentMemory } from '@/hooks/queries/useMemories';
 
 type AgentMemoryModalProps = {
   agentName: string;
@@ -24,65 +17,36 @@ const MEMORY_TYPES = [
 ];
 
 export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) {
-  const [memories, setMemories] = useState<AgentMemory[]>([]);
-  const [loading, setLoading] = useState(true);
   const [newMemory, setNewMemory] = useState({ type: 'core', content: '', importance: 5 });
 
-  useEffect(() => {
-    loadMemories();
-  }, [agentName]);
-
-  const loadMemories = async () => {
-    try {
-      const res = await fetch(`/api/agent/memory?agent_name=${encodeURIComponent(agentName)}&limit=20`);
-      const json = await res.json();
-      if (json.ok) {
-        setMemories(json.memories);
-      }
-    } catch (e) {
-      console.error('Failed to load memories:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Use TanStack Query hooks
+  const { data: memories = [], isLoading: loading, error } = useAgentMemories(agentName);
+  const addMemoryMutation = useAddAgentMemory();
+  const deleteMemoryMutation = useDeleteAgentMemory();
 
   const addMemory = async () => {
     if (!newMemory.content.trim()) return;
 
     try {
-      const res = await fetch('/api/agent/memory', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agent_name: agentName,
-          memory_type: newMemory.type,
-          content: newMemory.content.trim(),
-          importance: newMemory.importance,
-        }),
+      await addMemoryMutation.mutateAsync({
+        agent_name: agentName,
+        memory_type: newMemory.type,
+        content: newMemory.content.trim(),
+        importance: newMemory.importance,
       });
-      const json = await res.json();
-
-      if (json.ok) {
-        setMemories([json.memory, ...memories]);
-        setNewMemory({ type: 'core', content: '', importance: 5 });
-      }
+      setNewMemory({ type: 'core', content: '', importance: 5 });
     } catch (e) {
       console.error('Failed to add memory:', e);
+      alert('Failed to add memory');
     }
   };
 
   const deleteMemory = async (memoryId: string) => {
     try {
-      const res = await fetch(`/api/agent/memory?id=${memoryId}`, {
-        method: 'DELETE',
-      });
-      const json = await res.json();
-
-      if (json.ok) {
-        setMemories(memories.filter((m) => m.id !== memoryId));
-      }
+      await deleteMemoryMutation.mutateAsync(memoryId);
     } catch (e) {
       console.error('Failed to delete memory:', e);
+      alert('Failed to delete memory');
     }
   };
 
@@ -96,6 +60,13 @@ export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) 
         <p className="text-sm text-gray-400 mb-4">
           Manage persistent memories that the agent remembers across all conversations.
         </p>
+
+        {/* Error State */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+            ⚠️ Failed to load memories. Please try refreshing.
+          </div>
+        )}
 
         {/* Add New Memory */}
         <div className="bg-gray-800 rounded-lg p-4 mb-4">

@@ -1,60 +1,50 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@frok/ui';
-
-type UserMemory = {
-  id: string;
-  content: string;
-  tags: string[];
-  created_at: string;
-};
+import { useUserMemories, useDeleteUserMemory, useAddUserMemory } from '@/hooks/queries/useMemories';
 
 type UserMemoriesModalProps = {
   onClose: () => void;
 };
 
 export function UserMemoriesModal({ onClose }: UserMemoriesModalProps) {
-  const [memories, setMemories] = useState<UserMemory[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [newMemory, setNewMemory] = useState({ content: '', tags: '' });
+  const [showAddForm, setShowAddForm] = useState(false);
 
-  useEffect(() => {
-    loadMemories();
-  }, [selectedTag]);
+  // Use TanStack Query hooks
+  const { data: memories = [], isLoading: loading, error } = useUserMemories(selectedTag || undefined);
+  const deleteMemoryMutation = useDeleteUserMemory();
+  const addMemoryMutation = useAddUserMemory();
 
-  const loadMemories = async () => {
+  const addMemory = async () => {
+    if (!newMemory.content.trim()) return;
+
     try {
-      setLoading(true);
-      const url = selectedTag 
-        ? `/api/memory/list?tag=${encodeURIComponent(selectedTag)}&limit=100`
-        : `/api/memory/list?limit=100`;
-      
-      const res = await fetch(url);
-      const json = await res.json();
-      
-      if (json.ok) {
-        setMemories(json.memories);
-      }
+      const tags = newMemory.tags
+        .split(',')
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
+
+      await addMemoryMutation.mutateAsync({
+        content: newMemory.content.trim(),
+        tags,
+      });
+
+      setNewMemory({ content: '', tags: '' });
+      setShowAddForm(false);
     } catch (e) {
-      console.error('Failed to load memories:', e);
-    } finally {
-      setLoading(false);
+      console.error('Failed to add memory:', e);
+      alert('Failed to add memory');
     }
   };
 
   const deleteMemory = async (memoryId: string) => {
     if (!confirm('Delete this memory? This cannot be undone.')) return;
-    
-    try {
-      const res = await fetch(`/api/memory/list?id=${memoryId}`, {
-        method: 'DELETE',
-      });
-      const json = await res.json();
 
-      if (json.ok) {
-        setMemories(memories.filter((m) => m.id !== memoryId));
-      }
+    try {
+      await deleteMemoryMutation.mutateAsync(memoryId);
     } catch (e) {
       console.error('Failed to delete memory:', e);
       alert('Failed to delete memory');
@@ -117,12 +107,80 @@ export function UserMemoriesModal({ onClose }: UserMemoriesModalProps) {
           </div>
         )}
 
+        {/* Error State */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+            ⚠️ Failed to load memories. Please try refreshing.
+          </div>
+        )}
+
+        {/* Add Memory Button/Form */}
+        <div className="mb-4">
+          {!showAddForm ? (
+            <Button
+              onClick={() => setShowAddForm(true)}
+              variant="primary"
+              size="sm"
+            >
+              + Add New Memory
+            </Button>
+          ) : (
+            <div className="bg-gray-800 rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium">Add New Memory</h3>
+                <Button
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setNewMemory({ content: '', tags: '' });
+                  }}
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-400"
+                >
+                  Cancel
+                </Button>
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Content *</label>
+                <textarea
+                  value={newMemory.content}
+                  onChange={(e) => setNewMemory({ ...newMemory, content: e.target.value })}
+                  placeholder="What should the agent remember about you?"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm resize-none"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Tags (comma-separated)</label>
+                <input
+                  type="text"
+                  value={newMemory.tags}
+                  onChange={(e) => setNewMemory({ ...newMemory, tags: e.target.value })}
+                  placeholder="e.g., preference, work, personal"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm"
+                />
+              </div>
+
+              <Button
+                onClick={addMemory}
+                variant="primary"
+                size="sm"
+                disabled={!newMemory.content.trim() || addMemoryMutation.isPending}
+              >
+                {addMemoryMutation.isPending ? 'Adding...' : 'Add Memory'}
+              </Button>
+            </div>
+          )}
+        </div>
+
         {/* Memories List */}
         <div>
           <h3 className="text-sm font-medium mb-3">
             {selectedTag ? `Memories tagged "${selectedTag}"` : 'All Memories'} ({memories.length})
           </h3>
-          
+
           {loading ? (
             <div className="text-center text-gray-500 py-12">
               <div className="inline-block w-6 h-6 border-2 border-gray-600 border-t-sky-500 rounded-full animate-spin mb-2"></div>

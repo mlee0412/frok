@@ -1,39 +1,37 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/withAuth';
+import { z } from 'zod';
 
-function getSupabase() {
-  const url = process.env["NEXT_PUBLIC_SUPABASE_URL"];
-  const key = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-  if (!url || !key) return null;
-  return createClient(url, key);
-}
+// Validation schema for search body
+const searchMemoryBodySchema = z.object({
+  query: z.string().min(1, 'Query is required').max(500),
+  top_k: z.number().min(1).max(50).default(10),
+  tags: z.array(z.string()).optional(),
+});
 
-export async function POST(req: Request) {
-  const supabase = getSupabase();
-  if (!supabase) {
-    return NextResponse.json({ ok: false, error: 'missing_supabase_env' }, { status: 500 });
-  }
-
-  let body: any;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ ok: false, error: 'invalid_json' }, { status: 400 });
-  }
-
-  const query = String(body?.query || '').trim().toLowerCase();
-  const top_k = typeof body?.top_k === 'number' && body.top_k > 0 ? Math.min(body.top_k, 50) : 10;
-
-  if (!query) {
-    return NextResponse.json({ ok: false, error: 'query_required' }, { status: 400 });
-  }
-
-  // For now, use a default user_id. In production, filter by authenticated user.
-  const user_id = 'system';
+export async function POST(req: NextRequest) {
+  // Authenticate user
+  const auth = await withAuth(req);
+  if (!auth.ok) return auth.response;
 
   try {
-    // Simple text search using ilike
-    const { data, error } = await supabase
+    const body = await req.json();
+
+    // Validate request body
+    const validation = searchMemoryBodySchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { ok: false, error: 'Invalid request body', details: validation.error.errors },
+        { status: 400 }
+      );
+    }
+
+    const { query, top_k, tags } = validation.data;
+    const supabase = auth.user.supabase;
+    const user_id = auth.user.userId;
+
+    // Build query with user isolation
+    let dbQuery = supabase
       .from('memories')
       .select('id, content, tags, created_at')
       .eq('user_id', user_id)
@@ -41,12 +39,23 @@ export async function POST(req: Request) {
       .order('created_at', { ascending: false })
       .limit(top_k);
 
+    // Filter by tags if provided
+    if (tags && tags.length > 0) {
+      dbQuery = dbQuery.overlaps('tags', tags);
+    }
+
+    const { data, error } = await dbQuery;
+
     if (error) {
-      return NextResponse.json({ ok: false, error: 'db_error', detail: error.message }, { status: 500 });
+      console.error('[memory search error]', error);
+      return NextResponse.json(
+        { ok: false, error: 'Database search failed', details: error.message },
+        { status: 500 }
+      );
     }
 
     // Return results with a basic score (1.0 for matches)
-    const results = (data || []).map((m: any) => ({
+    const results = (data || []).map((m) => ({
       id: m.id,
       content: m.content,
       tags: m.tags || [],
@@ -55,8 +64,13 @@ export async function POST(req: Request) {
     }));
 
     return NextResponse.json({ ok: true, results }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: 'exception', detail: e?.message }, { status: 500 });
+
+  } catch (error: unknown) {
+    console.error('[memory search exception]', error);
+    return NextResponse.json(
+      { ok: false, error: error instanceof Error ? error.message : 'Failed to search memories' },
+      { status: 500 }
+    );
   }
 }
 

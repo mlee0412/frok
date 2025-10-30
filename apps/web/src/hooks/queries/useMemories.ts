@@ -46,6 +46,49 @@ export function useUserMemories(tag: string | null = null) {
   });
 }
 
+export function useAddUserMemory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      content,
+      tags,
+      category,
+      metadata,
+      importance,
+    }: {
+      content: string;
+      tags?: string[];
+      category?: string;
+      metadata?: Record<string, unknown>;
+      importance?: number;
+    }) => {
+      const res = await fetch('/api/memory/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content,
+          tags: tags || [],
+          category,
+          metadata,
+          importance: importance || 5,
+        }),
+      });
+      const json = await res.json();
+
+      if (!json.ok) {
+        throw new Error(json.error || 'Failed to add memory');
+      }
+
+      return json.memory as Memory;
+    },
+    onSuccess: () => {
+      // Invalidate all user memory queries
+      queryClient.invalidateQueries({ queryKey: memoriesKeys.user() });
+    },
+  });
+}
+
 export function useDeleteUserMemory() {
   const queryClient = useQueryClient();
 
@@ -131,7 +174,7 @@ export function useDeleteAgentMemory() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ memoryId, agentName }: { memoryId: string; agentName: string }) => {
+    mutationFn: async (memoryId: string) => {
       const res = await fetch(`/api/agent/memory?id=${memoryId}`, {
         method: 'DELETE',
       });
@@ -141,11 +184,11 @@ export function useDeleteAgentMemory() {
         throw new Error(json.error || 'Failed to delete memory');
       }
 
-      return { memoryId, agentName };
+      return memoryId;
     },
-    onSuccess: (data) => {
-      // Invalidate the specific agent's memories
-      queryClient.invalidateQueries({ queryKey: memoriesKeys.agent(data.agentName) });
+    onSuccess: () => {
+      // Invalidate all agent memory queries
+      queryClient.invalidateQueries({ queryKey: memoriesKeys.all });
     },
   });
 }
