@@ -1,5 +1,3 @@
-import * as React from 'react';
-
 export type ChatMessageProps = {
   role: 'user' | 'assistant' | 'system';
   content: string;
