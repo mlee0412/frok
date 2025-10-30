@@ -6,22 +6,18 @@ import { Card } from '@frok/ui';
 // Dynamic imports for heavy finance components
 const FinancesCharts = dynamic(() => import('./FinancesCharts'), {
   loading: () => <div className="h-32 animate-pulse bg-surface/50 rounded" />,
-  ssr: false,
 });
 
 const FinancesImportClient = dynamic(() => import('./FinancesImportClient'), {
   loading: () => <div className="h-40 animate-pulse bg-surface/50 rounded" />,
-  ssr: false,
 });
 
 const FinancesRulesClient = dynamic(() => import('./FinancesRulesClient'), {
   loading: () => <div className="h-40 animate-pulse bg-surface/50 rounded" />,
-  ssr: false,
 });
 
 const FinancesTransactionsClient = dynamic(() => import('./FinancesTransactionsClient'), {
   loading: () => <div className="h-96 animate-pulse bg-surface/50 rounded" />,
-  ssr: false,
 });
 
 // ISR with 60-second revalidation for financial data

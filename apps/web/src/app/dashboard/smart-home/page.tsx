@@ -12,7 +12,6 @@ const SmartHomeView = dynamic(() => import('@/components/smart-home/SmartHomeVie
       <div className="h-32 bg-surface/50 rounded" />
     </div>
   ),
-  ssr: false,
 });
 
 // ISR with 15-second revalidation for smart home data

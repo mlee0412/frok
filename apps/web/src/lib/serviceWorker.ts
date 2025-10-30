@@ -128,7 +128,7 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
     const registration = await navigator.serviceWorker.ready;
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      applicationServerKey: process.env['NEXT_PUBLIC_VAPID_PUBLIC_KEY'],
     });
 
     console.log('[SW] Push subscription successful');
@@ -164,8 +164,13 @@ export async function triggerSync(tag: string): Promise<void> {
 
   try {
     const registration = await navigator.serviceWorker.ready;
-    await registration.sync.register(tag);
-    console.log(`[SW] Background sync registered: ${tag}`);
+    // Type assertion for Background Sync API (not in all browsers)
+    if ('sync' in registration) {
+      await (registration as any).sync.register(tag);
+      console.log(`[SW] Background sync registered: ${tag}`);
+    } else {
+      console.log('[SW] Background sync not available in this browser');
+    }
   } catch (error) {
     console.error('[SW] Background sync failed:', error);
   }

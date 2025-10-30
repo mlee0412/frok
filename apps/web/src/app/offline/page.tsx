@@ -20,7 +20,7 @@ export default function OfflinePage() {
           </svg>
         </div>
 
-        <h1 className="mb-2 text-2xl font-semibold text-foreground">You're offline</h1>
+        <h1 className="mb-2 text-2xl font-semibold text-foreground">You&apos;re offline</h1>
         <p className="mb-6 text-foreground/70">
           Please check your internet connection and try again.
         </p>
@@ -47,7 +47,7 @@ export default function OfflinePage() {
 
         <div className="mt-8 text-xs text-foreground/50">
           <p>Some features may still be available offline.</p>
-          <p>Your work will sync when you're back online.</p>
+          <p>Your work will sync when you&apos;re back online.</p>
         </div>
       </div>
     </div>
