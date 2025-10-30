@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runWorkflow } from '@/lib/agent/runWorkflow';
 import { withAuth } from '@/lib/api/withAuth';
-import { withRateLimit } from '@/lib/api/withRateLimit';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/withRateLimit';
 
 export async function POST(req: NextRequest) {
   // Authenticate user
@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response;
 
   // Rate limiting (5 requests per minute for AI operations)
-  const rateLimit = await withRateLimit(req, { preset: 'ai' });
+  const rateLimit = await withRateLimit(req, rateLimitPresets.ai);
   if (!rateLimit.ok) return rateLimit.response;
 
   try {
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
   if (!auth.ok) return auth.response;
 
   // Rate limiting (5 requests per minute for AI operations)
-  const rateLimit = await withRateLimit(req, { preset: 'ai' });
+  const rateLimit = await withRateLimit(req, rateLimitPresets.ai);
   if (!rateLimit.ok) return rateLimit.response;
 
   try {

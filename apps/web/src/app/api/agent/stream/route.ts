@@ -3,7 +3,7 @@ import { AgentInputItem, Runner, withTrace } from '@openai/agents';
 import { performance } from 'perf_hooks';
 import { createAgentSuite } from '@/lib/agent/orchestrator';
 import { withAuth } from '@/lib/api/withAuth';
-import { withRateLimit } from '@/lib/api/withRateLimit';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/withRateLimit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response;
 
   // Rate limiting (5 requests per minute for AI operations)
-  const rateLimit = await withRateLimit(req, { preset: 'ai' });
+  const rateLimit = await withRateLimit(req, rateLimitPresets.ai);
   if (!rateLimit.ok) return rateLimit.response;
 
   const encoder = new TextEncoder();

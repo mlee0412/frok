@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { withAuth } from '@/lib/api/withAuth';
-import { withRateLimit } from '@/lib/api/withRateLimit';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/withRateLimit';
 
 export const runtime = 'nodejs';
 
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response;
 
   // Rate limiting (AI preset - 5 req/min)
-  const rateLimit = await withRateLimit(req, { preset: 'ai' });
+  const rateLimit = await withRateLimit(req, rateLimitPresets.ai);
   if (!rateLimit.ok) return rateLimit.response;
 
   try {

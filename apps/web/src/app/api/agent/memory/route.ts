@@ -10,10 +10,8 @@ export async function GET(req: NextRequest) {
   if (!auth.ok) return auth.response;
 
   try {
-    const { searchParams } = new URL(req.url);
-
     // Validate query parameters
-    const validation = validateQuery(listAgentMemoriesSchema, req);
+    const validation = await validateQuery(req, listAgentMemoriesSchema);
     if (!validation.ok) return validation.response;
 
     const { agent_name, type, limit } = validation.data;
