@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   }
 
   // Check for TAVILY_API_KEY
-  const tavilyKey = process.env.TAVILY_API_KEY;
+  const tavilyKey = process.env["TAVILY_API_KEY"];
   if (tavilyKey) {
     try {
       const res = await fetch('https://api.tavily.com/search', {
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
     const linkRegex = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([^<]+)<\/a>/gi;
     let match;
     while ((match = linkRegex.exec(html)) !== null && results.length < max_results) {
-      results.push({ title: match[2], url: match[1], snippet: '' });
+      results.push({ title: match[2] ?? '', url: match[1] ?? '', snippet: '' });
     }
 
     return NextResponse.json({ ok: true, answer: null, results }, { status: 200 });

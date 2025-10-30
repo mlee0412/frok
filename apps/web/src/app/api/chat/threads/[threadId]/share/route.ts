@@ -10,7 +10,7 @@ export async function POST(
     const { expiresInDays } = body;
     const { threadId } = await context.params;
 
-    const supabase = getSupabaseServer();
+    const supabase = await getSupabaseServer();
     
     // Generate unique share token
     const shareToken = Math.random().toString(36).substring(2, 15) + 
@@ -21,7 +21,7 @@ export async function POST(
       ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString()
       : null;
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('shared_threads')
       .insert({
         thread_id: threadId,
@@ -46,12 +46,12 @@ export async function POST(
 }
 
 export async function DELETE(
-  req: Request,
+  _req: Request,
   context: { params: Promise<{ threadId: string }> }
 ) {
   try {
     const { threadId } = await context.params;
-    const supabase = getSupabaseServer();
+    const supabase = await getSupabaseServer();
     
     const { error } = await supabase
       .from('shared_threads')

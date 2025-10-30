@@ -1,9 +1,9 @@
 import { Agent, type AgentInputItem, type InputGuardrail, type OutputGuardrail, type Tool } from '@openai/agents';
 
-const FAST_MODEL_FALLBACK = process.env.OPENAI_FAST_MODEL ?? 'gpt-5-nano';
-const BALANCED_MODEL_FALLBACK = process.env.OPENAI_GENERAL_MODEL ?? 'gpt-5-mini';
+const FAST_MODEL_FALLBACK = process.env["OPENAI_FAST_MODEL"] ?? 'gpt-5-nano';
+const BALANCED_MODEL_FALLBACK = process.env["OPENAI_GENERAL_MODEL"] ?? 'gpt-5-mini';
 const COMPLEX_MODEL_FALLBACK =
-  process.env.OPENAI_COMPLEX_MODEL ?? process.env.OPENAI_AGENT_MODEL ?? 'gpt-5-think';
+  process.env["OPENAI_COMPLEX_MODEL"] ?? process.env["OPENAI_AGENT_MODEL"] ?? 'gpt-5-think';
 
 type AgentTool = Tool<unknown>;
 
@@ -75,8 +75,9 @@ const sanitizeInputGuardrail: InputGuardrail = {
         ? input
         : input
             .map(item => {
-              if (item.type === 'input_text') return item.text ?? '';
-              if (item.type === 'input_image') return '[image]';
+              const itemType = (item as { type?: string }).type;
+              if (itemType === 'input_text') return (item as { text?: string }).text ?? '';
+              if (itemType === 'input_image') return '[image]';
               return '';
             })
             .join(' ');
@@ -146,11 +147,11 @@ function buildModelSettings(
 ) {
   const settings: Record<string, unknown> = { store };
   if (typeof temperature === 'number') {
-    settings.temperature = temperature;
+    settings['temperature'] = temperature;
   }
 
   if (supportsReasoning(model)) {
-    settings.reasoning = {
+    settings['reasoning'] = {
       effort: reasoningEffort ?? getReasoningEffort(model),
     };
   }
@@ -161,13 +162,8 @@ function buildModelSettings(
 function buildConversationPrimer(): AgentInputItem[] {
   return [
     {
-      role: 'system',
-      content: [
-        {
-          type: 'input_text',
-          text: 'Maintain a friendly, concise tone. Summaries should note any tools that were used.',
-        },
-      ],
+      role: 'system' as const,
+      content: 'Maintain a friendly, concise tone. Summaries should note any tools that were used.',
     },
   ];
 }
@@ -177,13 +173,13 @@ export async function createAgentSuite(options: AgentSuiteOptions = {}): Promise
   const primer = buildConversationPrimer();
 
   const routerModel =
-    options.models?.router ?? process.env.OPENAI_ROUTER_MODEL ?? FAST_MODEL_FALLBACK;
+    options.models?.router ?? process.env["OPENAI_ROUTER_MODEL"] ?? FAST_MODEL_FALLBACK;
   const generalModel =
     options.models?.general ?? (options.preferFastGeneral ? BALANCED_MODEL_FALLBACK : COMPLEX_MODEL_FALLBACK);
-  const homeModel = options.models?.home ?? process.env.OPENAI_HOME_MODEL ?? routerModel;
-  const memoryModel = options.models?.memory ?? process.env.OPENAI_MEMORY_MODEL ?? routerModel;
+  const homeModel = options.models?.home ?? process.env["OPENAI_HOME_MODEL"] ?? routerModel;
+  const memoryModel = options.models?.memory ?? process.env["OPENAI_MEMORY_MODEL"] ?? routerModel;
   const researchModel =
-    options.models?.research ?? process.env.OPENAI_RESEARCH_MODEL ?? BALANCED_MODEL_FALLBACK;
+    options.models?.research ?? process.env["OPENAI_RESEARCH_MODEL"] ?? BALANCED_MODEL_FALLBACK;
 
   const homeAgent = new Agent({
     name: 'Home Control Specialist',

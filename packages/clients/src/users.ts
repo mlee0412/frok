@@ -8,9 +8,9 @@ export async function getUsers(): Promise<User[]> {
     const data = res.data;
     const isUserArray = (x: unknown): x is User[] => Array.isArray(x);
     const isUsersObj = (x: unknown): x is { users: User[] } =>
-      typeof x === 'object' && x !== null && Array.isArray((x as Record<string, unknown>).users);
+      typeof x === 'object' && x !== null && Array.isArray((x as Record<string, unknown>)['users']);
     if (isUserArray(data)) return data;
-    if (isUsersObj(data)) return data.users;
+    if (isUsersObj(data)) return data['users'];
   }
 
   // demo fallback

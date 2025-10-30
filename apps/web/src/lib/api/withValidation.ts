@@ -7,8 +7,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z, ZodError } from 'zod';
 import { formatErrorMessage } from '@/lib/errorHandler';
 
-type ValidationTarget = 'body' | 'query' | 'params';
-
 type ValidationConfig<TBody, TQuery, TParams> = {
   body?: z.ZodSchema<TBody>;
   query?: z.ZodSchema<TQuery>;

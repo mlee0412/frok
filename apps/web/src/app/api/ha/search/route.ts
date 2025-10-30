@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
 function getHA() {
-  const base = (process.env.HOME_ASSISTANT_URL || process.env.HA_BASE_URL || '').trim();
-  const token = (process.env.HOME_ASSISTANT_TOKEN || process.env.HA_TOKEN || '').trim();
+  const base = (process.env["HOME_ASSISTANT_URL"] || process.env["HA_BASE_URL"] || '').trim();
+  const token = (process.env["HOME_ASSISTANT_TOKEN"] || process.env["HA_TOKEN"] || '').trim();
   if (!base || !token) return null;
   return { base: base.replace(/\/$/, ''), token };
 }
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     const entities = states
       .filter((s) => {
         const entityId = String(s.entity_id || '').toLowerCase();
-        const friendlyName = String(s.attributes?.friendly_name || '').toLowerCase();
+        const friendlyName = String(s.attributes?.["friendly_name"] || '').toLowerCase();
         const matchesQuery = entityId.includes(query) || friendlyName.includes(query);
         const matchesDomain = domain ? entityId.startsWith(`${domain}.`) : true;
         return matchesQuery && matchesDomain;
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       .slice(0, 20)
       .map((s) => ({
         entity_id: s.entity_id,
-        friendly_name: s.attributes?.friendly_name || s.entity_id,
+        friendly_name: s.attributes?.["friendly_name"] || s.entity_id,
         state: s.state,
         domain: s.entity_id.split('.')[0],
       }));

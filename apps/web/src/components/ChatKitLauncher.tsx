@@ -79,7 +79,7 @@ export function ChatKitLauncher() {
       setError(err?.message ?? 'ChatKit experienced an unexpected error.');
     },
     onLog: ({ name, data }) => {
-      if (process.env.NODE_ENV !== 'production') {
+      if (process.env["NODE_ENV"] !== 'production') {
         console.debug('[ChatKit]', name, data);
       }
     },

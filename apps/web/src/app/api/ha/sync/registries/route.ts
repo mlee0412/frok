@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server';
 
 function getHA() {
-  const base = (process.env.HOME_ASSISTANT_URL || process.env.HA_BASE_URL || '').trim();
-  const token = (process.env.HOME_ASSISTANT_TOKEN || process.env.HA_TOKEN || '').trim();
+  const base = (process.env["HOME_ASSISTANT_URL"] || process.env["HA_BASE_URL"] || '').trim();
+  const token = (process.env["HOME_ASSISTANT_TOKEN"] || process.env["HA_TOKEN"] || '').trim();
   if (!base || !token) return null;
   return { base: base.replace(/\/$/, ''), token };
 }
 
 function getSB() {
-  const url = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim();
-  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const url = (process.env["SUPABASE_URL"] || process.env["NEXT_PUBLIC_SUPABASE_URL"] || '').trim();
+  const key = (process.env["SUPABASE_SERVICE_ROLE_KEY"] || '').trim();
   if (!url || !key) return null;
   return { url: url.replace(/\/$/, ''), key };
 }
@@ -65,7 +65,7 @@ export async function POST() {
       const rs = await fetch(`${ha.base}/api/states`, { headers: { Authorization: `Bearer ${ha.token}` }, cache: 'no-store' });
       if (rs.ok) {
         const states = (await rs.json()) as Array<{ entity_id: string; attributes?: Record<string, unknown> }>;
-        entities = states.map((s) => ({ entity_id: s.entity_id, name: (s.attributes?.friendly_name as string) || '', device_id: null, area_id: null }));
+        entities = states.map((s) => ({ entity_id: s.entity_id, name: (s.attributes?.["friendly_name"] as string) || '', device_id: null, area_id: null }));
       }
     }
 

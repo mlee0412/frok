@@ -19,7 +19,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ tool: s
     return NextResponse.json({ ok: false, detail: `unknown tool: ${key}` }, { status: 404 });
   }
   if (key === 'github') {
-    const token = process.env.GITHUB_TOKEN;
+    const token = process.env["GITHUB_TOKEN"];
     if (!token) {
       return NextResponse.json({ ok: false, detail: 'missing env for github' }, { status: 200 });
     }
@@ -50,8 +50,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ tool: s
   }
   if (key === 'home-assistant') {
     const ok =
-      ((process.env.HOME_ASSISTANT_URL || '').trim().length > 0 && (process.env.HOME_ASSISTANT_TOKEN || '').trim().length > 0) ||
-      ((process.env.HA_BASE_URL || '').trim().length > 0 && (process.env.HA_TOKEN || '').trim().length > 0);
+      ((process.env["HOME_ASSISTANT_URL"] || '').trim().length > 0 && (process.env["HOME_ASSISTANT_TOKEN"] || '').trim().length > 0) ||
+      ((process.env["HA_BASE_URL"] || '').trim().length > 0 && (process.env["HA_TOKEN"] || '').trim().length > 0);
     return NextResponse.json({ ok, detail: ok ? 'env present' : `missing env for ${key}` }, { status: 200 });
   }
   const ok = hasEnv(reqs);

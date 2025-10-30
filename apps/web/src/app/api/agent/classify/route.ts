@@ -45,7 +45,7 @@ export async function POST(req: Request) {
 
     // For ambiguous cases, use GPT-5 Nano for classification (fast)
     const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: process.env["OPENAI_API_KEY"],
     });
 
     const completion = await openai.chat.completions.create({

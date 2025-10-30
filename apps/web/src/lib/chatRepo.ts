@@ -16,7 +16,7 @@ function normaliseAgentId(agentId: unknown): string {
 function mapThreadRow(r: ChatThreadRow): ChatThread {
   return {
     id: r.id,
-    title: r.title,
+    title: r.title ?? 'Untitled',
     agentId: normaliseAgentId(r.agent_id),
     userId: r.user_id,
     createdAt: new Date(r.created_at).getTime(),
@@ -33,7 +33,7 @@ function mapThreadRow(r: ChatThreadRow): ChatThread {
       r.enabled_tools || ['home_assistant', 'memory', 'web_search', 'tavily_search', 'image_generation'],
     model: r.model || 'gpt-5-mini',
     agentStyle: r.agent_style || 'balanced',
-    projectContext: r.project_context,
+    projectContext: r.project_context ?? undefined,
     agentName: r.agent_name || 'FROK Assistant',
   };
 }
@@ -211,13 +211,13 @@ export function subscribe(
 ): ChatSubscriptions {
   const supa = supabaseClient();
   const channel = supa.channel('realtime:chat')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_threads' }, (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_threads' }, (payload: any) => {
       const r: any = payload.new;
       if (!r) return;
-      
+
       onThreadUpsert(mapThreadRow(r));
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, (payload: any) => {
       const r: any = payload.new;
       if (!r) return;
       

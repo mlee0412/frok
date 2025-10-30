@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const base = (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
-  const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
+  const base = (process.env["NEXT_PUBLIC_SUPABASE_URL"] || process.env["SUPABASE_URL"] || '').trim();
+  const anon = (process.env["NEXT_PUBLIC_SUPABASE_ANON_KEY"] || process.env["SUPABASE_ANON_KEY"] || '').trim();
   if (!base) {
     return NextResponse.json({ ok: false, detail: 'missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL' }, { status: 200 });
   }

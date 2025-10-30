@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const model = process.env.OPENAI_AGENT_MODEL || 'gpt-5-mini';
+  const model = process.env["OPENAI_AGENT_MODEL"] || 'gpt-5-mini';
 
   return NextResponse.json({
     model,

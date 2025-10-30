@@ -37,9 +37,9 @@ async function classifyQuery(query: string): Promise<'simple' | 'moderate' | 'co
   return 'moderate';
 }
 
-const FAST_MODEL = process.env.OPENAI_FAST_MODEL ?? 'gpt-5-nano';
-const BALANCED_MODEL = process.env.OPENAI_BALANCED_MODEL ?? process.env.OPENAI_GENERAL_MODEL ?? 'gpt-5-mini';
-const COMPLEX_MODEL = process.env.OPENAI_COMPLEX_MODEL ?? process.env.OPENAI_AGENT_MODEL ?? 'gpt-5-think';
+const FAST_MODEL = process.env["OPENAI_FAST_MODEL"] ?? 'gpt-5-nano';
+const BALANCED_MODEL = process.env["OPENAI_BALANCED_MODEL"] ?? process.env["OPENAI_GENERAL_MODEL"] ?? 'gpt-5-mini';
+const COMPLEX_MODEL = process.env["OPENAI_COMPLEX_MODEL"] ?? process.env["OPENAI_AGENT_MODEL"] ?? 'gpt-5-think';
 
 function selectModelAndTools(
   complexity: 'simple' | 'moderate' | 'complex',
@@ -97,9 +97,11 @@ function selectModelAndTools(
         tools: ['home_assistant', 'memory', 'web_search'],
         orchestrate: true,
       };
-  }
 
-  return { model: BALANCED_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: false };
+    default:
+      // Fallback to balanced model
+      return { model: BALANCED_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: false };
+  }
 }
 
 export async function POST(req: Request) {
@@ -131,7 +133,7 @@ export async function POST(req: Request) {
         if (threadId && conversationHistory.length === 0) {
           try {
             const { getSupabaseServer } = await import('@/lib/supabase/server');
-            const supabase = getSupabaseServer();
+            const supabase = await getSupabaseServer();
             const { data: messages } = await supabase
               .from('chat_messages')
               .select('role, content')
@@ -204,7 +206,7 @@ export async function POST(req: Request) {
                   router: FAST_MODEL,
                   home: FAST_MODEL,
                   memory: FAST_MODEL,
-                  research: process.env.OPENAI_RESEARCH_MODEL ?? BALANCED_MODEL,
+                  research: process.env["OPENAI_RESEARCH_MODEL"] ?? BALANCED_MODEL,
                 },
               })
             : null;
@@ -264,11 +266,11 @@ export async function POST(req: Request) {
           const runner = new Runner({
             traceMetadata: {
               __trace_source__: 'agent-builder',
-              workflow_id: process.env.WORKFLOW_ID || 'unknown',
+              workflow_id: process.env["WORKFLOW_ID"] || 'unknown',
             },
           });
 
-          let result: Awaited<ReturnType<typeof runner.run>>;
+          let result;
           const startedAt = performance.now();
 
           if (orchestrate && suite) {

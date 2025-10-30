@@ -23,7 +23,7 @@ function serializeSessionCookie(value: string): string {
     'HttpOnly',
     'SameSite=Lax',
   ];
-  if (process.env.NODE_ENV === 'production') attrs.push('Secure');
+  if (process.env["NODE_ENV"] === 'production') attrs.push('Secure');
   return attrs.join('; ');
 }
 
@@ -35,19 +35,19 @@ function resolveUserId(cookieHeader: string | null): { userId: string; sessionCo
 }
 
 export async function POST(req: Request) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  const workflowId = process.env.WORKFLOW_ID;
+  const apiKey = process.env["OPENAI_API_KEY"];
+  const workflowId = process.env["WORKFLOW_ID"];
   if (!apiKey || !workflowId) {
     return NextResponse.json({ error: 'missing_openai_env', detail: 'Set OPENAI_API_KEY and WORKFLOW_ID in apps/web/.env.local' }, { status: 500 });
   }
 
   // We accept the current secret but simply request a fresh session
   // so the widget can re-connect with a valid token.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _body = await req.json().catch(() => null);
+  // Consume request body (intentionally unused)
+  await req.json().catch(() => null);
 
   const { userId, sessionCookie } = resolveUserId(req.headers.get('cookie'));
-  const apiBase = process.env.CHATKIT_API_BASE?.trim() || DEFAULT_CHATKIT_BASE;
+  const apiBase = process.env["CHATKIT_API_BASE"]?.trim() || DEFAULT_CHATKIT_BASE;
   const url = `${apiBase}/v1/chatkit/sessions`;
 
   const upstream = await fetch(url, {

@@ -43,7 +43,7 @@ const AGENT_STYLES = [
 ];
 
 export function ThreadOptionsMenu({
-  threadId,
+  threadId: _threadId,
   currentTags = [],
   currentFolder,
   currentTools = AVAILABLE_TOOLS.map(t => t.id),

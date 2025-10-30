@@ -2,12 +2,12 @@ import { NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabase/server';
 
 export async function GET(
-  req: Request,
+  _req: Request,
   context: { params: Promise<{ token: string }> }
 ) {
   try {
     const { token } = await context.params;
-    const supabase = getSupabaseServer();
+    const supabase = await getSupabaseServer();
     
     // Get shared thread info
     const { data: sharedThread, error: shareError } = await supabase

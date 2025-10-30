@@ -1,14 +1,12 @@
 'use client';
 import * as React from 'react';
 import { supabaseClient } from '@/lib/supabaseClient';
-import { useRouter } from 'next/navigation';
 import { Button } from '@frok/ui';
 
 export default function SignInPage() {
   const [email, setEmail] = React.useState('');
   const [status, setStatus] = React.useState<'idle'|'sending'|'sent'|'error'>('idle');
   const [err, setErr] = React.useState<string | null>(null);
-  const router = useRouter();
 
   async function sendMagicLink(e: React.FormEvent) {
     e.preventDefault();

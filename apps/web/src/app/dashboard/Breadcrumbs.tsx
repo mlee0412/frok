@@ -10,7 +10,7 @@ function labelize(segment: string) {
   if (map[segment]) return map[segment];
   return segment
     .split('-')
-    .map((p) => (p ? p[0].toUpperCase() + p.slice(1) : p))
+    .map((p) => (p && p[0] ? p[0].toUpperCase() + p.slice(1) : p))
     .join(' ');
 }
 

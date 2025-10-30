@@ -5,7 +5,7 @@ import { useEffect, useRef, useCallback } from 'react';
  */
 export function useFocusTrap<T extends HTMLElement = HTMLElement>(
   isActive = true
-): React.RefObject<T> {
+): React.RefObject<T | null> {
   const containerRef = useRef<T>(null);
 
   useEffect(() => {
@@ -73,7 +73,7 @@ export function useFocusReturn(): {
  */
 export function useAutoFocus<T extends HTMLElement = HTMLElement>(
   shouldFocus = true
-): React.RefObject<T> {
+): React.RefObject<T | null> {
   const elementRef = useRef<T>(null);
 
   useEffect(() => {
@@ -97,7 +97,7 @@ export function useListFocus<T extends HTMLElement = HTMLElement>(options: {
   enabled?: boolean;
   loop?: boolean; // Whether to loop from end to start
 } = {}): {
-  containerRef: React.RefObject<T>;
+  containerRef: React.RefObject<T | null>;
   focusNext: () => void;
   focusPrevious: () => void;
   focusFirst: () => void;

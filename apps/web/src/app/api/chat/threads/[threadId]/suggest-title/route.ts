@@ -39,10 +39,10 @@ export async function POST(
 
   try {
     const { firstMessage } = bodyValidation.data;
-    const { threadId } = paramsValidation.data;
+    const { threadId: _threadId } = paramsValidation.data;
 
     const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: process.env["OPENAI_API_KEY"],
     });
 
     // Use GPT to generate a concise title

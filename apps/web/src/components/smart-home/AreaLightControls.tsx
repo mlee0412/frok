@@ -37,8 +37,8 @@ export default function AreaLightControls({ area, devices }: { area: string; dev
       const r: unknown = await fn();
       if (typeof r === 'object' && r !== null) {
         const rec = r as Record<string, unknown>;
-        if ('ok' in rec && rec.ok === false) {
-          const m = typeof rec.error === 'string' ? rec.error : 'error';
+        if ('ok' in rec && rec['ok'] === false) {
+          const m = typeof rec['error'] === 'string' ? rec['error'] : 'error';
           setMsg(m);
         } else {
           setMsg('ok');

@@ -65,7 +65,7 @@ export function withErrorHandler(handler: ApiRouteHandler): ApiRouteHandler {
         {
           ok: false,
           error: errorMessage,
-          ...(process.env.NODE_ENV === 'development' && {
+          ...(process.env["NODE_ENV"] === 'development' && {
             stack: error instanceof Error ? error.stack : undefined,
           }),
         },

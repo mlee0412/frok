@@ -129,7 +129,7 @@ export default function ChatKitPage() {
       const script = document.createElement('script');
       script.type = 'module';
       script.src = 'https://cdn.openai.com/chatkit/chatkit.js';
-      script.dataset.chatkitWebComponent = 'true';
+      script.dataset['chatkitWebComponent'] = 'true';
       script.onload = () => resolve();
       script.onerror = () => reject(new Error('Failed to load ChatKit web component script'));
       document.head.appendChild(script);

@@ -33,8 +33,8 @@ export async function GET(req: NextRequest) {
   if (!validation.ok) return validation.response;
 
   try {
-    const supabase = getSupabaseServer();
-    const { q, from, to, category, account, limit, offset } = validation.data;
+    const supabase = await getSupabaseServer();
+    const { q, from, to, category, account, limit = 50, offset = 0 } = validation.data;
 
     // Build query with user isolation
     let qb = supabase

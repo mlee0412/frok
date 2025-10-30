@@ -11,8 +11,8 @@ export async function GET(req: NextRequest) {
     const cookieStore = await cookies();
 
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env["NEXT_PUBLIC_SUPABASE_URL"]!,
+      process.env["NEXT_PUBLIC_SUPABASE_ANON_KEY"]!,
       {
         cookies: {
           get(name: string) {
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
               // Cookie setting can fail in server components
             }
           },
-          remove(name: string, options) {
+          remove(name: string, _options) {
             try {
               cookieStore.delete(name);
             } catch {

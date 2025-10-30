@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server';
-import { supabaseServiceClient } from '../../../../lib/supabaseServer';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -23,13 +22,9 @@ export async function GET(req: NextRequest) {
   let dbLastLatency = 0;
   let dbCooldownUntil = 0; // epoch ms
 
-  const supabase = (() => {
-    try { return supabaseServiceClient(); } catch { return null; }
-  })();
-
   async function pingHA(): Promise<{ ok: boolean; ms: number }> {
-    const base = (process.env.HOME_ASSISTANT_URL || process.env.HA_BASE_URL || '').trim();
-    const token = (process.env.HOME_ASSISTANT_TOKEN || process.env.HA_TOKEN || '').trim();
+    const base = (process.env["HOME_ASSISTANT_URL"] || process.env["HA_BASE_URL"] || '').trim();
+    const token = (process.env["HOME_ASSISTANT_TOKEN"] || process.env["HA_TOKEN"] || '').trim();
     if (!base || !token) return { ok: false, ms: 0 };
     const url = base.replace(/\/$/, '') + '/api/';
     const t0 = Date.now();
@@ -48,8 +43,8 @@ export async function GET(req: NextRequest) {
   async function pingDB(): Promise<{ ok: boolean; ms: number }> {
     const t0 = Date.now();
     try {
-      const base = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim();
-      const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+      const base = (process.env["NEXT_PUBLIC_SUPABASE_URL"] || '').trim();
+      const key = (process.env["SUPABASE_SERVICE_ROLE_KEY"] || '').trim();
       if (!base || !key) return { ok: false, ms: 0 };
       const ac = new AbortController();
       const timeout = setTimeout(() => ac.abort(), 5000);

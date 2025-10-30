@@ -719,7 +719,7 @@ export default function AgentPage() {
 
     // Get the user message before this assistant message
     const userMessage = messages[messageIndex - 1];
-    if (userMessage.role !== 'user') return;
+    if (!userMessage || userMessage.role !== 'user') return;
 
     // Mark the message as regenerating
     setThreads((prev) =>

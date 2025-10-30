@@ -4,15 +4,15 @@ import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 
 function getHA() {
-  const base = (process.env.HOME_ASSISTANT_URL || process.env.HA_BASE_URL || '').trim();
-  const token = (process.env.HOME_ASSISTANT_TOKEN || process.env.HA_TOKEN || '').trim();
+  const base = (process.env["HOME_ASSISTANT_URL"] || process.env["HA_BASE_URL"] || '').trim();
+  const token = (process.env["HOME_ASSISTANT_TOKEN"] || process.env["HA_TOKEN"] || '').trim();
   if (!base || !token) return null;
   return { base: base.replace(/\/$/, ''), token };
 }
 
 function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env["NEXT_PUBLIC_SUPABASE_URL"];
+  const key = process.env["SUPABASE_SERVICE_ROLE_KEY"];
   if (!url || !key) return null;
   return createClient(url, key);
 }
@@ -20,7 +20,7 @@ function getSupabase() {
 let cachedOpenAI: OpenAI | null = null;
 
 function getOpenAI() {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env["OPENAI_API_KEY"];
   if (!apiKey) return null;
   if (!cachedOpenAI) {
     cachedOpenAI = new OpenAI({ apiKey });
@@ -55,7 +55,7 @@ export const haSearch = tool({
     const entities = states
       .filter((s) => {
         const entityId = String(s.entity_id || '').toLowerCase();
-        const friendlyName = String(s.attributes?.friendly_name || '').toLowerCase();
+        const friendlyName = String(s.attributes?.["friendly_name"] || '').toLowerCase();
         const matchesQuery = entityId.includes(queryLower) || friendlyName.includes(queryLower);
         const matchesDomain = domainLower ? entityId.startsWith(`${domainLower}.`) : true;
         return matchesQuery && matchesDomain;
@@ -63,7 +63,7 @@ export const haSearch = tool({
       .slice(0, 20)
       .map((s) => ({
         entity_id: s.entity_id,
-        friendly_name: s.attributes?.friendly_name || s.entity_id,
+        friendly_name: s.attributes?.["friendly_name"] || s.entity_id,
         state: s.state,
         domain: s.entity_id.split('.')[0],
       }));
@@ -192,7 +192,7 @@ export const memorySearch = tool({
     };
 
     if (user_id) {
-      rpcInput.user_id = user_id;
+      rpcInput['user_id'] = user_id;
     }
 
     const { data, error } = await supabase.rpc('match_memories', rpcInput);
@@ -221,7 +221,7 @@ export const webSearch = tool({
   }),
   async execute({ query, max_results }) {
     const limit = max_results ?? 5;
-    const tavilyKey = process.env.TAVILY_API_KEY;
+    const tavilyKey = process.env["TAVILY_API_KEY"];
 
     if (tavilyKey) {
       const res = await fetch('https://api.tavily.com/search', {
@@ -259,7 +259,7 @@ export const webSearch = tool({
     const linkRegex = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([^<]+)<\/a>/gi;
     let match;
     while ((match = linkRegex.exec(html)) !== null && results.length < limit) {
-      results.push({ title: match[2], url: match[1], snippet: '' });
+      results.push({ title: match[2] ?? '', url: match[1] ?? '', snippet: '' });
     }
 
     return JSON.stringify({ answer: null, results });

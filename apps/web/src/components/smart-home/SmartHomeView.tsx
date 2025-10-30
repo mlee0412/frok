@@ -5,7 +5,7 @@ import { Card } from '@frok/ui';
 import DeviceControls from '@/components/smart-home/DeviceControls';
 import SyncButtons from '@/components/smart-home/SyncButtons';
 import AreaLightControls from '@/components/smart-home/AreaLightControls';
-import { callHAService, lightTurnOnTarget, turnOn, sceneTurnOn, scriptTurnOn } from '@frok/clients';
+import { callHAService, turnOn, sceneTurnOn, scriptTurnOn } from '@frok/clients';
 
 export default function SmartHomeView({ initialDevices, haOk, haDetail }: { initialDevices: Device[]; haOk: boolean; haDetail?: string }) {
   const [devices, setDevices] = useState<Device[]>(initialDevices);
@@ -111,7 +111,7 @@ export default function SmartHomeView({ initialDevices, haOk, haDetail }: { init
         </div>
         <div className="text-sm text-foreground/60 md:text-right">{haDetail || ''}</div>
         <div className="text-sm">Devices: {devices.length}</div>
-        <div className="text-sm md:text-right">Lights: {counts.light || 0} • Media: {counts.media_player || 0} • Climate: {counts.climate || 0} • Sensors: {counts.sensor || 0} • Switches: {counts.switch || 0} • Covers: {counts.cover || 0}</div>
+        <div className="text-sm md:text-right">Lights: {counts["light"] || 0} • Media: {counts["media_player"] || 0} • Climate: {counts["climate"] || 0} • Sensors: {counts["sensor"] || 0} • Switches: {counts["switch"] || 0} • Covers: {counts["cover"] || 0}</div>
         <div className="text-sm">On: {lightsOn} • Playing: {mediaPlaying} • Covers open: {coversOpen} • Heating: {heating} • Cooling: {cooling}</div>
         <div className="flex items-center gap-3 md:justify-end">
           <div className="text-sm text-foreground/60">{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : ''}</div>

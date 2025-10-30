@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabase/server';
 import { withAuth } from '@/lib/api/withAuth';
 import { formatErrorMessage } from '@/lib/errorHandler';
-import type { Transaction, Category } from '@/types/finances';
+import type { Category } from '@/types/finances';
 
-type TransactionAmount = Pick<Transaction, 'amount' | 'category_id'>;
 type CategoryInfo = Pick<Category, 'id' | 'name'>;
 
 export async function GET(req: NextRequest) {
@@ -13,7 +12,7 @@ export async function GET(req: NextRequest) {
   if (!auth.ok) return auth.response;
 
   try {
-    const supabase = getSupabaseServer();
+    const supabase = await getSupabaseServer();
 
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);

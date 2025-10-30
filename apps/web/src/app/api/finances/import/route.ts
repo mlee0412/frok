@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabase/server';
 import { withAuth } from '@/lib/api/withAuth';
 import { formatErrorMessage } from '@/lib/errorHandler';
-import type { ImportTransaction } from '@/types/finances';
 
 type ParsedItem = {
   date: string;
@@ -55,7 +54,7 @@ function parseCSV(text: string): ParsedItem[] {
     return out.map((s) => s.trim());
   };
 
-  const header = split(lines[0]).map((h) => h.toLowerCase());
+  const header = split(lines[0] ?? '').map((h) => h.toLowerCase());
   const idx = {
     date: header.indexOf('date'),
     account: header.indexOf('account'),
@@ -66,19 +65,19 @@ function parseCSV(text: string): ParsedItem[] {
 
   const items: ParsedItem[] = [];
   for (let li = 1; li < lines.length; li++) {
-    const cols = split(lines[li]);
-    if (cols.length === 1 && cols[0] === '') continue;
+    const cols = split(lines[li] ?? '');
+    if (cols.length === 1 && (cols[0] ?? '') === '') continue;
 
-    const amountRaw = idx.amount >= 0 ? cols[idx.amount] : '';
+    const amountRaw = idx.amount >= 0 ? (cols[idx.amount] ?? '') : '';
     const amount = Number((amountRaw || '').replace(/[$,\s]/g, ''));
     if (!isFinite(amount)) continue;
 
     const item: ParsedItem = {
-      date: idx.date >= 0 ? cols[idx.date] : '',
-      account: idx.account >= 0 ? cols[idx.account] : '',
-      description: idx.description >= 0 ? cols[idx.description] : '',
+      date: idx.date >= 0 ? (cols[idx.date] ?? '') : '',
+      account: idx.account >= 0 ? (cols[idx.account] ?? '') : '',
+      description: idx.description >= 0 ? (cols[idx.description] ?? '') : '',
       amount,
-      currency: idx.currency >= 0 ? (cols[idx.currency] || 'USD') : 'USD',
+      currency: idx.currency >= 0 ? ((cols[idx.currency] ?? '') || 'USD') : 'USD',
     };
 
     if (item.date && item.account) items.push(item);
@@ -92,8 +91,10 @@ export async function POST(req: NextRequest) {
   const auth = await withAuth(req);
   if (!auth.ok) return auth.response;
 
+  const userId = auth.user.userId;
+
   try {
-    const supabase = getSupabaseServer();
+    const supabase = await getSupabaseServer();
     const ct = (req.headers.get('content-type') || '').toLowerCase();
 
     let items: ParsedItem[] = [];
@@ -132,7 +133,7 @@ export async function POST(req: NextRequest) {
         .select('id, name, currency')
         .eq('name', name)
         .eq('currency', currency)
-        .eq('user_id', auth.user.userId)
+        .eq('user_id', userId)
         .limit(1)
         .maybeSingle();
 
@@ -148,7 +149,7 @@ export async function POST(req: NextRequest) {
         .insert({
           name,
           currency,
-          user_id: auth.user.userId,
+          user_id: userId,
           type: 'checking',
           balance: 0,
         })
@@ -165,7 +166,7 @@ export async function POST(req: NextRequest) {
     const { data: rules } = await supabase
       .from('fin_rules')
       .select('id, pattern, category_id')
-      .eq('user_id', auth.user.userId);
+      .eq('user_id', userId);
 
     function matchCategoryId(description?: string | null): string | null {
       const d = (description || '').toLowerCase();
@@ -205,7 +206,7 @@ export async function POST(req: NextRequest) {
         description: it.description || null,
         category_id,
         dedup_key,
-        user_id: auth.user.userId,
+        user_id: userId,
       });
     }
 
@@ -228,7 +229,7 @@ export async function POST(req: NextRequest) {
     const { data: existingRows, error: existingErr } = await supabase
       .from('fin_transactions')
       .select('dedup_key')
-      .eq('user_id', auth.user.userId)
+      .eq('user_id', userId)
       .in('dedup_key', keys);
 
     if (existingErr) throw existingErr;

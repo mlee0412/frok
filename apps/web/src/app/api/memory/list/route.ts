@@ -8,7 +8,7 @@ export async function GET(req: Request) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const tag = searchParams.get('tag');
     
-    const supabase = getSupabaseServer();
+    const supabase = await getSupabaseServer();
     
     // TODO: Get from authenticated session
     // For now, using default user_id
@@ -60,7 +60,7 @@ export async function DELETE(req: Request) {
       );
     }
     
-    const supabase = getSupabaseServer();
+    const supabase = await getSupabaseServer();
     
     // TODO: Get from authenticated session
     const user_id = 'system';

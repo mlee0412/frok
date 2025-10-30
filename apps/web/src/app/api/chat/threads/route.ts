@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { withAuth } from '@/lib/api/withAuth';
 import { validateBody } from '@/lib/api/withValidation';
 import { formatErrorMessage } from '@/lib/errorHandler';

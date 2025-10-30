@@ -1,6 +1,5 @@
 import { tool } from '@openai/agents';
 import { z } from 'zod';
-import { createClient } from '@supabase/supabase-js';
 
 // Cache for HA states and areas (5 second TTL)
 const cache = new Map<string, { data: any; timestamp: number }>();
@@ -20,20 +19,13 @@ function setCache(key: string, data: any): void {
 }
 
 function getHA() {
-  const base = (process.env.HOME_ASSISTANT_URL || process.env.HA_BASE_URL || '').trim();
-  const token = (process.env.HOME_ASSISTANT_TOKEN || process.env.HA_TOKEN || '').trim();
+  const base = (process.env["HOME_ASSISTANT_URL"] || process.env["HA_BASE_URL"] || '').trim();
+  const token = (process.env["HOME_ASSISTANT_TOKEN"] || process.env["HA_TOKEN"] || '').trim();
   if (!base || !token) {
     console.error('[HA] Missing configuration: HOME_ASSISTANT_URL or HOME_ASSISTANT_TOKEN');
     return null;
   }
   return { base: base.replace(/\/$/, ''), token };
-}
-
-function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key);
 }
 
 // Improved entity matching with fuzzy search
@@ -111,7 +103,7 @@ export const haSearch = tool({
       const scoredEntities = states
         .map((s) => {
           const entityId = String(s.entity_id || '').toLowerCase();
-          const friendlyName = String(s.attributes?.friendly_name || '').toLowerCase();
+          const friendlyName = String(s.attributes?.["friendly_name"] || '').toLowerCase();
           const areaName = String(s.attributes?.area_name || '').toLowerCase();
           
           // Calculate match score
@@ -134,7 +126,7 @@ export const haSearch = tool({
         .slice(0, limit)
         .map(item => ({
           entity_id: item.entity.entity_id,
-          friendly_name: item.entity.attributes?.friendly_name || item.entity.entity_id,
+          friendly_name: item.entity.attributes?.["friendly_name"] || item.entity.entity_id,
           state: item.entity.state,
           domain: item.entity.entity_id.split('.')[0],
           area: item.entity.attributes?.area_name || null,

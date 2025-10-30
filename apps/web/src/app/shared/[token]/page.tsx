@@ -20,7 +20,7 @@ type SharedThread = {
 
 export default function SharedThreadPage() {
   const params = useParams();
-  const token = params.token as string;
+  const token = params['token'] as string;
   const [thread, setThread] = React.useState<SharedThread | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);

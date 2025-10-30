@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   if (!validation.ok) return validation.response;
 
   try {
-    const { thread_id, limit, offset, since } = validation.data;
+    const { thread_id, limit = 50, offset = 0, since } = validation.data;
 
     let query = auth.user.supabase
       .from('chat_messages')

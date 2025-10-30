@@ -130,13 +130,13 @@ export default function DevicesTab() {
         </Card>
         <Card className="p-3">
           <div className="text-xs text-foreground/60">Lights</div>
-          <div className="text-xl font-semibold">{countsByType.light || 0}</div>
-          <div className="text-xs text-foreground/60">Switches: {countsByType.switch || 0}</div>
+          <div className="text-xl font-semibold">{countsByType["light"] || 0}</div>
+          <div className="text-xs text-foreground/60">Switches: {countsByType["switch"] || 0}</div>
         </Card>
         <Card className="p-3">
           <div className="text-xs text-foreground/60">Media / Climate</div>
-          <div className="text-xl font-semibold">{(countsByType.media_player || 0) + (countsByType.climate || 0)}</div>
-          <div className="text-xs text-foreground/60">Sensors: {countsByType.sensor || 0}</div>
+          <div className="text-xl font-semibold">{(countsByType["media_player"] || 0) + (countsByType["climate"] || 0)}</div>
+          <div className="text-xs text-foreground/60">Sensors: {countsByType["sensor"] || 0}</div>
         </Card>
       </div>
 

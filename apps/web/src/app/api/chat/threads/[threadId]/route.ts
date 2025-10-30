@@ -40,7 +40,7 @@ export async function PATCH(
   try {
     const { title, pinned, archived, tags, folder, enabled_tools, model, agent_style } = bodyValidation.data;
 
-    const supabase = getSupabaseServer();
+    const supabase = await getSupabaseServer();
 
     const updates: ThreadUpdates = { updated_at: new Date().toISOString() };
     if (title !== undefined) updates.title = title;
@@ -89,7 +89,7 @@ export async function DELETE(
   const { threadId } = paramsValidation.data;
 
   try {
-    const supabase = getSupabaseServer();
+    const supabase = await getSupabaseServer();
 
     const { error } = await supabase
       .from('chat_threads')

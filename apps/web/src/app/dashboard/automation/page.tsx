@@ -1,5 +1,4 @@
 import React from 'react';
-import { Card } from '@frok/ui';
 import AutomationClient from './AutomationClient';
 
 export const dynamic = 'force-dynamic';

@@ -18,7 +18,7 @@ export async function runWorkflowHaOnly(workflow: WorkflowInput) {
     const runner = new Runner({
       traceMetadata: {
         __trace_source__: 'agent-builder',
-        workflow_id: process.env.WORKFLOW_ID || 'unknown',
+        workflow_id: process.env["WORKFLOW_ID"] || 'unknown',
       },
     });
 

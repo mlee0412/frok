@@ -5,8 +5,8 @@ export const revalidate = 0;
 export const runtime = 'nodejs';
 
 function getHA() {
-  const base = (process.env.HOME_ASSISTANT_URL || process.env.HA_BASE_URL || '').trim();
-  const token = (process.env.HOME_ASSISTANT_TOKEN || process.env.HA_TOKEN || '').trim();
+  const base = (process.env["HOME_ASSISTANT_URL"] || process.env["HA_BASE_URL"] || '').trim();
+  const token = (process.env["HOME_ASSISTANT_TOKEN"] || process.env["HA_TOKEN"] || '').trim();
   if (!base || !token) return null;
   return { base: base.replace(/\/$/, ''), token };
 }
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
             const raw = s.entity_id.split('.')[0];
             const domain: 'light' | 'media_player' | 'climate' | 'sensor' | 'switch' | 'cover' | 'scene' | 'script' | 'other' =
               raw === 'light' || raw === 'media_player' || raw === 'climate' || raw === 'sensor' || raw === 'switch' || raw === 'cover' || raw === 'scene' || raw === 'script' ? raw : 'other';
-            const name = String((s.attributes?.friendly_name as string) || s.entity_id);
+            const name = String((s.attributes?.["friendly_name"] as string) || s.entity_id);
             const online = s.state !== 'unavailable';
             const did = deviceIdByEntityId.get(s.entity_id) || '';
             const aid = did ? areaIdByDeviceId.get(did) || '' : '';

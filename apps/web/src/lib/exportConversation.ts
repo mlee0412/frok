@@ -27,7 +27,7 @@ export function exportToMarkdown(thread: Thread): string {
   markdown += `**Thread ID**: \`${thread.id}\`\n\n`;
   markdown += `---\n\n`;
 
-  thread.messages.forEach((msg, index) => {
+  thread.messages.forEach((msg) => {
     const msgDate = new Date(msg.timestamp).toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',

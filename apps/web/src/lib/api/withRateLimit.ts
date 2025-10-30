@@ -83,8 +83,8 @@ const upstashLimiters = new Map<string, Ratelimit>();
  * Get or create an Upstash rate limiter
  */
 function getUpstashLimiter(maxRequests: number, windowMs: number): Ratelimit | null {
-  const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
-  const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const redisUrl = process.env["UPSTASH_REDIS_REST_URL"];
+  const redisToken = process.env["UPSTASH_REDIS_REST_TOKEN"];
 
   if (!redisUrl || !redisToken) {
     return null;
@@ -123,7 +123,8 @@ function defaultIdentifier(req: NextRequest): string {
   // Fall back to IP address
   const forwardedFor = req.headers.get('x-forwarded-for');
   if (forwardedFor) {
-    return forwardedFor.split(',')[0].trim();
+    const ip = forwardedFor.split(',')[0]?.trim();
+    if (ip) return ip;
   }
 
   const realIp = req.headers.get('x-real-ip');

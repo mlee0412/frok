@@ -35,7 +35,7 @@ export type AuthResult =
 export async function withAuth(req: NextRequest): Promise<AuthResult> {
   try {
     // DEVELOPMENT ONLY: Bypass auth if environment variable is set
-    if (process.env.DEV_BYPASS_AUTH === 'true' && process.env.NODE_ENV === 'development') {
+    if (process.env["DEV_BYPASS_AUTH"] === 'true' && process.env["NODE_ENV"] === 'development') {
       console.warn('[withAuth] ⚠️  DEV_BYPASS_AUTH is enabled - skipping authentication!');
       const mockUser = {
         id: 'dev-user-id',
@@ -45,8 +45,8 @@ export async function withAuth(req: NextRequest): Promise<AuthResult> {
 
       // Create a mock Supabase client for dev
       const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        process.env["NEXT_PUBLIC_SUPABASE_URL"]!,
+        process.env["NEXT_PUBLIC_SUPABASE_ANON_KEY"]!,
         {
           cookies: {
             get(name: string) { return req.cookies.get(name)?.value; },
@@ -68,8 +68,8 @@ export async function withAuth(req: NextRequest): Promise<AuthResult> {
 
     // Create Supabase client with cookies from request
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env["NEXT_PUBLIC_SUPABASE_URL"]!,
+      process.env["NEXT_PUBLIC_SUPABASE_ANON_KEY"]!,
       {
         cookies: {
           get(name: string) {
@@ -137,7 +137,7 @@ export async function optionalAuth(req: NextRequest): Promise<AuthenticatedUser 
  * Check if user has specific role or permission
  * (Extend this based on your auth schema)
  */
-export function hasPermission(user: AuthenticatedUser, permission: string): boolean {
+export function hasPermission(_user: AuthenticatedUser, _permission: string): boolean {
   // TODO: Implement based on your user roles/permissions schema
   // For now, all authenticated users have all permissions
   return true;

@@ -2,15 +2,15 @@ import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 
 function getHA() {
-  const base = (process.env.HOME_ASSISTANT_URL || process.env.HA_BASE_URL || '').trim();
-  const token = (process.env.HOME_ASSISTANT_TOKEN || process.env.HA_TOKEN || '').trim();
+  const base = (process.env["HOME_ASSISTANT_URL"] || process.env["HA_BASE_URL"] || '').trim();
+  const token = (process.env["HOME_ASSISTANT_TOKEN"] || process.env["HA_TOKEN"] || '').trim();
   if (!base || !token) return null;
   return { base: base.replace(/\/$/, ''), token };
 }
 
 function getSB() {
-  const url = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim();
-  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const url = (process.env["SUPABASE_URL"] || process.env["NEXT_PUBLIC_SUPABASE_URL"] || '').trim();
+  const key = (process.env["SUPABASE_SERVICE_ROLE_KEY"] || '').trim();
   if (!url || !key) return null;
   return { url: url.replace(/\/$/, ''), key };
 }
@@ -33,7 +33,7 @@ export async function POST() {
       device_id: null as any,
       area_id: null as any,
       domain: String((s.entity_id.split('.')[0] || 'other')),
-      name: String((s.attributes?.friendly_name as string) || ''),
+      name: String((s.attributes?.["friendly_name"] as string) || ''),
       disabled_by: null as any,
     }));
 

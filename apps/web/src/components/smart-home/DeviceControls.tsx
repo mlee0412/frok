@@ -152,10 +152,10 @@ export default function DeviceControls({ device }: { device: Device }) {
     try {
       const r: unknown = await fn();
       if (typeof r === 'object' && r !== null && 'ok' in (r as Record<string, unknown>)) {
-        const ok = (r as Record<string, unknown>).ok === true;
+        const ok = (r as Record<string, unknown>)['ok'] === true;
         if (ok) { setMsg('ok'); router.refresh(); }
         else {
-          const errVal = (r as Record<string, unknown>).error;
+          const errVal = (r as Record<string, unknown>)['error'];
           const m = typeof errVal === 'string' ? errVal : 'error';
           setMsg(m);
         }

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const base = (process.env.N8N_URL || process.env.N8N_BASE_URL || '').trim();
-  const key = (process.env.N8N_API_KEY || '').trim();
+  const base = (process.env["N8N_URL"] || process.env["N8N_BASE_URL"] || '').trim();
+  const key = (process.env["N8N_API_KEY"] || '').trim();
   if (!base || !key) {
     return NextResponse.json({ ok: false, error: 'missing_env', detail: 'Set N8N_URL (or N8N_BASE_URL) and N8N_API_KEY in apps/web/.env.local' }, { status: 200 });
   }

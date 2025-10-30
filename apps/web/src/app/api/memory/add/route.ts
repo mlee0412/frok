@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   try {
     const { content, category, tags, metadata, importance } = validation.data;
 
-    const supabase = getSupabaseServer();
+    const supabase = await getSupabaseServer();
 
     const { data, error } = await supabase
       .from('memories')

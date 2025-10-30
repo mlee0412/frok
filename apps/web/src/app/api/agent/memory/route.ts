@@ -9,7 +9,7 @@ export async function GET(req: Request) {
     const memoryType = searchParams.get('type');
     const limit = parseInt(searchParams.get('limit') || '10');
 
-    const supabase = getSupabaseServer();
+    const supabase = await getSupabaseServer();
     
     let query = supabase
       .from('agent_memories')
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const supabase = getSupabaseServer();
+    const supabase = await getSupabaseServer();
     
     const { data, error } = await supabase
       .from('agent_memories')
@@ -89,7 +89,7 @@ export async function DELETE(req: Request) {
       );
     }
 
-    const supabase = getSupabaseServer();
+    const supabase = await getSupabaseServer();
     
     const { error } = await supabase
       .from('agent_memories')

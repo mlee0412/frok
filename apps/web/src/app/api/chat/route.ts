@@ -1,10 +1,11 @@
 import OpenAI from 'openai';
+import type { ChatCompletionMessageParam } from 'openai/resources';
 import { NextResponse } from 'next/server';
 import { supabaseServiceClient } from '@/lib/supabaseServer';
 
 function getHA() {
-  const base = (process.env.HOME_ASSISTANT_URL || process.env.HA_BASE_URL || '').trim();
-  const token = (process.env.HOME_ASSISTANT_TOKEN || process.env.HA_TOKEN || '').trim();
+  const base = (process.env["HOME_ASSISTANT_URL"] || process.env["HA_BASE_URL"] || '').trim();
+  const token = (process.env["HOME_ASSISTANT_TOKEN"] || process.env["HA_TOKEN"] || '').trim();
   if (!base || !token) return null;
   return { base: base.replace(/\/$/, ''), token } as const;
 }
@@ -40,7 +41,7 @@ async function haServiceCall(args: { domain: string; service: string; entity_id?
 
 export async function POST(req: Request) {
   const { message, agentId, threadId } = await req.json().catch(() => ({ message: '', agentId: 'default', threadId: null }));
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env["OPENAI_API_KEY"];
   if (!apiKey) {
     return NextResponse.json({ ok: false, error: 'missing_openai_key', detail: 'Set OPENAI_API_KEY in apps/web/.env.local' }, { status: 200 });
   }
@@ -112,7 +113,7 @@ export async function POST(req: Request) {
         },
       ];
 
-      const messages = [
+      const messages: ChatCompletionMessageParam[] = [
         { role: 'system', content: sys },
         { role: 'user', content: String(message || '') },
       ];

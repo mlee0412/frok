@@ -299,7 +299,7 @@ export function getThreadStats(thread: Thread): {
     messageCount: messages.length,
     userMessageCount: messages.filter((m) => m.role === 'user').length,
     assistantMessageCount: messages.filter((m) => m.role === 'assistant').length,
-    lastMessageAt: messages.length > 0 ? messages[messages.length - 1].timestamp || null : null,
+    lastMessageAt: messages.length > 0 ? messages[messages.length - 1]?.timestamp || null : null,
     hasImages: messages.some((m) => m.images && m.images.length > 0),
     hasFiles: messages.some((m) => m.files && m.files.length > 0),
   };

@@ -10,8 +10,8 @@ import { cookies } from 'next/headers';
  * For user-scoped operations, use the client from withAuth() instead
  */
 export function getSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = process.env["NEXT_PUBLIC_SUPABASE_URL"];
+  const supabaseKey = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Missing Supabase environment variables');
@@ -34,23 +34,23 @@ export async function getSupabaseServer() {
   const cookieStore = await cookies();
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env["NEXT_PUBLIC_SUPABASE_URL"]!,
+    process.env["NEXT_PUBLIC_SUPABASE_ANON_KEY"]!,
     {
       cookies: {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        set(name: string, value: string, options) {
+        set(name: string, value: string, _options) {
           try {
-            cookieStore.set(name, value, options);
+            cookieStore.set(name, value, _options);
           } catch {
             // The `set` method was called from a Server Component.
             // This can be ignored if you have middleware refreshing
             // user sessions.
           }
         },
-        remove(name: string, options) {
+        remove(name: string, _options) {
           try {
             cookieStore.delete(name);
           } catch {
