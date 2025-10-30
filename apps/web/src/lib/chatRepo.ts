@@ -11,16 +11,20 @@ type RealtimePayload<T> = {
 
 // Typed Supabase helpers to avoid 'as any' casts
 type SupabaseClient = ReturnType<typeof supabaseClient>;
+type SupabaseError = { message: string } | null;
+type SupabaseResponse<T> = Promise<{ data: T | null; error: SupabaseError }>;
+type SupabaseArrayResponse<T> = Promise<{ data: T[] | null; error: SupabaseError }>;
+
 type SupabaseQueryBuilder<T> = {
-  select: (columns?: string) => SupabaseQueryBuilder<T>;
-  insert: (data: Partial<T> | Partial<T>[], options?: { onConflict?: string; ignoreDuplicates?: boolean }) => SupabaseQueryBuilder<T>;
-  update: (data: Partial<T>) => SupabaseQueryBuilder<T>;
+  select: (columns?: string) => SupabaseQueryBuilder<T> & SupabaseArrayResponse<T>;
+  insert: (data: Partial<T> | Partial<T>[], options?: { onConflict?: string; ignoreDuplicates?: boolean }) => SupabaseQueryBuilder<T> & SupabaseResponse<T>;
+  update: (data: Partial<T>) => SupabaseQueryBuilder<T> & SupabaseResponse<T>;
   eq: (column: string, value: unknown) => SupabaseQueryBuilder<T>;
   is: (column: string, value: unknown) => SupabaseQueryBuilder<T>;
   order: (column: string, options?: { ascending?: boolean }) => SupabaseQueryBuilder<T>;
   limit: (count: number) => SupabaseQueryBuilder<T>;
-  single: () => Promise<{ data: T | null; error: { message: string } | null }>;
-};
+  single: () => SupabaseResponse<T>;
+} & SupabaseArrayResponse<T>;
 
 function supaTable<T>(client: SupabaseClient, table: string): SupabaseQueryBuilder<T> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

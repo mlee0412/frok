@@ -227,15 +227,15 @@ export const haCall = tool({
 
     try {
       const payload: Record<string, unknown> = {};
-      
+
       // Add targeting
       if (entity_id) {
-        payload.entity_id = entity_id;
+        payload['entity_id'] = entity_id;
       }
       if (area_id) {
-        payload.area_id = area_id;
+        payload['area_id'] = area_id;
       }
-      
+
       // Add service data
       if (data) {
         Object.assign(payload, data);

@@ -26,6 +26,7 @@ export type ChatThreadRow = {
 export type ChatMessageRow = {
   id: string;
   thread_id: string;
+  user_id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   created_at: string;

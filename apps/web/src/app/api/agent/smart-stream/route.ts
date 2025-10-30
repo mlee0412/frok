@@ -19,11 +19,9 @@ type AgentTool = {
   [key: string]: unknown;
 };
 
-type InputContent = {
-  type: 'input_text' | 'input_image';
-  text?: string;
-  source?: string;
-};
+type InputContent =
+  | { type: 'input_text'; text: string; providerData?: Record<string, unknown> }
+  | { type: 'input_image'; image?: string; detail?: string; providerData?: Record<string, unknown> };
 
 async function classifyQuery(query: string): Promise<'simple' | 'moderate' | 'complex'> {
   // Ultra-fast pattern matching first
@@ -276,8 +274,8 @@ export async function POST(req: NextRequest) {
               .filter(Boolean);
 
           const requestedToolNames = enabledTools && enabledTools.length > 0 ? enabledTools : selectedTools;
-          const finalTools = flattenTools(requestedToolNames) as AgentTool[];
-          const finalToolNames = finalTools.map((t) => t?.name || 'unknown');
+          const finalTools = flattenTools(requestedToolNames);
+          const finalToolNames = finalTools.map((t: AgentTool) => t?.name || 'unknown');
 
           const content: InputContent[] = [];
 
@@ -288,7 +286,7 @@ export async function POST(req: NextRequest) {
           for (const imageUrl of images) {
             content.push({
               type: 'input_image',
-              source: imageUrl,
+              image: imageUrl,
             });
           }
 

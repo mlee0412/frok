@@ -9,11 +9,11 @@ export function useAuth() {
 
   useEffect(() => {
     let mounted = true;
-    supa.auth.getSession().then(({ data }) => {
+    supa.auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
       if (!mounted) return;
       setEmail(data.session?.user?.email ?? null);
     });
-    const { data: sub } = supa.auth.onAuthStateChange((_event, session: Session | null) => {
+    const { data: sub } = supa.auth.onAuthStateChange((_event: string, session: Session | null) => {
       setEmail(session?.user?.email ?? null);
     });
     return () => {

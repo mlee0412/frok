@@ -8,11 +8,9 @@ import { withRateLimit, rateLimitPresets } from '@/lib/api/withRateLimit';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-type InputContent = {
-  type: 'input_text' | 'input_image';
-  text?: string;
-  source?: string;
-};
+type InputContent =
+  | { type: 'input_text'; text: string; providerData?: Record<string, unknown> }
+  | { type: 'input_image'; image?: string; detail?: string; providerData?: Record<string, unknown> };
 
 export async function POST(req: NextRequest) {
   // Authenticate user
@@ -51,7 +49,7 @@ export async function POST(req: NextRequest) {
           for (const imageUrl of images) {
             content.push({
               type: 'input_image',
-              source: imageUrl,
+              image: imageUrl,
             });
           }
 

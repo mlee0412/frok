@@ -137,9 +137,9 @@ export const haCall = tool({
     if (!ha) throw new Error('HA config missing');
 
     const payload: Record<string, unknown> = { ...(data || {}) };
-    if (entity_id) payload.entity_id = entity_id;
-    if (area_id) payload.area_id = area_id;
-    if (target) payload.target = target;
+    if (entity_id) payload['entity_id'] = entity_id;
+    if (area_id) payload['area_id'] = area_id;
+    if (target) payload['target'] = target;
 
     const r = await fetch(`${ha.base}/api/services/${encodeURIComponent(domain)}/${encodeURIComponent(service)}`, {
       method: 'POST',

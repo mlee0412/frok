@@ -14,11 +14,11 @@ async function haServiceCall(args: { domain: string; service: string; entity_id?
   const ha = getHA();
   if (!ha) return { ok: false, error: 'missing_home_assistant_env' };
   const payload: Record<string, unknown> = {};
-  if (typeof args.entity_id !== 'undefined') payload.entity_id = args.entity_id;
-  if (args.target) payload.target = args.target;
+  if (typeof args.entity_id !== 'undefined') payload['entity_id'] = args.entity_id;
+  if (args.target) payload['target'] = args.target;
   if (typeof args.area_id !== 'undefined') {
     const arr = Array.isArray(args.area_id) ? args.area_id : [args.area_id];
-    payload.target = { ...(payload.target || {}), area_id: arr };
+    payload['target'] = { ...(payload['target'] || {}), area_id: arr };
   }
   if (args.data && typeof args.data === 'object') Object.assign(payload, args.data);
   try {
