@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Return results with a basic score (1.0 for matches)
-    const results = (data || []).map((m) => ({
+    const results = (data || []).map((m: { id: string; content: string; tags: string[] | null; created_at: string }) => ({
       id: m.id,
       content: m.content,
       tags: m.tags || [],
