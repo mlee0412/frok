@@ -20,7 +20,6 @@ const ThreadOptionsMenu = dynamic(() => import('@/components/ThreadOptionsMenu')
 const TTSSettingsModal = dynamic(() => import('@/components/TTSSettings').then(mod => ({ default: mod.TTSSettingsModal })), { ssr: false });
 const AgentMemoryModal = dynamic(() => import('@/components/AgentMemoryModal').then(mod => ({ default: mod.AgentMemoryModal })), { ssr: false });
 const UserMemoriesModal = dynamic(() => import('@/components/UserMemoriesModal').then(mod => ({ default: mod.UserMemoriesModal })), { ssr: false });
-const ChatKitLauncher = dynamic(() => import('@/components/ChatKitLauncher').then(mod => ({ default: mod.ChatKitLauncher })), { ssr: false });
 
 type Message = {
   id: string;
