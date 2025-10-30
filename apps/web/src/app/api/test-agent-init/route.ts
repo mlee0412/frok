@@ -5,7 +5,11 @@ export async function GET() {
     console.log('[test-agent-init] Starting...');
 
     // Try to create agent
-    const { createAgent } = await import('@/lib/agent/runWorkflow') as { createAgent: () => { name: string; model: string } };
+    const module = await import('@/lib/agent/runWorkflow');
+    const createAgent = 'createAgent' in module ? (module as { createAgent: () => { name: string; model: string } }).createAgent : null;
+    if (!createAgent) {
+      throw new Error('createAgent function not found in runWorkflow module');
+    }
     console.log('[test-agent-init] Imported createAgent');
 
     const agent = createAgent();

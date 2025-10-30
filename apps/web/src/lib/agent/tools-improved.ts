@@ -116,7 +116,7 @@ export const haSearch = tool({
       }
 
       // Score and filter entities
-      const scoredEntities = states
+      const scoredEntities = (states || [])
         .map((s) => {
           const entityId = String(s.entity_id || '').toLowerCase();
           const friendlyName = String(s.attributes?.["friendly_name"] || '').toLowerCase();
@@ -166,7 +166,7 @@ export const haSearch = tool({
         }
       }
 
-      const scoredAreas = areas
+      const scoredAreas = (areas || [])
         .map(a => ({
           area: a,
           score: scoreMatch(String(a.name || ''), queryLower),

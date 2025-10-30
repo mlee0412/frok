@@ -13,7 +13,7 @@ type TavilyResponse = {
 };
 
 export async function POST(req: Request) {
-  let body: unknown;
+  let body: { query?: string; max_results?: number };
   try {
     body = await req.json();
   } catch {

@@ -24,7 +24,7 @@ export function ChatKitLauncher() {
   const [error, setError] = React.useState<string | null>(null);
 
   const getClientSecret = React.useCallback(
-    async (currentClientSecret?: string | null) => {
+    async (currentClientSecret?: string | null): Promise<string> => {
       try {
         setError(null);
         setStatus('loading');
@@ -42,10 +42,10 @@ export function ChatKitLauncher() {
         } catch {
           setStatus('error');
           setError('Unexpected response from ChatKit session API.');
-          return null;
+          return '';
         }
 
-        const token = json?.client_secret ?? null;
+        const token = json?.client_secret ?? '';
         if (!token) {
           setStatus('error');
           setError(
@@ -53,7 +53,7 @@ export function ChatKitLauncher() {
               ? json.error
               : 'Unable to establish a ChatKit session.'
           );
-          return null;
+          return '';
         }
 
         setStatus('ready');
@@ -62,7 +62,7 @@ export function ChatKitLauncher() {
         const message = err instanceof Error ? err.message : 'Unable to reach ChatKit.';
         setStatus('error');
         setError(message);
-        return null;
+        return '';
       }
     },
     []
