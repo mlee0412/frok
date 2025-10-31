@@ -235,11 +235,7 @@ export default function AgentPage() {
       window.history.replaceState({}, '', window.location.pathname);
 
       // Show toast notification
-      toast({
-        title: 'Content Shared',
-        description: 'Shared content has been added to your message.',
-        variant: 'success',
-      });
+      toast.success('Shared content has been added to your message');
     }
   }, [toast]);
 
