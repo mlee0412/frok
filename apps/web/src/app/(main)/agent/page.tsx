@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { MessageContent } from '@/components/MessageContent';
 import { SuggestedPrompts } from '@/components/SuggestedPrompts';
 import { QuickActions } from '@/components/QuickActions';
+import { OptimizedImage } from '@/components/OptimizedImage';
 import { downloadMarkdown, copyToClipboard } from '@/lib/exportConversation';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
@@ -2140,9 +2141,15 @@ export default function AgentPage() {
                   {msg.images && msg.images.length > 0 && (
                     <div className="mb-3 grid grid-cols-2 gap-2">
                       {msg.images.map((img, i) => (
-                        <div key={i} className="overflow-hidden rounded-xl border border-white/10">
-                          <img src={img.url} alt={img.name} className="h-full w-full object-cover" />
-                          <div className="bg-black/60 px-2 py-1 text-[10px] text-white">
+                        <div key={i} className="relative h-48 overflow-hidden rounded-xl border border-white/10">
+                          <OptimizedImage
+                            src={img.url}
+                            alt={img.name}
+                            fill
+                            sizes="(max-width: 768px) 50vw, 25vw"
+                            className="object-cover"
+                          />
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1 text-[10px] text-white">
                             {img.name}
                           </div>
                         </div>
@@ -2312,12 +2319,15 @@ export default function AgentPage() {
                   {files.filter(f => f.type.startsWith('image/')).map((file, i) => (
                     <div
                       key={i}
-                      className="group relative overflow-hidden rounded-xl border border-white/10"
+                      className="group relative h-24 overflow-hidden rounded-xl border border-white/10"
                     >
-                      <img
+                      <OptimizedImage
                         src={URL.createObjectURL(file)}
                         alt={file.name}
-                        className="h-24 w-full object-cover"
+                        fill
+                        sizes="(max-width: 768px) 25vw, 10vw"
+                        className="object-cover"
+                        priority
                       />
                       <button
                         onClick={() =>
