@@ -959,8 +959,9 @@ const tcs = msg.tool_calls || [];  // Works!
 - **Coverage**: No thresholds → 60% enforced thresholds
 - **CI/CD**: Manual testing → Fully automated in GitHub Actions
 - **Image Optimization**: img tags → Next.js Image with lazy loading
-- **Files Created**: 4 (.env.test.example, e2e/auth.setup.ts, TESTING.md, OptimizedImage.tsx)
-- **Files Modified**: 8 (.gitignore, playwright.config.ts, package.json, vitest.config.ts, ci.yml, next.config.ts, agent/page.tsx, CLAUDE.md)
+- **PWA Features**: Basic → Install prompt + shortcuts + share target
+- **Files Created**: 5 (.env.test.example, e2e/auth.setup.ts, TESTING.md, OptimizedImage.tsx, PWAInstallPrompt.tsx)
+- **Files Modified**: 11 (.gitignore, playwright.config.ts, package.json, vitest.config.ts, ci.yml, next.config.ts, agent/page.tsx x2, ServiceWorkerProvider.tsx, manifest.json, CLAUDE.md)
 
 **Impact**:
 - ✅ **Testing**: 91% increase in passing tests (23 → 44)
@@ -968,11 +969,46 @@ const tcs = msg.tool_calls || [];  // Works!
 - ✅ **Quality**: 60% coverage thresholds enforced
 - ✅ **Documentation**: Comprehensive testing guide created
 - ✅ **Performance**: Image optimization with lazy loading and modern formats
+- ✅ **PWA**: Install prompt, 4 shortcuts, share target integration
+
+**7. PWA Enhancements (Completed)** ✅
+- **Created PWA Install Prompt** (`components/PWAInstallPrompt.tsx`):
+  - Detects `beforeinstallprompt` event
+  - Shows custom UI after 30 seconds (non-intrusive)
+  - Respects user dismissal with 7-day cooldown
+  - Detects already-installed apps
+  - Smooth slide-in animation
+  - LocalStorage persistence for dismissal tracking
+- **Enhanced PWA Manifest** (`public/manifest.json`):
+  - **App Shortcuts** (4 quick actions):
+    - New Chat - Quick access to AI agent
+    - Dashboard - View analytics
+    - Smart Home - Control devices
+    - Finances - Manage transactions
+  - **Share Target API**:
+    - Accepts title, text, and URL parameters
+    - Routes to /agent page
+    - Enables "Share to FROK" from other apps/browsers
+- **Integrated Share Target Handling** (`agent/page.tsx`):
+  - Detects URL parameters on mount
+  - Pre-fills input with shared content
+  - Clears URL params after processing (prevents re-trigger)
+  - Toast notification on share
+  - Formatted display: Title, text, URL
+- **Updated ServiceWorkerProvider**:
+  - Integrated PWAInstallPrompt component
+  - Maintains existing update notifications
+- **Benefits**:
+  - **Discoverability**: Install prompt increases PWA adoption
+  - **Productivity**: 4 shortcuts for common tasks
+  - **Integration**: Share from any app to FROK
+  - **UX**: Non-intrusive 30-second delay, respects dismissal
 
 **Session #9 Complete Summary**:
 - ✅ **Option 1 (Testing)**: E2E auth setup, React fix, CI/CD, coverage thresholds
 - ✅ **Option 2 (Images)**: Responsive images, lazy loading, AVIF/WebP optimization
-- **Total Impact**: +91% test coverage, automated CI/CD, 30-50% bandwidth reduction
+- ✅ **Option 4 (PWA)**: Install prompt, app shortcuts, share target API
+- **Total Impact**: +91% test coverage, automated CI/CD, 30-50% bandwidth reduction, enhanced PWA features
 
 ### Session #3: Future Improvements Implementation
 
