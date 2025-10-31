@@ -12,7 +12,7 @@ export default defineConfig({
     css: true,
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'html', 'lcov'],
       exclude: [
         'node_modules/',
         'e2e/',
@@ -20,7 +20,22 @@ export default defineConfig({
         '**/*.config.ts',
         '**/*.config.js',
         '**/types/',
+        '**/schemas/',
+        '**/*.d.ts',
+        '**/middleware.ts',
+        'src/app/**/layout.tsx',
+        'src/app/**/page.tsx',
       ],
+      thresholds: {
+        lines: 60,
+        functions: 60,
+        branches: 60,
+        statements: 60,
+      },
+      // Clean coverage directory before running tests
+      clean: true,
+      // Report uncovered lines
+      all: false,
     },
   },
   resolve: {

@@ -231,29 +231,41 @@ describe('MyComponent', () => {
 
 ## CI/CD Integration
 
-### GitHub Actions (Coming Soon)
+### GitHub Actions
 
-The test suite will be integrated into CI/CD:
+The test suite is integrated into the CI pipeline at `.github/workflows/ci.yml`. Tests run on:
+- Every push to `main` branch
+- Every pull request to `main` branch
 
-```yaml
-name: Tests
+**Test Steps in CI**:
+1. **Unit Tests** - Fast component and utility tests with Vitest
+2. **Coverage Tests** - Unit tests with coverage reporting (60% threshold)
+3. **E2E Tests** - Full browser automation tests with Playwright (Chromium only in CI)
+4. **Build Verification** - Ensures production build succeeds
 
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-      - uses: actions/setup-node@v4
-      - run: pnpm install
-      - run: pnpm run test:run
-      - run: pnpm run test:e2e
-        env:
-          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
-          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+**Required GitHub Secrets**:
 ```
+TEST_USER_EMAIL             - Test user email for E2E authentication
+TEST_USER_PASSWORD          - Test user password for E2E authentication
+NEXT_PUBLIC_SUPABASE_URL    - Supabase project URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY - Supabase anonymous key
+```
+
+**Artifacts Uploaded**:
+- `playwright-report/` - E2E test results and screenshots (30 day retention)
+- `coverage/` - Unit test coverage reports (30 day retention)
+
+### Coverage Thresholds
+
+Coverage thresholds are enforced in CI:
+- **Lines**: 60%
+- **Functions**: 60%
+- **Branches**: 60%
+- **Statements**: 60%
+
+Tests will fail if coverage drops below these thresholds. You can view coverage reports:
+- Locally: `pnpm run test:coverage` then open `coverage/index.html`
+- CI: Download coverage artifact from GitHub Actions
 
 ## Troubleshooting
 

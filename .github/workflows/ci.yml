@@ -46,8 +46,44 @@ jobs:
       - name: Lint
         run: pnpm -w run lint
 
-      - name: Test
+      - name: Unit Tests
         run: pnpm run test
+        env:
+          CI: true
+
+      - name: Unit Tests with Coverage
+        run: pnpm --filter=@frok/web run test:coverage
+        env:
+          CI: true
+
+      - name: Install Playwright Browsers
+        run: pnpm --filter=@frok/web exec playwright install --with-deps chromium
+
+      - name: E2E Tests
+        run: pnpm --filter=@frok/web run test:e2e
+        env:
+          CI: true
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 30
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: apps/web/coverage/
+          retention-days: 30
 
       - name: Build
         run: pnpm -w run build
