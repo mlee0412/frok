@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { withSentryConfig } from '@sentry/nextjs';
 
 // Bundle analyzer setup
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
@@ -38,4 +39,41 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withBundleAnalyzer(nextConfig);
+// Sentry configuration
+const sentryOptions = {
+  // For all available options, see:
+  // https://github.com/getsentry/sentry-webpack-plugin#options
+
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+
+  // Only print logs for uploading source maps in CI
+  silent: !process.env.CI,
+
+  // Upload source maps during production build
+  widenClientFileUpload: true,
+
+  // Automatically annotate React components to show their full name in breadcrumbs and session replay
+  reactComponentAnnotation: {
+    enabled: true,
+  },
+
+  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
+  // This can increase your server load as well as your hosting bill.
+  // Note: Check that the Sentry DSN provided to the client-side SDK is routed through this tunnel.
+  tunnelRoute: '/monitoring',
+
+  // Hides source maps from generated client bundles
+  hideSourceMaps: true,
+
+  // Automatically tree-shake Sentry logger statements to reduce bundle size
+  disableLogger: true,
+
+  // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
+  // See the following for more information:
+  // https://docs.sentry.io/product/crons/
+  // https://vercel.com/docs/cron-jobs
+  automaticVercelMonitors: true,
+};
+
+export default withSentryConfig(withBundleAnalyzer(nextConfig), sentryOptions);
