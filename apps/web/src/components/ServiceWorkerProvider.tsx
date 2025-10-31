@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { register, isStandalone } from '@/lib/serviceWorker';
+import { PWAInstallPrompt } from './PWAInstallPrompt';
 
 export function ServiceWorkerProvider({ children }: { children: React.ReactNode }) {
   const [showUpdatePrompt, setShowUpdatePrompt] = React.useState(false);
@@ -44,6 +45,9 @@ export function ServiceWorkerProvider({ children }: { children: React.ReactNode 
   return (
     <>
       {children}
+
+      {/* Install Prompt */}
+      <PWAInstallPrompt />
 
       {/* Update Prompt */}
       {showUpdatePrompt && (

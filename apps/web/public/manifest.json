@@ -60,5 +60,69 @@
   "screenshots": [],
   "categories": ["productivity", "utilities"],
   "lang": "en",
-  "dir": "ltr"
+  "dir": "ltr",
+  "shortcuts": [
+    {
+      "name": "New Chat",
+      "short_name": "Chat",
+      "description": "Start a new conversation with the AI agent",
+      "url": "/agent",
+      "icons": [
+        {
+          "src": "/icon-96.svg",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your dashboard and analytics",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "/icon-96.svg",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Smart Home",
+      "short_name": "Home",
+      "description": "Control your smart home devices",
+      "url": "/dashboard/smart-home",
+      "icons": [
+        {
+          "src": "/icon-96.svg",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Finances",
+      "short_name": "Finances",
+      "description": "Manage your finances and transactions",
+      "url": "/dashboard/finances",
+      "icons": [
+        {
+          "src": "/icon-96.svg",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "/agent",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }

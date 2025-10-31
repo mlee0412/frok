@@ -212,6 +212,37 @@ export default function AgentPage() {
     loadThreads();
   }, []);
 
+  // Handle share target API - pre-fill input with shared content
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const title = params.get('title');
+    const text = params.get('text');
+    const url = params.get('url');
+
+    // Build shared content message
+    const sharedParts = [];
+    if (title) sharedParts.push(`Title: ${title}`);
+    if (text) sharedParts.push(text);
+    if (url) sharedParts.push(`URL: ${url}`);
+
+    if (sharedParts.length > 0) {
+      const sharedContent = sharedParts.join('\n\n');
+      setInput(sharedContent);
+
+      // Clear URL parameters to avoid re-triggering on navigation
+      window.history.replaceState({}, '', window.location.pathname);
+
+      // Show toast notification
+      toast({
+        title: 'Content Shared',
+        description: 'Shared content has been added to your message.',
+        variant: 'success',
+      });
+    }
+  }, [toast]);
+
   // Load threads from backend
   const loadThreads = async () => {
     try {
