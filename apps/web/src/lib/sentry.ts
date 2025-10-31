@@ -60,16 +60,6 @@ export function setContext(key: string, context: Record<string, unknown> | null)
 }
 
 /**
- * Start a new transaction for performance monitoring
- */
-export function startTransaction(name: string, op: string) {
-  return Sentry.startTransaction({
-    name,
-    op,
-  });
-}
-
-/**
  * Wrap an async function with error tracking
  */
 export function withErrorTracking<T extends (...args: never[]) => Promise<unknown>>(
