@@ -4,38 +4,36 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ConfirmDialog } from '@frok/ui';
 
-// Skip ConfirmDialog tests due to React version mismatch
-// TODO: Fix after updating React to consistent version across packages
-describe.skip('ConfirmDialog Component', () => {
+describe('ConfirmDialog Component', () => {
   const defaultProps = {
-    isOpen: true,
-    onClose: vi.fn(),
+    open: true,
+    onOpenChange: vi.fn(),
     onConfirm: vi.fn(),
     title: 'Confirm Action',
     description: 'Are you sure you want to proceed?',
   };
 
-  it('renders when isOpen is true', () => {
+  it('renders when open is true', () => {
     render(<ConfirmDialog {...defaultProps} />);
 
     expect(screen.getByText('Confirm Action')).toBeInTheDocument();
     expect(screen.getByText('Are you sure you want to proceed?')).toBeInTheDocument();
   });
 
-  it('does not render when isOpen is false', () => {
-    render(<ConfirmDialog {...defaultProps} isOpen={false} />);
+  it('does not render when open is false', () => {
+    render(<ConfirmDialog {...defaultProps} open={false} />);
 
     expect(screen.queryByText('Confirm Action')).not.toBeInTheDocument();
   });
 
-  it('calls onClose when Cancel button is clicked', async () => {
-    const handleClose = vi.fn();
+  it('calls onOpenChange when Cancel button is clicked', async () => {
+    const handleOpenChange = vi.fn();
     const user = userEvent.setup();
 
-    render(<ConfirmDialog {...defaultProps} onClose={handleClose} />);
+    render(<ConfirmDialog {...defaultProps} onOpenChange={handleOpenChange} />);
 
     await user.click(screen.getByText('Cancel'));
-    expect(handleClose).toHaveBeenCalledTimes(1);
+    expect(handleOpenChange).toHaveBeenCalledWith(false);
   });
 
   it('calls onConfirm when Confirm button is clicked', async () => {
@@ -85,9 +83,9 @@ describe.skip('ConfirmDialog Component', () => {
 
     await user.click(screen.getByText('Confirm'));
 
-    // Button should be disabled during loading
+    // Button should show loading text and be disabled
     await waitFor(() => {
-      expect(screen.getByText('Confirm')).toBeDisabled();
+      expect(screen.getByText('Loading...')).toBeDisabled();
     });
   });
 
