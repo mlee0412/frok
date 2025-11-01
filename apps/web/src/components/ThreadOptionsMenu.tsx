@@ -28,10 +28,11 @@ const AVAILABLE_TOOLS = [
 ];
 
 const AVAILABLE_MODELS = [
-  { id: 'gpt-5-think', name: 'GPT-5 Think' },
-  { id: 'gpt-5', name: 'GPT-5' },
-  { id: 'gpt-5-mini', name: 'GPT-5 Mini' },
-  { id: 'gpt-5-nano', name: 'GPT-5 Nano' },
+  { id: 'auto', name: 'Auto (Recommended)', description: 'Automatically selects the best model based on query complexity' },
+  { id: 'gpt-5-think', name: 'GPT-5 Think', description: 'Most capable, best for complex reasoning' },
+  { id: 'gpt-5', name: 'GPT-5', description: 'Balanced performance and capability' },
+  { id: 'gpt-5-mini', name: 'GPT-5 Mini', description: 'Fast and efficient for most tasks' },
+  { id: 'gpt-5-nano', name: 'GPT-5 Nano', description: 'Fastest, best for simple queries' },
 ];
 
 const AGENT_STYLES = [
@@ -47,7 +48,7 @@ export function ThreadOptionsMenu({
   currentTags = [],
   currentFolder,
   currentTools = AVAILABLE_TOOLS.map(t => t.id),
-  currentModel = 'gpt-5-mini',
+  currentModel = 'auto',
   currentStyle = 'balanced',
   allTags,
   allFolders,
@@ -255,19 +256,33 @@ export function ThreadOptionsMenu({
             {/* Model Selection */}
             <div>
               <label className="block text-sm font-medium mb-2">AI Model</label>
-              <select
-                value={selectedModel}
-                onChange={(e) => setSelectedModel(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:border-sky-500 text-sm"
-              >
+              <div className="space-y-2">
                 {AVAILABLE_MODELS.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.name}
-                  </option>
+                  <label
+                    key={model.id}
+                    className="flex items-start gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750 transition"
+                  >
+                    <input
+                      type="radio"
+                      name="model"
+                      checked={selectedModel === model.id}
+                      onChange={() => setSelectedModel(model.id)}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium">
+                        {model.name}
+                        {model.id === 'auto' && <span className="ml-2 text-xs text-green-400">✓ Default</span>}
+                      </div>
+                      {model.description && (
+                        <div className="text-xs text-gray-500 mt-0.5">{model.description}</div>
+                      )}
+                    </div>
+                  </label>
                 ))}
-              </select>
-              <p className="text-xs text-gray-500 mt-1">
-                GPT-5 Nano is faster but less capable
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                💡 <strong>Auto mode</strong> analyzes your query and selects the optimal model for speed and accuracy
               </p>
             </div>
 

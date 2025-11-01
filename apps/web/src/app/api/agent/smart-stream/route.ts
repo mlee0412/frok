@@ -333,9 +333,37 @@ export async function POST(req: NextRequest) {
                 ? 'Be thorough and detailed. Use reasoning effort to provide comprehensive analysis.'
                 : 'Be helpful and concise. Use tools when needed.';
 
+            // Add rich formatting instructions for all complexity levels
+            instructions += `\n\n## Response Formatting Guidelines:
+- Use **Markdown** formatting to structure your responses clearly
+- Use **bold** for emphasis and important terms
+- Use *italics* for subtle emphasis
+- Create **bulleted lists** (with -) or **numbered lists** (with 1., 2., etc.) for step-by-step instructions or multiple items
+- Use \`inline code\` for technical terms, commands, file names, and code snippets
+- Use code blocks with language tags for longer code examples:
+  \`\`\`language
+  code here
+  \`\`\`
+- Include relevant **links** with descriptive text: [Link Text](URL)
+- Use ### headings to organize long responses into sections
+- Use > blockquotes for important notes or warnings
+- When presenting data, use **tables** in markdown format
+- When referencing web search results, **always include clickable links** to sources
+- For image-related queries, describe what images would show but note you cannot directly display images
+
+Examples of good formatting:
+- "Here are the **3 key steps**:\n1. First step\n2. Second step\n3. Third step"
+- "According to [Source Name](URL), the answer is..."
+- "**Important**: Make sure to backup your data first"
+- "Run the command: \`npm install package-name\`"`;
+
             const hasHA = finalTools.some((t) => t?.name === 'ha_search' || t?.name === 'ha_call');
             if (hasHA) {
-              instructions += `\n\nHome Assistant Tools:\n- Use ha_search first to find entity IDs before controlling devices\n- For lights/switches: use domain "light" or "switch" with service "turn_on" or "turn_off"\n- Always report the verification result to confirm success\n- If you get an error, explain it clearly to the user`;
+              instructions += `\n\n## Home Assistant Tools:
+- Use ha_search first to find entity IDs before controlling devices
+- For lights/switches: use domain "light" or "switch" with service "turn_on" or "turn_off"
+- Always report the verification result to confirm success
+- If you get an error, explain it clearly to the user`;
             }
 
             const agent = new Agent({

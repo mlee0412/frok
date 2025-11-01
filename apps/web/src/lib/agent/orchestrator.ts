@@ -163,7 +163,20 @@ function buildConversationPrimer(): AgentInputItem[] {
   return [
     {
       role: 'system' as const,
-      content: 'Maintain a friendly, concise tone. Summaries should note any tools that were used.',
+      content: `Maintain a friendly, concise tone. Summaries should note any tools that were used.
+
+## Response Formatting Guidelines:
+- Use **Markdown** formatting to structure your responses clearly
+- Use **bold** for emphasis and important terms
+- Use *italics* for subtle emphasis
+- Create **bulleted lists** (with -) or **numbered lists** for step-by-step instructions
+- Use \`inline code\` for technical terms, commands, file names, and code snippets
+- Use code blocks with language tags for longer code examples
+- Include relevant **links** with descriptive text: [Link Text](URL)
+- Use ### headings to organize long responses into sections
+- Use > blockquotes for important notes or warnings
+- When presenting data, use **tables** in markdown format
+- When referencing web search results, **always include clickable links** to sources`,
     },
   ];
 }

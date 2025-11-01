@@ -64,7 +64,7 @@ export default function AgentPage() {
   const [input, setInput] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [files, setFiles] = React.useState<File[]>([]);
-  const [modelName, setModelName] = React.useState('gpt-5-mini');
+  const [modelName, setModelName] = React.useState('auto');
   const [loadingThreads, setLoadingThreads] = React.useState(true);
   const [loadingMessages, setLoadingMessages] = React.useState(false);
   
@@ -572,10 +572,10 @@ export default function AgentPage() {
       const response = await fetch('/api/agent/smart-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           input_as_text: userContent,
           images: images.length > 0 ? images.map(img => img.url) : undefined,
-          model: activeThread?.model || 'gpt-5-mini',
+          model: activeThread?.model === 'auto' ? undefined : activeThread?.model,
           enabled_tools: activeThread?.enabledTools,
           thread_id: currentThreadId, // Pass thread ID for conversation history
         }),
@@ -777,10 +777,10 @@ export default function AgentPage() {
       const response = await fetch('/api/agent/smart-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           input_as_text: userMessage.content,
           images: userMessage.images?.map(img => img.url),
-          model: activeThread?.model || 'gpt-5-mini',
+          model: activeThread?.model === 'auto' ? undefined : activeThread?.model,
           enabled_tools: activeThread?.enabledTools,
           thread_id: activeThreadId, // Pass thread ID for conversation history
         }),
@@ -1411,9 +1411,9 @@ export default function AgentPage() {
       const response = await fetch('/api/agent/smart-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           input_as_text: newContent,
-          model: activeThread?.model || 'gpt-5-mini',
+          model: activeThread?.model === 'auto' ? undefined : activeThread?.model,
           enabled_tools: activeThread?.enabledTools,
           thread_id: activeThreadId, // Pass thread ID for conversation history
         }),
