@@ -61,9 +61,15 @@ const COMPLEX_MODEL = process.env["OPENAI_COMPLEX_MODEL"] ?? process.env["OPENAI
 
 function selectModelAndTools(
   complexity: 'simple' | 'moderate' | 'complex',
-  userModel?: string
+  userModel?: string,
+  query?: string
 ) {
   const normalizedPreference = userModel?.toLowerCase();
+  const queryLower = query?.toLowerCase() || '';
+
+  // Detect query type for smart tool selection
+  const isHomeQuery = /\b(turn|light|lamp|switch|fan|tv|door|window|garage|climate|thermostat|lock|unlock|dim|brighten|open|close)\b/i.test(queryLower);
+  const isSearchQuery = /\b(search|find|lookup|what is|who is|when|where|how to|recipe|news)\b/i.test(queryLower);
 
   // User preference overrides (from thread settings)
   if (normalizedPreference === 'gpt-5-nano') {
@@ -90,15 +96,32 @@ function selectModelAndTools(
     };
   }
 
-  // Smart routing based on complexity
+  // Smart routing based on complexity AND query type
   switch (complexity) {
     case 'simple':
       // Fast model, minimal tools for quick actions
-      return {
-        model: FAST_MODEL,
-        tools: ['home_assistant', 'memory', 'web_search'],
-        orchestrate: false,
-      };
+      if (isHomeQuery) {
+        // Home automation - only HA tools, no web search
+        return {
+          model: FAST_MODEL,
+          tools: ['home_assistant'],
+          orchestrate: false,
+        };
+      } else if (isSearchQuery) {
+        // Quick search - only web search
+        return {
+          model: FAST_MODEL,
+          tools: ['web_search'],
+          orchestrate: false,
+        };
+      } else {
+        // General simple query
+        return {
+          model: FAST_MODEL,
+          tools: ['home_assistant', 'memory'],
+          orchestrate: false,
+        };
+      }
 
     case 'moderate':
       // Balanced model, most common tools
@@ -210,7 +233,8 @@ export async function POST(req: NextRequest) {
         const complexity = await classifyQuery(input_as_text);
         const { model: selectedModel, tools: selectedTools, orchestrate } = selectModelAndTools(
           complexity,
-          userModel
+          userModel,
+          input_as_text
         );
 
         const loadToolset = async () => {
@@ -328,13 +352,14 @@ export async function POST(req: NextRequest) {
           } else {
             let instructions =
               complexity === 'simple'
-                ? 'Be extremely concise. Execute the requested action directly without explanation unless asked.'
+                ? 'Be EXTREMELY brief. For home automation: just confirm the action (e.g., "Lights turned off"). For other queries: answer in 1-2 sentences max. NO explanations unless explicitly asked.'
                 : complexity === 'complex'
                 ? 'Be thorough and detailed. Use reasoning effort to provide comprehensive analysis.'
                 : 'Be helpful and concise. Use tools when needed.';
 
-            // Add rich formatting instructions for all complexity levels
-            instructions += `\n\n## Response Formatting Guidelines:
+            // Add rich formatting instructions for moderate/complex queries only
+            if (complexity !== 'simple') {
+              instructions += `\n\n## Response Formatting Guidelines:
 - Use **Markdown** formatting to structure your responses clearly
 - Use **bold** for emphasis and important terms
 - Use *italics* for subtle emphasis
@@ -356,6 +381,7 @@ Examples of good formatting:
 - "According to [Source Name](URL), the answer is..."
 - "**Important**: Make sure to backup your data first"
 - "Run the command: \`npm install package-name\`"`;
+            }
 
             const hasHA = finalTools.some((t) => t?.name === 'ha_search' || t?.name === 'ha_call');
             if (hasHA) {
@@ -366,18 +392,30 @@ Examples of good formatting:
 - If you get an error, explain it clearly to the user`;
             }
 
+            // Build model settings with performance optimizations
+            const modelSettings: Record<string, unknown> = { store: true };
+
+            // Simple queries: optimize for speed
+            if (complexity === 'simple') {
+              modelSettings['temperature'] = 0; // Deterministic, faster
+              modelSettings['max_completion_tokens'] = 100; // Brief responses only
+            } else if (complexity === 'moderate') {
+              modelSettings['temperature'] = 0.3; // Slightly creative
+              modelSettings['max_completion_tokens'] = 500;
+            }
+
+            // Reasoning effort for reasoning-capable models
+            if (supportsReasoning(selectedModel)) {
+              modelSettings['reasoning'] = {
+                effort: complexity === 'complex' ? getReasoningEffort(selectedModel) : 'low',
+              };
+            }
+
             const agent = new Agent({
               name: 'FROK Assistant',
               instructions,
               model: selectedModel,
-              modelSettings: supportsReasoning(selectedModel)
-                ? {
-                    reasoning: {
-                      effort: complexity === 'complex' ? getReasoningEffort(selectedModel) : 'low',
-                    },
-                    store: true,
-                  }
-                : { store: true },
+              modelSettings,
               tools: finalTools,
             });
 
