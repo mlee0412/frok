@@ -395,14 +395,7 @@ Examples of good formatting:
             // Build model settings with performance optimizations
             const modelSettings: Record<string, unknown> = { store: true };
 
-            // Temperature optimization for speed
-            if (complexity === 'simple') {
-              modelSettings['temperature'] = 0; // Deterministic, faster
-            } else if (complexity === 'moderate') {
-              modelSettings['temperature'] = 0.3; // Slightly creative
-            }
-
-            // Reasoning effort for reasoning-capable models
+            // Reasoning effort for reasoning-capable models (no temperature for reasoning models)
             if (supportsReasoning(selectedModel)) {
               modelSettings['reasoning'] = {
                 effort: complexity === 'complex' ? getReasoningEffort(selectedModel) : 'low',
