@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(pnpm run build:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "WebSearch",
+      "WebFetch(domain:openai.github.io)",
+      "WebFetch(domain:platform.openai.com)",
+      "WebFetch(domain:cookbook.openai.com)"
     ],
     "deny": [],
     "ask": []
