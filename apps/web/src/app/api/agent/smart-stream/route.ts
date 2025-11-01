@@ -395,13 +395,11 @@ Examples of good formatting:
             // Build model settings with performance optimizations
             const modelSettings: Record<string, unknown> = { store: true };
 
-            // Simple queries: optimize for speed
+            // Temperature optimization for speed
             if (complexity === 'simple') {
               modelSettings['temperature'] = 0; // Deterministic, faster
-              modelSettings['max_completion_tokens'] = 100; // Brief responses only
             } else if (complexity === 'moderate') {
               modelSettings['temperature'] = 0.3; // Slightly creative
-              modelSettings['max_completion_tokens'] = 500;
             }
 
             // Reasoning effort for reasoning-capable models
