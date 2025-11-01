@@ -11,7 +11,7 @@ import { createHash } from 'crypto';
 // Types
 // ============================================================================
 
-export type CachedResponse = {
+type CachedResponse = {
   output: string;
   metadata: {
     model?: string;
@@ -28,7 +28,7 @@ export type CachedResponse = {
   threadId?: string;
 };
 
-export type CacheStats = {
+type CacheStats = {
   totalEntries: number;
   totalHits: number;
   totalMisses: number;
@@ -100,8 +100,6 @@ class AgentResponseCache {
    * Check if query is cacheable
    */
   private isCacheable(query: string, metadata?: Partial<CachedResponse['metadata']>): boolean {
-    const queryLower = query.toLowerCase();
-
     // Don't cache time-sensitive queries
     const timeSensitive = /\b(now|today|current|latest|right now|this moment|just now)\b/i;
     if (timeSensitive.test(query)) return false;
@@ -360,7 +358,7 @@ let cacheInstance: AgentResponseCache | null = null;
 /**
  * Get or create cache instance
  */
-export function getAgentCache(): AgentResponseCache {
+function getAgentCache(): AgentResponseCache {
   if (!cacheInstance) {
     cacheInstance = new AgentResponseCache();
   }

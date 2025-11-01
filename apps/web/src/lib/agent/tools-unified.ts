@@ -6,7 +6,6 @@
  */
 
 import type { Tool } from '@openai/agents';
-import { z } from 'zod';
 
 // Import existing custom tools
 import {
@@ -21,21 +20,21 @@ import {
 // Built-in Tool Types
 // ============================================================================
 
-export type BuiltInToolType =
+type BuiltInToolType =
   | 'web_search'
   | 'file_search'
   | 'code_interpreter'
   | 'computer_use'
   | 'image_generation';
 
-export type CustomToolType =
+type CustomToolType =
   | 'ha_search'
   | 'ha_call'
   | 'memory_add'
   | 'memory_search'
   | 'custom_web_search';
 
-export type ToolType = BuiltInToolType | CustomToolType;
+type ToolType = BuiltInToolType | CustomToolType;
 
 // ============================================================================
 // Tool Configurations
@@ -44,7 +43,7 @@ export type ToolType = BuiltInToolType | CustomToolType;
 /**
  * Built-in tool configurations for OpenAI
  */
-export const builtInToolConfigs = {
+const builtInToolConfigs = {
   web_search: {
     type: 'web_search' as const,
     web_search: {
@@ -91,7 +90,7 @@ export const builtInToolConfigs = {
 /**
  * Custom tool wrapper for consistency
  */
-export const customTools = {
+const customTools = {
   ha_search: haSearch,
   ha_call: haCall,
   memory_add: memoryAdd,
@@ -103,7 +102,7 @@ export const customTools = {
 // Tool Categories & Descriptions
 // ============================================================================
 
-export const toolCategories = {
+const toolCategories = {
   // Smart Home
   smart_home: {
     name: 'Smart Home Control',
@@ -157,7 +156,7 @@ export const toolCategories = {
 // Tool Metadata
 // ============================================================================
 
-export const toolMetadata: Record<ToolType, {
+const toolMetadata: Record<ToolType, {
   displayName: string;
   description: string;
   category: keyof typeof toolCategories;
@@ -271,14 +270,14 @@ export const toolMetadata: Record<ToolType, {
 /**
  * Get tool configuration based on enabled tools
  */
-export function getToolConfiguration(
+function getToolConfiguration(
   enabledTools: ToolType[],
   options?: {
     preferBuiltIn?: boolean;
     includeExperimental?: boolean;
   }
 ) {
-  const builtInTools: unknown[] = [];
+  const builtInTools: Array<Record<string, unknown>> = [];
   const customToolsList: Tool<unknown>[] = [];
 
   for (const toolName of enabledTools) {
@@ -313,7 +312,7 @@ export function getToolConfiguration(
 /**
  * Get default tools for different complexity levels
  */
-export function getDefaultTools(complexity: 'simple' | 'moderate' | 'complex'): ToolType[] {
+function getDefaultTools(complexity: 'simple' | 'moderate' | 'complex'): ToolType[] {
   switch (complexity) {
     case 'simple':
       // Fast, lightweight tools only
@@ -343,7 +342,7 @@ export function getDefaultTools(complexity: 'simple' | 'moderate' | 'complex'): 
 /**
  * Get specialized tool sets for different agent types
  */
-export function getAgentTools(agentType: 'home' | 'memory' | 'research' | 'code' | 'general'): ToolType[] {
+function getAgentTools(agentType: 'home' | 'memory' | 'research' | 'code' | 'general'): ToolType[] {
   switch (agentType) {
     case 'home':
       return ['ha_search', 'ha_call'];
@@ -376,7 +375,7 @@ export function getAgentTools(agentType: 'home' | 'memory' | 'research' | 'code'
 /**
  * Validate tool dependencies
  */
-export function validateToolDependencies(tools: ToolType[]): {
+function validateToolDependencies(tools: ToolType[]): {
   valid: boolean;
   missing: { tool: ToolType; dependencies: string[] }[];
 } {
@@ -394,7 +393,7 @@ export function validateToolDependencies(tools: ToolType[]): {
 
       // Check if service is available
       if (dep === 'SUPABASE') {
-        return !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY;
+        return !process.env['NEXT_PUBLIC_SUPABASE_URL'] || !process.env['SUPABASE_SERVICE_ROLE_KEY'];
       }
 
       return false;
@@ -418,8 +417,7 @@ export function validateToolDependencies(tools: ToolType[]): {
 /**
  * Get recommended tools based on query
  */
-export function recommendTools(query: string): ToolType[] {
-  const queryLower = query.toLowerCase();
+function recommendTools(query: string): ToolType[] {
   const recommended: ToolType[] = [];
 
   // Smart home keywords
@@ -463,7 +461,7 @@ export function recommendTools(query: string): ToolType[] {
 /**
  * Get tool display information for UI
  */
-export function getToolDisplayInfo(tool: ToolType) {
+function getToolDisplayInfo(tool: ToolType) {
   const metadata = toolMetadata[tool];
   const category = toolCategories[metadata.category];
 

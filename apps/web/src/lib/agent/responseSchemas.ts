@@ -235,8 +235,6 @@ export function selectResponseSchema(
   query: string,
   enabledTools: string[]
 ): { schema: z.ZodType; format: ReturnType<typeof getResponseFormat> } {
-  const queryLower = query.toLowerCase();
-
   // Smart home queries
   if (
     enabledTools.includes('home_assistant') &&

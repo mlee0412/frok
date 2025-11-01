@@ -9,7 +9,7 @@
  * - Response caching
  */
 
-import { Agent, type AgentInputItem } from '@openai/agents';
+import { Agent, type AgentInputItem, type Tool } from '@openai/agents';
 import {
   getToolConfiguration,
   getAgentTools,
@@ -20,7 +20,6 @@ import {
 } from './guardrails';
 import {
   ResponseFormats,
-  selectResponseSchema,
 } from './responseSchemas';
 
 // ============================================================================
@@ -65,10 +64,10 @@ export interface EnhancedAgentSuiteOptions {
 // Model Configuration
 // ============================================================================
 
-const FAST_MODEL_FALLBACK = process.env.OPENAI_FAST_MODEL ?? 'gpt-5-nano';
-const BALANCED_MODEL_FALLBACK = process.env.OPENAI_GENERAL_MODEL ?? 'gpt-5-mini';
+const FAST_MODEL_FALLBACK = process.env['OPENAI_FAST_MODEL'] ?? 'gpt-5-nano';
+const BALANCED_MODEL_FALLBACK = process.env['OPENAI_GENERAL_MODEL'] ?? 'gpt-5-mini';
 const COMPLEX_MODEL_FALLBACK =
-  process.env.OPENAI_COMPLEX_MODEL ?? process.env.OPENAI_AGENT_MODEL ?? 'gpt-5-think';
+  process.env['OPENAI_COMPLEX_MODEL'] ?? process.env['OPENAI_AGENT_MODEL'] ?? 'gpt-5-think';
 
 // ============================================================================
 // Helper Functions
@@ -111,11 +110,11 @@ function buildModelSettings(
 ) {
   const settings: Record<string, unknown> = { store };
   if (typeof temperature === 'number') {
-    settings.temperature = temperature;
+    settings['temperature'] = temperature;
   }
 
   if (supportsReasoning(model)) {
-    settings.reasoning = {
+    settings['reasoning'] = {
       effort: reasoningEffort ?? getReasoningEffort(model),
     };
   }
@@ -143,14 +142,14 @@ export async function createEnhancedAgentSuite(
 
   // Model configuration
   const routerModel =
-    options.models?.router ?? process.env.OPENAI_ROUTER_MODEL ?? FAST_MODEL_FALLBACK;
+    options.models?.router ?? process.env['OPENAI_ROUTER_MODEL'] ?? FAST_MODEL_FALLBACK;
   const generalModel =
     options.models?.general ??
     (options.preferFastGeneral ? BALANCED_MODEL_FALLBACK : COMPLEX_MODEL_FALLBACK);
-  const homeModel = options.models?.home ?? process.env.OPENAI_HOME_MODEL ?? routerModel;
-  const memoryModel = options.models?.memory ?? process.env.OPENAI_MEMORY_MODEL ?? routerModel;
+  const homeModel = options.models?.home ?? process.env['OPENAI_HOME_MODEL'] ?? routerModel;
+  const memoryModel = options.models?.memory ?? process.env['OPENAI_MEMORY_MODEL'] ?? routerModel;
   const researchModel =
-    options.models?.research ?? process.env.OPENAI_RESEARCH_MODEL ?? BALANCED_MODEL_FALLBACK;
+    options.models?.research ?? process.env['OPENAI_RESEARCH_MODEL'] ?? BALANCED_MODEL_FALLBACK;
   const codeModel = options.models?.code ?? BALANCED_MODEL_FALLBACK;
 
   // Tool configuration
@@ -197,7 +196,7 @@ export async function createEnhancedAgentSuite(
       '- Always report the final state of devices after actions.',
     model: homeModel,
     modelSettings: buildModelSettings(homeModel, { temperature: 0.2, store: false }),
-    tools: [...homeTools.custom, ...homeTools.builtIn],
+    tools: [...homeTools.custom, ...homeTools.builtIn] as Tool<unknown>[],
     inputGuardrails: homeGuardrails.input,
     outputGuardrails: homeGuardrails.output,
     ...(options.useStructuredOutputs && {
@@ -220,7 +219,7 @@ export async function createEnhancedAgentSuite(
       '- Provide relevance scores when retrieving memories.',
     model: memoryModel,
     modelSettings: buildModelSettings(memoryModel, { temperature: 0.2, store: false }),
-    tools: [...memoryTools.custom, ...memoryTools.builtIn],
+    tools: [...memoryTools.custom, ...memoryTools.builtIn] as Tool<unknown>[],
     inputGuardrails: memoryGuardrails.input,
     outputGuardrails: memoryGuardrails.output,
     ...(options.useStructuredOutputs && {
@@ -244,7 +243,7 @@ export async function createEnhancedAgentSuite(
       '- Rate the confidence of your findings (0-1 scale).',
     model: researchModel,
     modelSettings: buildModelSettings(researchModel, { temperature: 0.3, store: false }),
-    tools: [...researchTools.custom, ...researchTools.builtIn],
+    tools: [...researchTools.custom, ...researchTools.builtIn] as Tool<unknown>[],
     inputGuardrails: researchGuardrails.input,
     outputGuardrails: researchGuardrails.output,
     ...(options.useStructuredOutputs && {
@@ -268,7 +267,7 @@ export async function createEnhancedAgentSuite(
       '- Always validate inputs and outputs.',
     model: codeModel,
     modelSettings: buildModelSettings(codeModel, { temperature: 0.2, store: false }),
-    tools: [...codeTools.custom, ...codeTools.builtIn],
+    tools: [...codeTools.custom, ...codeTools.builtIn] as Tool<unknown>[],
     inputGuardrails: generalGuardrails.input,
     outputGuardrails: generalGuardrails.output,
     ...(options.useStructuredOutputs && {
@@ -296,7 +295,7 @@ export async function createEnhancedAgentSuite(
       store: true,
       reasoningEffort: options.preferFastGeneral ? 'low' : undefined,
     }),
-    tools: [...generalTools.custom, ...generalTools.builtIn],
+    tools: [...generalTools.custom, ...generalTools.builtIn] as Tool<unknown>[],
     inputGuardrails: generalGuardrails.input,
     outputGuardrails: generalGuardrails.output,
     ...(options.useStructuredOutputs && {

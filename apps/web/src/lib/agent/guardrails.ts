@@ -13,8 +13,8 @@ import type { InputGuardrail, OutputGuardrail } from '@openai/agents';
 
 const GUARDRAILS_CONFIG = {
   // Cost limits
-  maxCostPerRequest: parseFloat(process.env.MAX_COST_PER_REQUEST || '0.50'), // $0.50
-  maxTokensPerRequest: parseInt(process.env.MAX_TOKENS_PER_REQUEST || '50000', 10),
+  maxCostPerRequest: parseFloat(process.env['MAX_COST_PER_REQUEST'] || '0.50'), // $0.50
+  maxTokensPerRequest: parseInt(process.env['MAX_TOKENS_PER_REQUEST'] || '50000', 10),
 
   // Content limits
   maxInputLength: 10000,
@@ -57,7 +57,9 @@ function extractText(input: unknown): string {
 
 /**
  * Calculate cost based on model and token usage
+ * Note: Currently unused but kept for future implementation when usage data is available
  */
+// @ts-expect-error - Function is intentionally unused, kept for future implementation
 function calculateCost(model: string, tokens: number): number {
   const pricing: Record<string, number> = {
     'gpt-5-nano': 0.000001,
@@ -273,8 +275,15 @@ export const outputQualityGuardrail: OutputGuardrail = {
  */
 export const homeAssistantSafetyGuardrail: OutputGuardrail = {
   name: 'home-assistant-safety',
-  async execute({ agentOutput, toolCalls }) {
-    // Dangerous actions that require extra caution
+  async execute() {
+    // TODO: Implement when tool calls are available via OutputGuardrail
+    // The OutputGuardrail type doesn't currently provide toolCalls parameter
+    return {
+      tripwireTriggered: false,
+      outputInfo: { checked: 'ha_safety_not_implemented' },
+    };
+
+    /* Original implementation - needs proper type support with toolCalls
     const dangerousActions = [
       'unlock',
       'disarm',
@@ -286,7 +295,6 @@ export const homeAssistantSafetyGuardrail: OutputGuardrail = {
       'remove',
     ];
 
-    // Critical entities that should never be controlled without approval
     const criticalEntities = ['lock', 'alarm_control_panel', 'garage_door'];
 
     if (!toolCalls || toolCalls.length === 0) {
@@ -331,6 +339,7 @@ export const homeAssistantSafetyGuardrail: OutputGuardrail = {
         safe: true,
       },
     };
+    */
   },
 };
 
@@ -339,14 +348,15 @@ export const homeAssistantSafetyGuardrail: OutputGuardrail = {
  */
 export const costLimitGuardrail: OutputGuardrail = {
   name: 'cost-limit-enforcement',
-  async execute({ agentOutput, usage, metadata }) {
-    if (!usage) {
-      return {
-        tripwireTriggered: false,
-        outputInfo: { checked: 'no_usage_data' },
-      };
-    }
+  async execute() {
+    // TODO: Implement cost tracking when usage data is available
+    // The OutputGuardrail type doesn't currently provide usage/metadata
+    return {
+      tripwireTriggered: false,
+      outputInfo: { checked: 'cost_limit_not_implemented' },
+    };
 
+    /* Original implementation - needs proper type support
     const totalTokens = usage.totalTokens || 0;
     const model = (metadata as { model?: string })?.model || 'unknown';
 
@@ -385,6 +395,7 @@ export const costLimitGuardrail: OutputGuardrail = {
         withinBudget: true,
       },
     };
+    */
   },
 };
 

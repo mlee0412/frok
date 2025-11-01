@@ -10,7 +10,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { AgentInputItem, Runner, withTrace } from '@openai/agents';
+import { AgentInputItem, Runner, withTrace, type Tool } from '@openai/agents';
 import { performance } from 'perf_hooks';
 import { createEnhancedAgentSuite } from '@/lib/agent/orchestrator-enhanced';
 import { withAuth } from '@/lib/api/withAuth';
@@ -84,11 +84,11 @@ async function classifyQuery(query: string): Promise<'simple' | 'moderate' | 'co
 // Model & Tool Selection
 // ============================================================================
 
-const FAST_MODEL = process.env.OPENAI_FAST_MODEL ?? 'gpt-5-nano';
+const FAST_MODEL = process.env['OPENAI_FAST_MODEL'] ?? 'gpt-5-nano';
 const BALANCED_MODEL =
-  process.env.OPENAI_BALANCED_MODEL ?? process.env.OPENAI_GENERAL_MODEL ?? 'gpt-5-mini';
+  process.env['OPENAI_BALANCED_MODEL'] ?? process.env['OPENAI_GENERAL_MODEL'] ?? 'gpt-5-mini';
 const COMPLEX_MODEL =
-  process.env.OPENAI_COMPLEX_MODEL ?? process.env.OPENAI_AGENT_MODEL ?? 'gpt-5-think';
+  process.env['OPENAI_COMPLEX_MODEL'] ?? process.env['OPENAI_AGENT_MODEL'] ?? 'gpt-5-think';
 
 function selectModelAndTools(
   complexity: 'simple' | 'moderate' | 'complex',
@@ -390,7 +390,7 @@ export async function POST(req: NextRequest) {
           const runner = new Runner({
             traceMetadata: {
               __trace_source__: 'agent-builder-enhanced',
-              workflow_id: process.env.WORKFLOW_ID || 'unknown',
+              workflow_id: process.env['WORKFLOW_ID'] || 'unknown',
               user_id,
               thread_id: threadId,
             },
@@ -429,7 +429,7 @@ export async function POST(req: NextRequest) {
               name: 'FROK Assistant',
               instructions,
               model: selectedModel,
-              tools: [...toolsConfig.custom, ...toolsConfig.builtIn],
+              tools: [...toolsConfig.custom, ...toolsConfig.builtIn] as Tool<unknown>[],
             });
 
             const directConversation: AgentInputItem[] = [
