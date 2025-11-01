@@ -1,0 +1,625 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FROK API",
+    "version": "1.0.0",
+    "description": "AI-powered personal assistant API",
+    "contact": {
+      "name": "API Support",
+      "url": "https://github.com/your-repo/frok"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development server"
+    },
+    {
+      "url": "https://your-production-url.vercel.app",
+      "description": "Production server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Chat",
+      "description": "Chat thread and message management"
+    },
+    {
+      "name": "Agent",
+      "description": "AI agent operations"
+    },
+    {
+      "name": "Memory",
+      "description": "Knowledge base and memory management"
+    },
+    {
+      "name": "Finances",
+      "description": "Financial data and transactions"
+    },
+    {
+      "name": "Smart Home",
+      "description": "Home Assistant integration"
+    },
+    {
+      "name": "System",
+      "description": "System health and monitoring"
+    }
+  ],
+  "paths": {
+    "/api/chat/threads": {
+      "get": {
+        "tags": ["Chat"],
+        "summary": "List all chat threads",
+        "description": "Retrieve all chat threads for the authenticated user",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean" },
+                    "threads": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Thread" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Chat"],
+        "summary": "Create a new chat thread",
+        "description": "Create a new conversation thread",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string", "example": "New Conversation" },
+                  "tags": { "type": "array", "items": { "type": "string" } },
+                  "folder": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thread created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean" },
+                    "thread": { "$ref": "#/components/schemas/Thread" }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/chat/messages": {
+      "get": {
+        "tags": ["Chat"],
+        "summary": "List messages in a thread",
+        "description": "Retrieve all messages for a specific thread",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          {
+            "name": "threadId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean" },
+                    "messages": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Message" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Chat"],
+        "summary": "Send a message",
+        "description": "Send a new message in a thread",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["threadId", "content"],
+                "properties": {
+                  "threadId": { "type": "string", "format": "uuid" },
+                  "content": { "type": "string" },
+                  "role": { "type": "string", "enum": ["user", "assistant"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Message sent successfully"
+          }
+        }
+      }
+    },
+    "/api/agent/smart-stream": {
+      "post": {
+        "tags": ["Agent"],
+        "summary": "Stream AI agent response",
+        "description": "Send a message and receive streaming AI response",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["message"],
+                "properties": {
+                  "message": { "type": "string" },
+                  "threadId": { "type": "string", "format": "uuid" },
+                  "model": { "type": "string", "default": "gpt-5-mini" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Streaming response",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/memory/list": {
+      "get": {
+        "tags": ["Memory"],
+        "summary": "List user memories",
+        "description": "Retrieve all memories for the authenticated user",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          {
+            "name": "tag",
+            "in": "query",
+            "schema": { "type": "string" },
+            "description": "Filter by tag"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean" },
+                    "memories": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Memory" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/finances/summary": {
+      "get": {
+        "tags": ["Finances"],
+        "summary": "Get financial summary",
+        "description": "Retrieve financial summary and statistics",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/memory": {
+      "get": {
+        "tags": ["Agent"],
+        "summary": "List agent memories",
+        "description": "Retrieve all memories for a specific agent",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          {
+            "name": "agentName",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Name of the agent"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean" },
+                    "memories": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/AgentMemory" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Agent"],
+        "summary": "Add agent memory",
+        "description": "Add a new memory for an agent",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["agentName", "content", "memoryType"],
+                "properties": {
+                  "agentName": { "type": "string" },
+                  "content": { "type": "string" },
+                  "memoryType": {
+                    "type": "string",
+                    "enum": ["system", "user", "conversation"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Memory added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean" },
+                    "memory": { "$ref": "#/components/schemas/AgentMemory" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "delete": {
+        "tags": ["Agent"],
+        "summary": "Delete agent memory",
+        "description": "Delete a specific agent memory",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          {
+            "name": "memoryId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "description": "ID of the memory to delete"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memory deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/memory/search": {
+      "post": {
+        "tags": ["Memory"],
+        "summary": "Search user memories",
+        "description": "Search through user memories using semantic search",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["query"],
+                "properties": {
+                  "query": { "type": "string" },
+                  "tag": { "type": "string" },
+                  "limit": { "type": "integer", "default": 5 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean" },
+                    "results": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Memory" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/chat/threads/{threadId}": {
+      "patch": {
+        "tags": ["Chat"],
+        "summary": "Update chat thread",
+        "description": "Update thread properties like title, tags, or folder",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          {
+            "name": "threadId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string" },
+                  "tags": { "type": "array", "items": { "type": "string" } },
+                  "folder": { "type": "string" },
+                  "pinned": { "type": "boolean" },
+                  "archived": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thread updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean" },
+                    "thread": { "$ref": "#/components/schemas/Thread" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Chat"],
+        "summary": "Delete chat thread",
+        "description": "Delete a thread and all its messages",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          {
+            "name": "threadId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thread deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sb-access-token",
+        "description": "Supabase authentication cookie"
+      }
+    },
+    "schemas": {
+      "Thread": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "folder": { "type": "string", "nullable": true },
+          "pinned": { "type": "boolean" },
+          "archived": { "type": "boolean" }
+        }
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "thread_id": { "type": "string", "format": "uuid" },
+          "role": { "type": "string", "enum": ["user", "assistant"] },
+          "content": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Memory": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "content": { "type": "string" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "AgentMemory": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "agent_name": { "type": "string" },
+          "content": { "type": "string" },
+          "memory_type": {
+            "type": "string",
+            "enum": ["system", "user", "conversation"]
+          },
+          "user_id": { "type": "string", "format": "uuid" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "FinancialSummary": {
+        "type": "object",
+        "properties": {
+          "totalBalance": { "type": "number" },
+          "totalIncome": { "type": "number" },
+          "totalExpenses": { "type": "number" },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "total": { "type": "number" }
+              }
+            }
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean", "example": false },
+          "error": { "type": "string" },
+          "details": { "type": "object" }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Authentication required",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Insufficient permissions",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    }
+  }
+}
