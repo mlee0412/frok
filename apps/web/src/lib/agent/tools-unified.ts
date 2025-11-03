@@ -18,6 +18,7 @@ import {
 
 // Import export tools
 import { pdfGeneratorTool } from './tools/pdfGenerator';
+import { pptxGeneratorTool } from './tools/pptxGenerator';
 
 // ============================================================================
 // Built-in Tool Types
@@ -36,7 +37,8 @@ type CustomToolType =
   | 'memory_add'
   | 'memory_search'
   | 'custom_web_search'
-  | 'pdf_generator';
+  | 'pdf_generator'
+  | 'pptx_generator';
 
 type ToolType = BuiltInToolType | CustomToolType;
 
@@ -101,6 +103,7 @@ const customTools = {
   memory_search: memorySearch,
   custom_web_search: customWebSearch,
   pdf_generator: pdfGeneratorTool,
+  pptx_generator: pptxGeneratorTool,
 };
 
 // ============================================================================
@@ -160,7 +163,7 @@ const toolCategories = {
   export: {
     name: 'Export & Documents',
     description: 'Generate and export documents in various formats',
-    tools: ['pdf_generator'] as const,
+    tools: ['pdf_generator', 'pptx_generator'] as const,
     icon: '📄',
   },
 };
@@ -283,6 +286,16 @@ const toolMetadata: Record<ToolType, {
     requiresAuth: true,
     experimental: false,
     dependencies: ['jspdf', 'html2canvas'],
+  },
+
+  pptx_generator: {
+    displayName: 'PowerPoint Generator',
+    description: 'Create professional PowerPoint presentations with multiple slides, layouts, and themes',
+    category: 'export',
+    costPerUse: 'Minimal (computation only, ~$0.002)',
+    requiresAuth: true,
+    experimental: false,
+    dependencies: ['pptxgenjs'],
   },
 };
 
