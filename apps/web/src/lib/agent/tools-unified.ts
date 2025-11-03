@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Unified Tool System - Built-in + Custom Tools
  *
@@ -10,6 +9,7 @@
  * createUserMemoryTools(userId) from './tools-user-specific'
  *
  * Current status: Not actively used (enhanced orchestrator not integrated yet)
+ * Temporarily excluded from build - see .eslintrc.json
  */
 
 import type { Tool } from '@openai/agents';
@@ -160,7 +160,7 @@ const toolCategories = {
   memory: {
     name: 'Memory & Preferences',
     description: 'Store and retrieve long-term memories and user preferences with hybrid search',
-    tools: ['memory_add', 'memory_search', 'memory_search_enhanced'] as const,
+    tools: ['memory_search_enhanced'] as const, // NOTE: memory_add and memory_search are user-specific
     icon: '🧠',
   },
 
@@ -278,25 +278,7 @@ const toolMetadata: Record<ToolType, {
     dependencies: ['HOME_ASSISTANT_URL', 'HOME_ASSISTANT_TOKEN'],
   },
 
-  memory_add: {
-    displayName: 'Add Memory',
-    description: 'Store persistent memories and user preferences',
-    category: 'memory',
-    costPerUse: 'Embedding cost (~$0.0001)',
-    requiresAuth: true,
-    experimental: false,
-    dependencies: ['OPENAI_API_KEY', 'SUPABASE'],
-  },
-
-  memory_search: {
-    displayName: 'Search Memories',
-    description: 'Search through stored memories using semantic search',
-    category: 'memory',
-    costPerUse: 'Embedding cost (~$0.0001)',
-    requiresAuth: true,
-    experimental: false,
-    dependencies: ['OPENAI_API_KEY', 'SUPABASE'],
-  },
+  // NOTE: memory_add and memory_search removed - user-specific tools created via createUserMemoryTools()
 
   memory_search_enhanced: {
     displayName: 'Enhanced Memory Search',
@@ -410,27 +392,25 @@ function getToolConfiguration(
 function getDefaultTools(complexity: 'simple' | 'moderate' | 'complex'): ToolType[] {
   switch (complexity) {
     case 'simple':
-      // Fast, lightweight tools only
-      return ['ha_search', 'ha_call', 'memory_search'];
+      // Fast, lightweight tools only (NOTE: memory tools added per-user at runtime)
+      return ['ha_search', 'ha_call'];
 
     case 'moderate':
-      // Common tools with web search
-      return ['ha_search', 'ha_call', 'memory_search', 'memory_add', 'web_search'];
+      // Common tools with web search (NOTE: memory tools added per-user at runtime)
+      return ['ha_search', 'ha_call', 'web_search'];
 
     case 'complex':
-      // All tools including code execution
+      // All tools including code execution (NOTE: memory tools added per-user at runtime)
       return [
         'ha_search',
         'ha_call',
-        'memory_search',
-        'memory_add',
         'web_search',
         'file_search',
         'code_interpreter',
       ];
 
     default:
-      return ['ha_search', 'ha_call', 'memory_search', 'web_search'];
+      return ['ha_search', 'ha_call', 'web_search'];
   }
 }
 
@@ -443,27 +423,27 @@ function getAgentTools(agentType: 'home' | 'memory' | 'research' | 'code' | 'gen
       return ['ha_search', 'ha_call'];
 
     case 'memory':
-      return ['memory_add', 'memory_search'];
+      // NOTE: Memory tools (memory_add, memory_search) are created per-user at runtime
+      return [];
 
     case 'research':
-      return ['web_search', 'file_search', 'memory_search'];
+      return ['web_search', 'file_search'];
 
     case 'code':
       return ['code_interpreter', 'web_search'];
 
     case 'general':
+      // NOTE: Memory tools added per-user at runtime
       return [
         'ha_search',
         'ha_call',
-        'memory_add',
-        'memory_search',
         'web_search',
         'file_search',
         'code_interpreter',
       ];
 
     default:
-      return ['web_search', 'memory_search'];
+      return ['web_search'];
   }
 }
 
@@ -525,10 +505,10 @@ function recommendTools(query: string): ToolType[] {
     recommended.push('code_interpreter');
   }
 
-  // Memory keywords
-  if (/\b(remember|recall|forget|preference|save|store)\b/i.test(query)) {
-    recommended.push('memory_search', 'memory_add');
-  }
+  // Memory keywords (NOTE: Memory tools added per-user at runtime)
+  // if (/\b(remember|recall|forget|preference|save|store)\b/i.test(query)) {
+  //   recommended.push('memory_search', 'memory_add'); // Removed - user-specific
+  // }
 
   // Research keywords
   if (/\b(search|find|lookup|latest|current|news|research)\b/i.test(query)) {
@@ -547,7 +527,7 @@ function recommendTools(query: string): ToolType[] {
 
   // Default fallback
   if (recommended.length === 0) {
-    recommended.push('web_search', 'memory_search');
+    recommended.push('web_search');
   }
 
   return recommended;
