@@ -77,9 +77,11 @@ export default function LovelaceDashboardEnhanced({
   // Separate lights and light switches from regular switches
   const allLights = devices.filter((d) => d.type === 'light' || isLightSwitch(d));
   const regularSwitches = devices.filter((d) => d.type === 'switch' && !isLightSwitch(d));
-  const climates = devices.filter((d) => d.type === 'climate');
   const covers = devices.filter((d) => d.type === 'cover');
   const mediaPlayers = devices.filter((d) => d.type === 'media_player');
+
+  // Find specific HVAC entity
+  const hvacEntity = devices.find((d) => d.id === 'climate.simon_aire_inc');
 
   // Convert helpers
   const convertToSwitch = (d: Device): SwitchEntity => ({
@@ -253,7 +255,7 @@ export default function LovelaceDashboardEnhanced({
     },
   ];
 
-  // Get media player data for remote control
+  // Get media player data for remote control (Sonos for volume)
   const sonosPlayer = mediaPlayers.find((mp) => mp.id.includes('sonos'));
   const mediaPlayerData: MediaPlayerData | undefined = sonosPlayer
     ? {
@@ -265,11 +267,9 @@ export default function LovelaceDashboardEnhanced({
       }
     : undefined;
 
-  // Find Apple TV entity for app launching
-  const appleTvEntity = mediaPlayers.find(
-    (mp) => mp.id.includes('apple_tv') || mp.id.includes('appletv') || mp.name.toLowerCase().includes('apple tv')
-  );
-  const appleTvEntityId = appleTvEntity?.id;
+  // Use specific entity IDs for Apple TV
+  const appleTvEntityId = 'media_player.living_room'; // For app launching via select_source
+  const remoteEntityId = 'remote.living_room'; // For remote commands
 
   return (
     <div className="space-y-6">
@@ -314,14 +314,12 @@ export default function LovelaceDashboardEnhanced({
         </div>
       </HorizontalStack>
 
-      {/* Climate Control */}
-      {climates.length > 0 && (
+      {/* Climate Control - Simon Aire HVAC */}
+      {hvacEntity && (
         <div>
-          <h3 className="text-lg font-semibold mb-3 text-blue-400">🌡️ Climate</h3>
+          <h3 className="text-lg font-semibold mb-3 text-blue-400">🌡️ Climate Control</h3>
           <HorizontalStack>
-            {climates.slice(0, 2).map((device) => (
-              <ClimateCard key={device.id} entity={convertToClimate(device)} />
-            ))}
+            <ClimateCard entity={convertToClimate(hvacEntity)} />
           </HorizontalStack>
         </div>
       )}
@@ -369,7 +367,7 @@ export default function LovelaceDashboardEnhanced({
       <div>
         <h3 className="text-lg font-semibold mb-3 text-cyan-400">📱 Media Control</h3>
         <RemoteControlEnhanced
-          remoteId="remote.living_room"
+          remoteId={remoteEntityId}
           mode={remoteMode}
           customActions={hueSyncBoxActions}
           mediaPlayer={mediaPlayerData}
