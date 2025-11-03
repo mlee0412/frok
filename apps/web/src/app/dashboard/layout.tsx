@@ -18,8 +18,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { label: t('system'), href: '/dashboard/system' },
     { label: t('users'), href: '/dashboard/users' },
     { label: t('smartHome'), href: '/dashboard/smart-home' },
-    { label: t('health'), href: '/dashboard/health' },
-    { label: t('development'), href: '/dashboard/development' },
     { label: t('automation'), href: '/dashboard/automation' },
     { label: t('finances'), href: '/dashboard/finances' },
   ];
