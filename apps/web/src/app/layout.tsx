@@ -2,13 +2,13 @@
 import '../styles/globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import { NextIntlClientProvider } from 'next-intl';
 import { ThemeProvider } from '@/providers/ThemeProvider';
 import { QueryProvider } from '@/providers/QueryProvider';
 import { Toaster } from '@frok/ui';
 import { WebVitals } from '@/components/WebVitals';
 import { PerformanceMonitor } from '@/components/PerformanceMonitor';
 import { ServiceWorkerProvider } from '@/components/ServiceWorkerProvider';
+import { I18nProvider } from '@/lib/i18n/I18nProvider';
 import { getLocale } from '@/lib/i18n/getLocale';
 import { getMessages } from '../../i18n';
 
@@ -55,7 +55,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={locale} className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body>
-        <NextIntlClientProvider locale={locale} messages={messages}>
+        <I18nProvider locale={locale} messages={messages}>
           <WebVitals />
           <PerformanceMonitor />
           <ServiceWorkerProvider>
@@ -67,7 +67,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </Toaster>
             </ThemeProvider>
           </ServiceWorkerProvider>
-        </NextIntlClientProvider>
+        </I18nProvider>
       </body>
     </html>
   );

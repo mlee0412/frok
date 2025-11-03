@@ -6,7 +6,8 @@
       "WebSearch",
       "WebFetch(domain:openai.github.io)",
       "WebFetch(domain:platform.openai.com)",
-      "WebFetch(domain:cookbook.openai.com)"
+      "WebFetch(domain:cookbook.openai.com)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

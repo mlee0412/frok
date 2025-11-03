@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useLocale } from 'next-intl';
+import { useLocale } from '@/lib/i18n/I18nProvider';
 import { setLocale } from '@/lib/i18n/getLocale';
 import { locales, type Locale } from '../../i18n';
 
@@ -21,7 +21,7 @@ const languageFlags: Record<Locale, string> = {
 };
 
 export function LanguageSwitcher({ variant = 'dropdown', className = '' }: LanguageSwitcherProps) {
-  const currentLocale = useLocale() as Locale;
+  const currentLocale = useLocale();
   const [isOpen, setIsOpen] = React.useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 

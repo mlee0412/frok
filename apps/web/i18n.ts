@@ -7,11 +7,14 @@ export type Locale = (typeof locales)[number];
 // Load messages for a given locale
 export async function getMessages(locale: Locale) {
   try {
-    const messages = (await import(`./messages/${locale}.json`)).default;
-    return messages;
+    // Use explicit imports for better Vercel compatibility
+    if (locale === 'ko') {
+      return (await import('./messages/ko.json')).default;
+    }
+    return (await import('./messages/en.json')).default;
   } catch (error) {
     console.error(`Failed to load messages for locale: ${locale}`, error);
     // Fallback to English
-    return (await import(`./messages/en.json`)).default;
+    return (await import('./messages/en.json')).default;
   }
 }
