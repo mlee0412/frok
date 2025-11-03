@@ -1,10 +1,9 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { headers } from 'next/headers';
-import { Card } from '@frok/ui';
 
-// Dynamic import for SmartHomeView (client-heavy component)
-const SmartHomeView = dynamic(() => import('@/components/smart-home/SmartHomeView'), {
+// Dynamic import for Lovelace Dashboard (client-heavy component)
+const LovelaceDashboard = dynamic(() => import('@/components/lovelace/LovelaceDashboard'), {
   loading: () => (
     <div className="animate-pulse space-y-4">
       <div className="h-20 bg-surface/50 rounded" />
@@ -33,11 +32,9 @@ export default async function SmartHomePage() {
   const ok = !!(ha && typeof ha.ok === 'boolean' ? ha.ok : false);
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-semibold">Smart Home</h1>
-      <Card className="p-4">
-        <SmartHomeView initialDevices={devices} haOk={ok} haDetail={ha?.detail} />
-      </Card>
+    <div className="p-6">
+      <h1 className="text-2xl font-semibold mb-6">Smart Home</h1>
+      <LovelaceDashboard initialDevices={devices} haOk={ok} haDetail={ha?.detail} />
     </div>
   );
 }

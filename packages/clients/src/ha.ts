@@ -158,3 +158,7 @@ export async function sceneTurnOn(entity_id: string | string[]) {
 export async function scriptTurnOn(entity_id: string | string[], data?: Record<string, unknown>) {
   return callHAService({ domain: 'script', service: 'turn_on', entity_id, data });
 }
+
+export async function remoteSendCommand(entity_id: string, command: string | string[]) {
+  return callHAService({ domain: 'remote', service: 'send_command', entity_id, data: { command } });
+}
