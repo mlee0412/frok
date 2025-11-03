@@ -21,6 +21,9 @@ import { pdfGeneratorTool } from './tools/pdfGenerator';
 import { pptxGeneratorTool } from './tools/pptxGenerator';
 import { docxGeneratorTool } from './tools/docxGenerator';
 
+// Import enhanced memory search (Phase 2.1)
+import { memorySearchEnhanced } from './tools/memorySearchEnhanced';
+
 // ============================================================================
 // Built-in Tool Types
 // ============================================================================
@@ -37,6 +40,7 @@ type CustomToolType =
   | 'ha_call'
   | 'memory_add'
   | 'memory_search'
+  | 'memory_search_enhanced' // Phase 2.1: Hybrid vector + keyword search
   | 'custom_web_search'
   | 'pdf_generator'
   | 'pptx_generator'
@@ -103,6 +107,7 @@ const customTools = {
   ha_call: haCall,
   memory_add: memoryAdd,
   memory_search: memorySearch,
+  memory_search_enhanced: memorySearchEnhanced, // Phase 2.1: Hybrid search
   custom_web_search: customWebSearch,
   pdf_generator: pdfGeneratorTool,
   pptx_generator: pptxGeneratorTool,
@@ -141,8 +146,8 @@ const toolCategories = {
   // Memory & Preferences
   memory: {
     name: 'Memory & Preferences',
-    description: 'Store and retrieve long-term memories and user preferences',
-    tools: ['memory_add', 'memory_search'] as const,
+    description: 'Store and retrieve long-term memories and user preferences with hybrid search',
+    tools: ['memory_add', 'memory_search', 'memory_search_enhanced'] as const,
     icon: '🧠',
   },
 
@@ -265,6 +270,16 @@ const toolMetadata: Record<ToolType, {
   memory_search: {
     displayName: 'Search Memories',
     description: 'Search through stored memories using semantic search',
+    category: 'memory',
+    costPerUse: 'Embedding cost (~$0.0001)',
+    requiresAuth: true,
+    experimental: false,
+    dependencies: ['OPENAI_API_KEY', 'SUPABASE'],
+  },
+
+  memory_search_enhanced: {
+    displayName: 'Enhanced Memory Search',
+    description: 'Hybrid vector + keyword search with tag filtering, date ranges, and weighted relevance scoring (Phase 2.1)',
     category: 'memory',
     costPerUse: 'Embedding cost (~$0.0001)',
     requiresAuth: true,
