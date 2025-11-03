@@ -21,19 +21,29 @@ export function AreaLightControl({
   onColorTempChange,
   onAreaToggle,
 }: AreaLightControlProps) {
-  const [expandedAreas, setExpandedAreas] = useState<Set<string>>(new Set(['all']));
-  const [selectedLight, setSelectedLight] = useState<LightEntity | null>(null);
-
-  // Group devices by area
+  // Group devices by area, use friendly name for empty areas
   const devicesByArea = devices.reduce((acc, device) => {
-    const area = device.area || 'Other';
+    let area = device.area?.trim();
+    // If no area assigned, use "Unassigned Lights"
+    if (!area || area === '') {
+      area = 'Unassigned Lights';
+    }
     if (!acc[area]) acc[area] = [];
-    acc[area].push(device);
+    acc[area]!.push(device);
     return acc;
   }, {} as Record<string, Device[]>);
 
-  // Sort areas: put areas with most devices first
-  const sortedAreas = Object.entries(devicesByArea).sort((a, b) => b[1].length - a[1].length);
+  // Sort areas: put areas with most devices first, but "Unassigned Lights" last
+  const sortedAreas = Object.entries(devicesByArea).sort((a, b) => {
+    if (a[0] === 'Unassigned Lights') return 1;
+    if (b[0] === 'Unassigned Lights') return -1;
+    return b[1].length - a[1].length;
+  });
+
+  // Expand first 2 areas by default
+  const defaultExpanded = new Set(sortedAreas.slice(0, 2).map(([area]) => area));
+  const [expandedAreas, setExpandedAreas] = useState<Set<string>>(defaultExpanded);
+  const [selectedLight, setSelectedLight] = useState<LightEntity | null>(null);
 
   const toggleArea = (area: string) => {
     const newExpanded = new Set(expandedAreas);
@@ -65,12 +75,29 @@ export function AreaLightControl({
     }
   };
 
+  // Get area icon based on area name
+  const getAreaIcon = (areaName: string): string => {
+    const name = areaName.toLowerCase();
+    if (name.includes('bedroom')) return '🛏️';
+    if (name.includes('living') || name.includes('lounge')) return '🛋️';
+    if (name.includes('kitchen')) return '🍳';
+    if (name.includes('bathroom') || name.includes('bath')) return '🚿';
+    if (name.includes('office') || name.includes('study')) return '💼';
+    if (name.includes('dining')) return '🍽️';
+    if (name.includes('garage')) return '🚗';
+    if (name.includes('outdoor') || name.includes('garden') || name.includes('patio')) return '🌳';
+    if (name.includes('hallway') || name.includes('corridor')) return '🚪';
+    if (name.includes('unassigned')) return '❓';
+    return '🏠';
+  };
+
   return (
     <div className="space-y-4">
       {sortedAreas.map(([area, areaDevices]) => {
         const isExpanded = expandedAreas.has(area);
         const lightsOn = areaDevices.filter((d) => d.state === 'on').length;
         const totalLights = areaDevices.length;
+        const areaIcon = getAreaIcon(area);
 
         return (
           <div key={area} className="space-y-2">
@@ -87,6 +114,9 @@ export function AreaLightControl({
             >
               <div className="flex items-center gap-3">
                 <span className="text-2xl">
+                  {areaIcon}
+                </span>
+                <span className="text-lg">
                   {isExpanded ? '🔽' : '▶️'}
                 </span>
                 <div>

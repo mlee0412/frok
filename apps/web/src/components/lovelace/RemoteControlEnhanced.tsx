@@ -488,56 +488,91 @@ export function RemoteControlEnhanced({
           </button>
         </div>
 
-        {/* App Shortcuts */}
-        <div className="grid grid-cols-4 gap-2">
-          <button
-            disabled={pending}
-            onClick={() => handleCommand('youtube')}
-            className="px-2 py-2 rounded-lg text-xs font-semibold"
-            style={{
-              background: '#FF0000',
-              color: 'white',
-              border: 'none',
-            }}
-          >
-            📺 YT
-          </button>
-          <button
-            disabled={pending}
-            onClick={() => handleCommand('netflix')}
-            className="px-2 py-2 rounded-lg text-xs font-semibold"
-            style={{
-              background: '#E50914',
-              color: 'white',
-              border: 'none',
-            }}
-          >
-            🎬 NF
-          </button>
-          <button
-            disabled={pending}
-            onClick={() => handleCommand('spotify')}
-            className="px-2 py-2 rounded-lg text-xs font-semibold"
-            style={{
-              background: '#1DB954',
-              color: 'white',
-              border: 'none',
-            }}
-          >
-            🎵 SP
-          </button>
-          <button
-            disabled={pending}
-            onClick={() => handleCommand('home')}
-            className="px-2 py-2 rounded-lg text-xs font-semibold"
-            style={{
-              background: 'rgba(255,255,255,0.2)',
-              border: '1px solid rgba(255,255,255,0.4)',
-              color: 'white',
-            }}
-          >
-            🏠
-          </button>
+        {/* App Shortcuts - Apple TV Apps */}
+        <div className="space-y-2">
+          <div className="text-xs font-semibold opacity-70 px-1" style={{ color: 'white' }}>
+            Quick Launch
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              disabled={pending}
+              onClick={() => handleCommand('home')}
+              className="px-3 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
+              style={{
+                background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.3), rgba(124, 58, 237, 0.2))',
+                border: '1px solid rgba(147, 51, 234, 0.5)',
+                color: 'white',
+                fontSize: '13px',
+              }}
+            >
+              <span style={{ fontSize: '20px' }}>🏠</span>
+              <span>Home</span>
+            </button>
+            <button
+              disabled={pending}
+              onClick={() => handleCommand('top_menu')}
+              className="px-3 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
+              style={{
+                background: 'linear-gradient(135deg, rgba(100, 116, 139, 0.3), rgba(71, 85, 105, 0.2))',
+                border: '1px solid rgba(100, 116, 139, 0.5)',
+                color: 'white',
+                fontSize: '13px',
+              }}
+            >
+              <span style={{ fontSize: '20px' }}>⬆️</span>
+              <span>Menu</span>
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              disabled={pending}
+              onClick={() => handleCommand('wakeup')}
+              className="px-2 py-2.5 rounded-lg font-semibold transition-all"
+              style={{
+                background: 'linear-gradient(135deg, #FF0000, #CC0000)',
+                color: 'white',
+                border: '1px solid rgba(255,255,255,0.2)',
+                fontSize: '11px',
+                boxShadow: '0 2px 8px rgba(255,0,0,0.3)',
+              }}
+              title="Launch YouTube"
+            >
+              <div style={{ fontSize: '18px', marginBottom: '2px' }}>▶️</div>
+              YouTube
+            </button>
+            <button
+              disabled={pending}
+              onClick={() => handleCommand('netflix')}
+              className="px-2 py-2.5 rounded-lg font-semibold transition-all"
+              style={{
+                background: 'linear-gradient(135deg, #E50914, #B20710)',
+                color: 'white',
+                border: '1px solid rgba(255,255,255,0.2)',
+                fontSize: '11px',
+                boxShadow: '0 2px 8px rgba(229,9,20,0.3)',
+              }}
+              title="Launch Netflix"
+            >
+              <div style={{ fontSize: '18px', marginBottom: '2px' }}>🎬</div>
+              Netflix
+            </button>
+            <button
+              disabled={pending}
+              onClick={() => handleCommand('spotify')}
+              className="px-2 py-2.5 rounded-lg font-semibold transition-all"
+              style={{
+                background: 'linear-gradient(135deg, #1DB954, #1AA34A)',
+                color: 'white',
+                border: '1px solid rgba(255,255,255,0.2)',
+                fontSize: '11px',
+                boxShadow: '0 2px 8px rgba(29,185,84,0.3)',
+              }}
+              title="Launch Spotify"
+            >
+              <div style={{ fontSize: '18px', marginBottom: '2px' }}>🎵</div>
+              Spotify
+            </button>
+          </div>
         </div>
 
         {/* Custom Actions (Hue Sync Box) */}

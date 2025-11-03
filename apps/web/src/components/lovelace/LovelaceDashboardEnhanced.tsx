@@ -323,7 +323,12 @@ export default function LovelaceDashboardEnhanced({
       {/* Lights Section with Area Grouping */}
       {allLights.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold mb-3 text-yellow-400">💡 Lights & Switches</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold text-yellow-400">💡 Lights & Switches</h3>
+            <span className="text-sm text-foreground/60">
+              {allLights.length} {allLights.length === 1 ? 'device' : 'devices'}
+            </span>
+          </div>
           <AreaLightControl
             devices={allLights}
             onToggle={handleLightToggle}
