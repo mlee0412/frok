@@ -19,6 +19,7 @@ import {
 // Import export tools
 import { pdfGeneratorTool } from './tools/pdfGenerator';
 import { pptxGeneratorTool } from './tools/pptxGenerator';
+import { docxGeneratorTool } from './tools/docxGenerator';
 
 // ============================================================================
 // Built-in Tool Types
@@ -38,7 +39,8 @@ type CustomToolType =
   | 'memory_search'
   | 'custom_web_search'
   | 'pdf_generator'
-  | 'pptx_generator';
+  | 'pptx_generator'
+  | 'docx_generator';
 
 type ToolType = BuiltInToolType | CustomToolType;
 
@@ -104,6 +106,7 @@ const customTools = {
   custom_web_search: customWebSearch,
   pdf_generator: pdfGeneratorTool,
   pptx_generator: pptxGeneratorTool,
+  docx_generator: docxGeneratorTool,
 };
 
 // ============================================================================
@@ -163,7 +166,7 @@ const toolCategories = {
   export: {
     name: 'Export & Documents',
     description: 'Generate and export documents in various formats',
-    tools: ['pdf_generator', 'pptx_generator'] as const,
+    tools: ['pdf_generator', 'pptx_generator', 'docx_generator'] as const,
     icon: '📄',
   },
 };
@@ -296,6 +299,16 @@ const toolMetadata: Record<ToolType, {
     requiresAuth: true,
     experimental: false,
     dependencies: ['pptxgenjs'],
+  },
+
+  docx_generator: {
+    displayName: 'Word Document Generator',
+    description: 'Create professional Word documents with rich text formatting and markdown support',
+    category: 'export',
+    costPerUse: 'Minimal (computation only, ~$0.001)',
+    requiresAuth: true,
+    experimental: false,
+    dependencies: ['docx'],
   },
 };
 
