@@ -89,7 +89,9 @@
 - WeatherCard dashboard component (current + 5-day forecast)
 - OpenWeatherMap integration (free tier, 1k calls/day)
 - Unit switching (Celsius/Fahrenheit) + auto-refresh
-- **Impact**: Real-time weather data in dashboard + agent queries
+- Automatic location detection via browser geolocation API
+- Manual location detection button (📍) + fallback to default
+- **Impact**: Real-time weather data in dashboard + agent queries with accurate location
 
 ### Session #12: Internationalization ✅
 - Full English/Korean translation support
