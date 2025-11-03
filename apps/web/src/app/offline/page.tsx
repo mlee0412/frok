@@ -1,8 +1,11 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from '@/lib/i18n/I18nProvider';
 
 export default function OfflinePage() {
+  const t = useTranslations('pwa.offline');
+
   return (
     <div className="flex h-screen items-center justify-center bg-surface">
       <div className="text-center">
@@ -22,9 +25,9 @@ export default function OfflinePage() {
           </svg>
         </div>
 
-        <h1 className="mb-2 text-2xl font-semibold text-foreground">You&apos;re offline</h1>
+        <h1 className="mb-2 text-2xl font-semibold text-foreground">{t('title')}</h1>
         <p className="mb-6 text-foreground/70">
-          Please check your internet connection and try again.
+          {t('description')}
         </p>
 
         <button
@@ -44,7 +47,7 @@ export default function OfflinePage() {
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-          Retry
+          {t('retry')}
         </button>
 
         <div className="mt-8 text-xs text-foreground/50">

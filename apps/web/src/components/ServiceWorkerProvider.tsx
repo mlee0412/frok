@@ -3,8 +3,10 @@
 import React from 'react';
 import { register, isStandalone } from '@/lib/serviceWorker';
 import { PWAInstallPrompt } from './PWAInstallPrompt';
+import { useTranslations } from '@/lib/i18n/I18nProvider';
 
 export function ServiceWorkerProvider({ children }: { children: React.ReactNode }) {
+  const t = useTranslations('pwa.update');
   const [showUpdatePrompt, setShowUpdatePrompt] = React.useState(false);
   const [registration, setRegistration] = React.useState<ServiceWorkerRegistration | null>(null);
 
@@ -69,22 +71,22 @@ export function ServiceWorkerProvider({ children }: { children: React.ReactNode 
               </svg>
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-semibold text-foreground">Update Available</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t('title')}</h3>
               <p className="mt-1 text-xs text-foreground/70">
-                A new version of FROK is available. Refresh to update.
+                {t('description')}
               </p>
               <div className="mt-3 flex gap-2">
                 <button
                   onClick={handleUpdate}
                   className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
                 >
-                  Update Now
+                  {t('update')}
                 </button>
                 <button
                   onClick={() => setShowUpdatePrompt(false)}
                   className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-surface"
                 >
-                  Later
+                  {t('later')}
                 </button>
               </div>
             </div>

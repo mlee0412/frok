@@ -92,7 +92,8 @@
     "greaterThan": "greater than",
     "lessThan": "less than",
     "between": "between",
-    "notBetween": "not between"
+    "notBetween": "not between",
+    "allSystemsNominal": "All Systems Nominal"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -511,6 +512,13 @@
       "subtitle": "Welcome back! Sign in to your account",
       "email": "Email",
       "password": "Password",
+      "emailLabel": "Email",
+      "emailPlaceholder": "Enter your email",
+      "sending": "Sending...",
+      "sendButton": "Send Magic Link",
+      "successMessage": "Check your email for the magic link!",
+      "errorSending": "Failed to send magic link",
+      "redirectMessage": "You'll be redirected after signing in.",
       "rememberMe": "Remember me",
       "forgotPassword": "Forgot password?",
       "submit": "Sign In",

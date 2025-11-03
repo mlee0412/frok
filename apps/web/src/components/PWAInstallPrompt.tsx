@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Button } from '@frok/ui';
+import { useTranslations } from '@/lib/i18n/I18nProvider';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -9,6 +10,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function PWAInstallPrompt() {
+  const t = useTranslations('pwa.install');
   const [deferredPrompt, setDeferredPrompt] = React.useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = React.useState(false);
   const [isInstalled, setIsInstalled] = React.useState(false);
@@ -122,9 +124,9 @@ export function PWAInstallPrompt() {
           </svg>
         </div>
         <div className="flex-1">
-          <h3 className="text-sm font-semibold text-foreground">Install FROK</h3>
+          <h3 className="text-sm font-semibold text-foreground">{t('title')}</h3>
           <p className="mt-1 text-xs text-foreground/70">
-            Install FROK on your device for a faster, app-like experience with offline access.
+            {t('description')}
           </p>
           <div className="mt-3 flex gap-2">
             <Button
@@ -132,14 +134,14 @@ export function PWAInstallPrompt() {
               size="sm"
               onClick={handleInstall}
             >
-              Install
+              {t('install')}
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={handleDismiss}
             >
-              Not Now
+              {t('later')}
             </Button>
           </div>
         </div>
