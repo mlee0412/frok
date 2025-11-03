@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useLocale } from '@/lib/i18n/I18nProvider';
-import { setLocale } from '@/lib/i18n/getLocale';
+import { setLocale } from '@/lib/i18n/setLocale';
 import { locales, type Locale } from '../../i18n';
 
 type LanguageSwitcherProps = {

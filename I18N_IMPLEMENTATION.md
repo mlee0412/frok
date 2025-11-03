@@ -179,7 +179,7 @@ export function MyComponent() {
 
 ```tsx
 'use client';
-import { setLocale } from '@/lib/i18n/getLocale';
+import { setLocale } from '@/lib/i18n/setLocale';
 
 export function MyButton() {
   const handleClick = () => {
