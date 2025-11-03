@@ -24,6 +24,9 @@ import { docxGeneratorTool } from './tools/docxGenerator';
 // Import enhanced memory search (Phase 2.1)
 import { memorySearchEnhanced } from './tools/memorySearchEnhanced';
 
+// Import weather tool (Phase 3.1)
+import { weatherTool } from './tools/weather';
+
 // ============================================================================
 // Built-in Tool Types
 // ============================================================================
@@ -44,7 +47,8 @@ type CustomToolType =
   | 'custom_web_search'
   | 'pdf_generator'
   | 'pptx_generator'
-  | 'docx_generator';
+  | 'docx_generator'
+  | 'weather'; // Phase 3.1: Weather integration
 
 type ToolType = BuiltInToolType | CustomToolType;
 
@@ -112,6 +116,7 @@ const customTools = {
   pdf_generator: pdfGeneratorTool,
   pptx_generator: pptxGeneratorTool,
   docx_generator: docxGeneratorTool,
+  weather: weatherTool, // Phase 3.1: Weather integration
 };
 
 // ============================================================================
@@ -173,6 +178,14 @@ const toolCategories = {
     description: 'Generate and export documents in various formats',
     tools: ['pdf_generator', 'pptx_generator', 'docx_generator'] as const,
     icon: '📄',
+  },
+
+  // Dashboard & Integrations (Phase 3)
+  dashboard: {
+    name: 'Dashboard & Integrations',
+    description: 'Weather, calendar, email, and other smart dashboard features',
+    tools: ['weather'] as const,
+    icon: '📊',
   },
 };
 
@@ -324,6 +337,16 @@ const toolMetadata: Record<ToolType, {
     requiresAuth: true,
     experimental: false,
     dependencies: ['docx'],
+  },
+
+  weather: {
+    displayName: 'Weather',
+    description: 'Get current weather conditions and 5-day forecasts for any location worldwide',
+    category: 'dashboard',
+    costPerUse: 'Free (OpenWeatherMap Free Tier: 1k calls/day)',
+    requiresAuth: false,
+    experimental: false,
+    dependencies: ['OPENWEATHER_API_KEY'],
   },
 };
 

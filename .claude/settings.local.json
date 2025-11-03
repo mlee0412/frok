@@ -15,7 +15,9 @@
       "Bash(mv:*)",
       "Bash(pnpm add:*)",
       "Bash(pnpm exec tsc:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(awk:*)"
     ],
     "deny": [],
     "ask": []

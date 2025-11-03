@@ -2,6 +2,7 @@ import React from 'react';
 import { headers } from 'next/headers';
 import { Card } from '@frok/ui';
 import DashboardQuickActions from './DashboardQuickActions';
+import { WeatherCard } from '@/components/dashboard/WeatherCard';
 
 // ISR with 30-second revalidation for better performance
 export const revalidate = 30;
@@ -61,7 +62,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="p-4">Tasks placeholder</Card>
+        <WeatherCard defaultLocation="Seoul" defaultUnits="metric" />
         <Card className="p-4">Notifications placeholder</Card>
         <Card className="p-4">Integrations placeholder</Card>
       </div>
