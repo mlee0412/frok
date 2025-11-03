@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useTranslations } from '@/lib/i18n/I18nProvider';
 
 type ThreadOptionsMenuProps = {
   threadId: string;
@@ -63,6 +64,8 @@ export function ThreadOptionsMenu({
   onUpdateStyle,
   onClose,
 }: ThreadOptionsMenuProps) {
+  const t = useTranslations('agent.threadOptions');
+  const tCommon = useTranslations('common');
   const [activeTab, setActiveTab] = useState<'organize' | 'tools' | 'config'>('organize');
   const [title, setTitle] = useState<string>(currentTitle);
   const [tags, setTags] = useState<string[]>(currentTags);
@@ -111,7 +114,7 @@ export function ThreadOptionsMenu({
         className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold mb-4">Thread Settings</h2>
+        <h2 className="text-lg font-semibold mb-4">{t('title')}</h2>
 
         {/* Tabs */}
         <div className="flex gap-2 mb-4 border-b border-gray-700">
@@ -123,7 +126,7 @@ export function ThreadOptionsMenu({
                 : 'text-gray-400 hover:text-gray-300'
             }`}
           >
-            📁 Organize
+            📁 {t('organize')}
           </button>
           <button
             onClick={() => setActiveTab('tools')}
@@ -133,7 +136,7 @@ export function ThreadOptionsMenu({
                 : 'text-gray-400 hover:text-gray-300'
             }`}
           >
-            🔧 Tools
+            🔧 {t('tools')}
           </button>
           <button
             onClick={() => setActiveTab('config')}
@@ -143,7 +146,7 @@ export function ThreadOptionsMenu({
                 : 'text-gray-400 hover:text-gray-300'
             }`}
           >
-            ⚙️ Config
+            ⚙️ {t('config')}
           </button>
         </div>
 
@@ -152,22 +155,22 @@ export function ThreadOptionsMenu({
 
         {/* Title */}
         <div className="mb-6">
-          <label className="block text-sm font-medium mb-2">Title</label>
+          <label className="block text-sm font-medium mb-2">{t('titleLabel')}</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Enter thread title..."
+            placeholder={t('titlePlaceholder')}
             className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:border-sky-500 text-sm"
           />
           <p className="mt-1 text-xs text-gray-500">
-            This title will be displayed in the thread sidebar
+            {t('titleDescription')}
           </p>
         </div>
 
         {/* Tags */}
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Tags</label>
+          <label className="block text-sm font-medium mb-2">{t('tagsLabel')}</label>
           <div className="flex flex-wrap gap-2 mb-2">
             {tags.map((tag) => (
               <span
@@ -187,14 +190,14 @@ export function ThreadOptionsMenu({
               value={newTag}
               onChange={(e) => setNewTag(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
-              placeholder="Add new tag..."
+              placeholder={t('tagsPlaceholder')}
               className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:border-sky-500 text-sm"
             />
             <button
               onClick={handleAddTag}
               className="px-4 py-2 bg-sky-500 hover:bg-sky-600 rounded text-sm transition"
             >
-              Add
+              {tCommon('add')}
             </button>
           </div>
           {allTags.length > 0 && (
@@ -357,13 +360,13 @@ export function ThreadOptionsMenu({
             onClick={onClose}
             className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded transition"
           >
-            Cancel
+            {tCommon('cancel')}
           </button>
           <button
             onClick={handleSave}
             className="px-4 py-2 bg-sky-500 hover:bg-sky-600 rounded transition"
           >
-            Save
+            {tCommon('save')}
           </button>
         </div>
       </div>

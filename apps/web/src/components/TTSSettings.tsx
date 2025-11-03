@@ -3,6 +3,7 @@
 import React from 'react';
 import { Button } from '@frok/ui';
 import type { TTSSettings } from '@/hooks/useTextToSpeech';
+import { useTranslations } from '@/lib/i18n/I18nProvider';
 
 type TTSSettingsProps = {
   settings: TTSSettings;
@@ -17,6 +18,8 @@ export function TTSSettingsModal({
   onUpdate,
   onClose,
 }: TTSSettingsProps) {
+  const t = useTranslations('tts');
+  const tCommon = useTranslations('common');
   const [rate, setRate] = React.useState(settings.rate);
   const [selectedVoice, setSelectedVoice] = React.useState(settings.voice);
 
@@ -37,12 +40,12 @@ export function TTSSettingsModal({
         className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md w-full mx-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold mb-4">🔊 Text-to-Speech Settings</h2>
+        <h2 className="text-lg font-semibold mb-4">🔊 {t('title')}</h2>
 
         {/* Playback Speed */}
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2">
-            Playback Speed: {rate.toFixed(1)}x
+            {t('speed.label')}: {rate.toFixed(1)}x
           </label>
           <input
             type="range"
@@ -54,22 +57,22 @@ export function TTSSettingsModal({
             className="w-full"
           />
           <div className="flex justify-between text-xs text-gray-500 mt-1">
-            <span>0.5x (Slower)</span>
-            <span>1.0x (Normal)</span>
-            <span>2.0x (Faster)</span>
+            <span>{t('speed.verySlow')}</span>
+            <span>{t('speed.normal')}</span>
+            <span>{t('speed.veryFast')}</span>
           </div>
         </div>
 
         {/* Voice Selection */}
         <div className="mb-6">
-          <label className="block text-sm font-medium mb-2">Voice</label>
+          <label className="block text-sm font-medium mb-2">{t('voice.label')}</label>
           <select
             value={selectedVoice || ''}
             onChange={(e) => setSelectedVoice(e.target.value || null)}
             className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:border-sky-500 text-sm"
           >
             {englishVoices.length === 0 ? (
-              <option>Loading voices...</option>
+              <option>{tCommon('loading')}</option>
             ) : (
               englishVoices.map((voice) => (
                 <option key={voice.name} value={voice.name}>
@@ -86,10 +89,10 @@ export function TTSSettingsModal({
         {/* Actions */}
         <div className="flex gap-2 justify-end">
           <Button onClick={onClose} variant="outline">
-            Cancel
+            {tCommon('cancel')}
           </Button>
           <Button onClick={handleSave} variant="primary">
-            Save
+            {tCommon('save')}
           </Button>
         </div>
       </div>

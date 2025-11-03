@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Button } from '@frok/ui';
+import { useTranslations } from '@/lib/i18n/I18nProvider';
 
 type SuggestedPromptsProps = {
   onSelect: (prompt: string) => void;
@@ -57,6 +58,7 @@ type CachedSuggestions = {
 };
 
 export function SuggestedPrompts({ onSelect, disabled }: SuggestedPromptsProps) {
+  const t = useTranslations('agent.suggestions');
   const [suggestions, setSuggestions] = React.useState<Suggestion[]>(FALLBACK_PROMPTS);
   const [loading, setLoading] = React.useState(false);
   const cacheRef = React.useRef<CachedSuggestions | null>(null);
@@ -105,12 +107,12 @@ export function SuggestedPrompts({ onSelect, disabled }: SuggestedPromptsProps) 
     <div className="space-y-4">
       <div className="text-center text-gray-400">
         <h3 className="text-lg font-medium mb-2">
-          👋 How can I help you today?
+          👋 {t('title')}
           {loading && (
-            <span className="ml-2 text-xs text-sky-400">(refreshing suggestions...)</span>
+            <span className="ml-2 text-xs text-sky-400">({t('refreshing')})</span>
           )}
         </h3>
-        <p className="text-sm">Try one of these suggestions or type your own message</p>
+        <p className="text-sm">{t('subtitle')}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-3xl mx-auto">

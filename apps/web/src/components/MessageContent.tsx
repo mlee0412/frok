@@ -4,6 +4,7 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from '@frok/ui';
+import { useTranslations } from '@/lib/i18n/I18nProvider';
 
 type MessageContentProps = {
   content: string;
@@ -11,6 +12,8 @@ type MessageContentProps = {
 };
 
 export const MessageContent = React.memo(function MessageContent({ content, role }: MessageContentProps) {
+  const tCommon = useTranslations('common');
+  const tMessages = useTranslations('chat.messages');
   const [copied, setCopied] = React.useState(false);
 
   const handleCopy = () => {
@@ -76,9 +79,9 @@ export const MessageContent = React.memo(function MessageContent({ content, role
         variant="ghost"
         size="sm"
         className="absolute top-0 right-0 opacity-0 group-hover:opacity-100"
-        title="Copy message"
+        title={tCommon('copy')}
       >
-        {copied ? '✓ Copied' : '📋 Copy'}
+        {copied ? `✓ ${tMessages('copied')}` : `📋 ${tCommon('copy')}`}
       </Button>
     </div>
   );
