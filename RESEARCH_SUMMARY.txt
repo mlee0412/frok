@@ -1,0 +1,195 @@
+================================================================================
+AGENT PAGE BUTTON DESIGN - RESEARCH COMPLETE
+================================================================================
+
+SEARCH RESULTS SUMMARY
+─────────────────────────────────────────────────────────────────────────────
+
+Documents Created (in C:\Dev\FROK):
+  1. AGENT_FEATURES_SUMMARY.md (206 lines)
+     - Overview of all current buttons
+     - Feature descriptions with file locations
+     - State variables and hooks
+     - Translation namespaces
+
+  2. AGENT_BUTTON_OPTIONS.txt (340+ lines)
+     - 5 different button layout options
+     - Pros/cons for each option
+     - Implementation cost estimates
+     - Feature priority analysis
+
+  3. AGENT_BUTTON_QUICK_REFERENCE.txt (200+ lines)
+     - Absolute file paths for all components
+     - State variables already in place
+     - Step-by-step implementation guide
+     - Testing checklist
+
+CURRENT TOP-RIGHT BUTTONS
+─────────────────────────────────────────────────────────────────────────────
+
+Layout: [☁️ Cozy] [📋 Compact] [🧠 Memory] [📚 Notebook] [🔗 Share] [📥 Export ▼]
+
+Components:
+  - 🧠 Memory → AgentMemoryModal.tsx
+    Path: C:\Dev\FROK\apps\web\src\components\AgentMemoryModal.tsx
+    Purpose: Manage agent core knowledge (facts, skills, preferences)
+    Features: Add/delete, type selection, importance rating
+    API: /api/memory/add (auth required)
+    Translations: memory.agentMemory.*
+
+  - 📚 Notebook → UserMemoriesModal.tsx
+    Path: C:\Dev\FROK\apps\web\src\components\UserMemoriesModal.tsx
+    Purpose: Personal memory management (user notes/knowledge)
+    Features: Add/delete, tag-based filtering, search
+    API: /api/memory/list, /api/memory/search (auth required)
+    Translations: memory.userMemories.*
+
+  - 🔗 Share → ShareModal
+    Purpose: Share conversation threads
+    Condition: Only shows when thread has messages
+
+  - 📥 Export → Dropdown menu
+    Purpose: Export conversation
+    Options: Download (markdown), Copy to clipboard
+    File: lib/exportConversation.ts
+    Functions: downloadMarkdown(), copyToClipboard()
+
+AVAILABLE FEATURES NOT IN TOP BUTTONS
+─────────────────────────────────────────────────────────────────────────────
+
+1. TEXT-TO-SPEECH (TTS)
+   Files:
+     - Hook: C:\Dev\FROK\apps\web\src\hooks\useTextToSpeech.ts
+     - Modal: C:\Dev\FROK\apps\web\src\components\TTSSettings.tsx
+     - Store: C:\Dev\FROK\apps\web\src\store\ttsStore.ts
+   Features:
+     - Voice selection (English voices)
+     - Speed control (0.5x-2.0x)
+     - Speak messages aloud
+     - Pause/resume/stop controls
+     - Settings: enabled, autoPlay, voice, speed, volume
+   State: showTTSSettings (already defined, unused button)
+   Per-message controls exist (lines 2197-2219)
+
+2. VOICE RECORDING/TRANSCRIPTION
+   File: C:\Dev\FROK\apps\web\src\hooks\useVoiceRecorder.ts
+   Features:
+     - Record audio input
+     - Transcribe via Whisper API
+     - Audio level visualization
+   State: recordingState, audioLevel (already in component)
+   Methods: startRecording(), stopRecording(), transcribeAudio()
+
+3. THREAD CONFIGURATION
+   Component: ThreadOptionsMenu.tsx (3 tabs)
+   Path: C:\Dev\FROK\apps\web\src\components\ThreadOptionsMenu.tsx
+   Tabs:
+     a) Organize: title, tags, folders
+     b) Tools: Enable/disable 5 tools
+        - 🏠 Home Assistant
+        - 🧠 Persistent Memory
+        - 🔍 Web Search (DuckDuckGo)
+        - 🌐 Web Search (Tavily)
+        - 🎨 Image Generation
+     c) Config: Model, agent style, project context
+        - Models: GPT-5 Think/Think-Planning, GPT-5, Mini, Nano, Auto
+        - Styles: Balanced, Concise, Detailed, Technical, Casual
+
+KEY FINDINGS
+─────────────────────────────────────────────────────────────────────────────
+
+✓ ALL INFRASTRUCTURE FOR VOICE BUTTONS ALREADY EXISTS:
+  - useTextToSpeech hook implemented
+  - TTSSettingsModal component created
+  - useVoiceRecorder hook implemented
+  - State variables already defined (showTTSSettings, recordingState)
+  - Just needs button + click handlers added
+
+✓ MEMORY/NOTEBOOK USAGE ANALYSIS:
+  - AgentMemoryModal: Complex feature (types, importance ratings)
+  - UserMemoriesModal: Less frequently used personal notes
+  - Could be moved to secondary menu without losing discoverability
+
+✓ VOICE IS PRIMARY MISSING FEATURE:
+  - TTS buttons exist per-message (lines 2197-2219)
+  - But no top-level access to configure TTS
+  - No obvious way to start recording from top bar
+
+RECOMMENDED OPTIONS
+─────────────────────────────────────────────────────────────────────────────
+
+OPTION 1: Voice-First (RECOMMENDED - Simplest)
+  Replace: 🧠 Memory + 📚 Notebook
+  Add: 🔊 Voice Settings + 🎤 Record
+  Cost: 2-3 hours
+  Impact: Clear voice-first UI, memory moved to settings menu
+  Setup: All infrastructure ready, just add buttons
+
+OPTION 4: Reorganize Sidebar (RECOMMENDED - Best UX)
+  Move Memory/Notebook to collapsible sidebar
+  Add: 🔊 Voice Settings + 🎤 Record to top
+  Cost: 6-8 hours
+  Impact: Cleaner top bar, better info hierarchy
+  Result: Voice-first interaction + memory in context
+
+OPTION 5: Dropdown Menu (RECOMMENDED - Keep All)
+  Add: 🔊 Voice button
+  Move Memory/Notebook/Tools/Settings to "More" menu
+  Cost: 3-4 hours
+  Impact: No feature loss, voice elevated to top-tier
+  Setup: New dropdown component needed
+
+DECISION FACTORS
+─────────────────────────────────────────────────────────────────────────────
+
+Choose based on priority:
+
+If prioritize SPEED → Option 1 (Voice-First)
+  - Fastest implementation (2-3 hours)
+  - Assumes memory less critical than voice
+  - Clear signal about app focus
+
+If prioritize UX → Option 4 (Sidebar Reorganize)
+  - Best information architecture
+  - Memory accessible in context (sidebar)
+  - Cleaner, more focused top bar
+  - Requires more refactoring
+
+If prioritize COMPLETENESS → Option 5 (Keep All)
+  - No feature loss
+  - Good compromise
+  - Voice gets top-tier placement
+  - Organized dropdown for settings
+
+IMPLEMENTATION ROADMAP
+─────────────────────────────────────────────────────────────────────────────
+
+Quick implementation (Option 1):
+
+1. Modify agent/page.tsx:
+   - Replace Memory button → Voice Settings button (1 hour)
+   - Replace Notebook button → Record button (1 hour)
+   - Add translations (30 min)
+   - Test (30 min)
+
+2. Files to modify:
+   - C:\Dev\FROK\apps\web\src\app\(main)\agent\page.tsx
+   - C:\Dev\FROK\apps\web\messages\en.json
+   - C:\Dev\FROK\apps\web\messages\ko.json
+
+3. Files that work as-is:
+   - useTextToSpeech (no changes)
+   - TTSSettingsModal (no changes)
+   - useVoiceRecorder (no changes)
+
+REFERENCES
+─────────────────────────────────────────────────────────────────────────────
+
+See detailed documentation in:
+  ✓ AGENT_FEATURES_SUMMARY.md - Feature overview
+  ✓ AGENT_BUTTON_OPTIONS.txt - All 5 options with pros/cons
+  ✓ AGENT_BUTTON_QUICK_REFERENCE.txt - Implementation guide
+
+All files located in: C:\Dev\FROK\
+
+================================================================================

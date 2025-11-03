@@ -1,0 +1,224 @@
+================================================================================
+FROK AGENT PAGE - TOP-RIGHT BUTTON OPTIONS COMPARISON
+================================================================================
+
+CURRENT LAYOUT (6 buttons + 1 dropdown):
+──────────────────────────────────────────────────────────────────────────────
+[☁️ Cozy] [📋 Compact] [🧠 Memory] [📚 Notebook] [🔗 Share] [📥 Export ▼]
+
+Focus Areas: Density, Memory, Export/Share
+Missing: Voice interaction (recording, TTS)
+
+
+OPTION 1: Voice-First Interface (Replace Memory + Notebook)
+──────────────────────────────────────────────────────────────────────────────
+[☁️ Cozy] [📋 Compact] [🔊 Voice Settings] [🎤 Record] [🔗 Share] [📥 Export ▼]
+
+Removed:
+  - 🧠 Memory (Agent core knowledge)
+  - 📚 Notebook (Personal memories)
+
+Added:
+  - 🔊 Voice Settings → opens TTSSettingsModal
+  - 🎤 Record → initiates voice recording
+
+Rationale:
+  + Voice interaction is a primary feature
+  + Natural conversation flow (speak + hear responses)
+  + Infrastructure already implemented (useTextToSpeech, useVoiceRecorder)
+  + Memory management less frequently used
+
+Impact:
+  - Memory management less accessible (moved to settings menu)
+  - Better support for multimodal interaction
+  - Reduced button count (6 → 6, but different features)
+
+Implementation Cost: 2-3 hours
+  ✓ State variables already exist
+  ✓ Modals already created
+  ✓ Just need button + click handlers
+  ✓ Add translations for tts.title, voice.title
+
+
+OPTION 2: Tool-Centric Interface (Replace Notebook)
+──────────────────────────────────────────────────────────────────────────────
+[☁️ Cozy] [📋 Compact] [🧠 Memory] [🔧 Tools] [🔗 Share] [📥 Export ▼]
+                                     └─┬─────────────────────────────┘
+                                       ├─ 🏠 Home Assistant
+                                       ├─ 🌐 Web Search
+                                       ├─ 🎨 Image Generation
+                                       └─ 🔍 Other Tools...
+
+Removed:
+  - 📚 Notebook (Personal memories)
+
+Modified:
+  - 🔧 Tools → dropdown showing enabled/disabled tools for current thread
+
+Rationale:
+  + Tool selection is per-thread, frequent action
+  + Quick access without opening full settings modal
+  + Affects agent behavior directly (search, image generation, etc.)
+  + Aligns with "which tools can the agent use" mindset
+
+Impact:
+  + Faster tool toggling workflow
+  + More visible which tools are active
+  - Requires new dropdown component
+  - Notebook still accessible through settings menu
+
+Implementation Cost: 4-5 hours
+  ✗ Requires creating new Tools dropdown component
+  ✗ Need to wire up tool enable/disable to current thread
+  ✗ Add translations for tool names
+
+
+OPTION 3: Hybrid - Keep Voice + Settings (Replace Notebook)
+──────────────────────────────────────────────────────────────────────────────
+[☁️ Cozy] [📋 Compact] [🧠 Memory] [🔊 Voice] [⚙️ Settings] [🔗 Share] [📥 Export ▼]
+
+Removed:
+  - 📚 Notebook (Personal memories)
+
+Added:
+  - 🔊 Voice → opens TTSSettingsModal (or voice recording menu)
+  - ⚙️ Settings → opens ThreadOptionsMenu (replaces three-dot menu)
+
+Rationale:
+  + Quick access to frequently-used settings
+  + Voice interaction support
+  + Settings become primary, not hidden in dropdown
+  + Thread configuration (model, style, tools) at top level
+
+Impact:
+  + More discoverable settings
+  + Voice interaction support
+  + May make toolbar feel crowded
+  - Settings modal now more prominent (good for discoverability?)
+  - Notebook still accessible through settings menu
+
+Implementation Cost: 2-3 hours
+  ✓ ThreadOptionsMenu already exists
+  ✓ Just need Settings button + click handler
+  ✓ Voice button same as Option 1
+
+
+OPTION 4: Reorganize - Move Memory/Notebook to Sidebar
+──────────────────────────────────────────────────────────────────────────────
+TOP BUTTONS:
+[☁️ Cozy] [📋 Compact] [🔊 Voice Settings] [🎤 Record] [🔗 Share] [📥 Export ▼]
+
+SIDEBAR COLLAPSIBLE:
+├─ 📁 Thread Info
+│  ├─ 🧠 Memory
+│  ├─ 📚 Notebook
+│  └─ ⚙️ Settings
+└─ [Expand/Collapse ▼]
+
+Removed from top: Memory, Notebook
+Added to top: Voice Settings, Record
+
+Rationale:
+  + Keep primary interaction (voice) at top
+  + Memory/Notebook less critical for main conversation flow
+  + Sidebar provides context-aware organization
+  + Reduces top-bar clutter
+
+Impact:
+  + Cleaner top bar (voice focus)
+  + Memory still accessible but not primary
+  + Sidebar becomes "thread control panel"
+  + Best of both worlds (voice + memory)
+
+Implementation Cost: 6-8 hours
+  ✗ Requires restructuring sidebar UI
+  ✗ New collapsible component
+  ✗ Updated styling for sidebar
+
+Expected UX:
+  [User starts recording] → 🎤 click
+  [Transcribed to text] → input field populated
+  [Agent responds] → 🔊 Voice button enables TTS playback
+  [Want to save info] → Expand sidebar → 📚 Notebook
+
+
+OPTION 5: Settings Compact - Keep All, Use Dropdown Menu
+──────────────────────────────────────────────────────────────────────────────
+[☁️ Cozy] [📋 Compact] [🔊 Voice] [⋮ More] [🔗 Share] [📥 Export ▼]
+                                   └─┬──────────────────┘
+                                     ├─ 🧠 Memory
+                                     ├─ 📚 Notebook
+                                     ├─ 🔧 Tools
+                                     └─ ⚙️ Settings
+
+Removed: Nothing! All features preserved
+
+Modified:
+  - Voice button added (explicit)
+  - Memory/Notebook/Tools/Settings in collapsible menu
+
+Rationale:
+  + Keep all features accessible
+  + Voice gets explicit prominent placement
+  + Less crowded top bar
+  + Settings grouped logically
+
+Impact:
+  + No feature loss
+  + Good compromise between discoverability and clarity
+  + Voice interaction elevated to top-tier
+
+Implementation Cost: 3-4 hours
+  ✗ Create new "More" dropdown menu component
+  ✗ Move Memory/Notebook/Tools/Settings to dropdown
+  ✓ Voice button simple to add
+
+
+================================================================================
+FEATURE PRIORITY ANALYSIS
+================================================================================
+
+PRIMARY INTERACTION LOOP:
+1. Record/speak message (Voice Record 🎤)
+2. Receive response (TTS Voice Settings 🔊)
+3. Configure thread (Tools 🔧, Settings ⚙️)
+4. Save/organize (Memory 🧠, Notebook 📚)
+5. Share conversation (Share 🔗, Export 📥)
+
+Usage Frequency (Estimated):
+- HIGH: Voice Record, TTS playback, Export
+- MEDIUM: Memory, Settings, Tools
+- LOW: Notebook (personal notes), Share (not common)
+
+Accessibility Needs:
+- Mobile: All buttons need icon + text mode toggle
+- Desktop: Can show both icon + text
+- Large labels would help discoverability
+
+
+================================================================================
+RECOMMENDATION
+================================================================================
+
+Suggested: OPTION 4 - Reorganize Sidebar
+──────────────────────────────────────────────────────────────────────────────
+
+Reasoning:
+1. Makes voice interaction primary (user speaks to agent)
+2. Keeps memory/notebook accessible in context (sidebar)
+3. Reduces top bar to 6 focused buttons
+4. Improves information hierarchy
+5. Better for mobile (less button clutter)
+
+Alternative if simpler: OPTION 1 - Voice-First
+- Simpler implementation (2-3 hours)
+- Moves memory management to settings dropdown
+- Assumes memory is less critical than voice interaction
+- Good if goal is "make voice the primary mode"
+
+Alternative if keeping all: OPTION 5 - Dropdown Menu
+- No feature loss
+- Compromise approach
+- Good discoverability through "More" menu
+
+================================================================================

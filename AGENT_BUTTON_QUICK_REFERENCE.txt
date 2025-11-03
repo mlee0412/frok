@@ -1,0 +1,215 @@
+================================================================================
+FROK AGENT PAGE - QUICK REFERENCE & FILE LOCATIONS
+================================================================================
+
+## ABSOLUTE FILE PATHS FOR KEY COMPONENTS
+
+### Agent Page (Main Component)
+📁 C:\Dev\FROK\apps\web\src\app\(main)\agent\page.tsx
+   Lines 2000-2074: Top-right button section
+   Lines 101-103: Modal state variables
+   Lines 114-116: Voice hooks
+   Lines 2747-2770: Modal rendering
+
+### Memory/Notebook Features
+📁 C:\Dev\FROK\apps\web\src\components\AgentMemoryModal.tsx
+   - Manage agent core knowledge
+   - Add/delete memories by type
+   - Importance ratings
+
+📁 C:\Dev\FROK\apps\web\src\components\UserMemoriesModal.tsx
+   - Personal knowledge/notes
+   - Tag-based organization
+   - Filter and search
+
+📁 C:\Dev\FROK\apps\web\src\components\ThreadOptionsMenu.tsx
+   - Thread settings (title, tags, folders)
+   - Tool selection (Home, Memory, Web Search, Image Gen)
+   - Model selection (GPT-5 variants)
+   - Agent style configuration
+
+### Voice/TTS Features
+📁 C:\Dev\FROK\apps\web\src\hooks\useTextToSpeech.ts
+   - TTS state management
+   - Voice selection and playback
+   - Speed/volume control
+   - Methods: speak, pause, resume, stop
+
+📁 C:\Dev\FROK\apps\web\src\components\TTSSettings.tsx
+   - TTS configuration modal
+   - Voice selector (English voices)
+   - Speed slider (0.5x-2.0x)
+
+📁 C:\Dev\FROK\apps\web\src\store\ttsStore.ts
+   - Persistent TTS settings (Zustand)
+   - enabled, autoPlay, voice, speed, volume
+
+### Voice Recording
+📁 C:\Dev\FROK\apps\web\src\hooks\useVoiceRecorder.ts
+   - Audio recording state
+   - Transcription via Whisper API
+   - Audio level visualization
+
+### Export/Share
+📁 C:\Dev\FROK\apps\web\src\lib\exportConversation.ts
+   - downloadMarkdown() function
+   - copyToClipboard() function
+
+### Translations
+📁 C:\Dev\FROK\apps\web\messages\en.json
+   - Key: memory.agentMemory.*
+   - Key: memory.userMemories.*
+   - Key: tts.*
+   - Key: agent.threadOptions.*
+   - Key: common.*
+
+📁 C:\Dev\FROK\apps\web\messages\ko.json
+   - Korean translations (same keys)
+
+================================================================================
+STATE VARIABLES ALREADY IN AGENT PAGE
+================================================================================
+
+✓ showMemoryModal - Controls AgentMemoryModal visibility
+✓ showUserMemoriesModal - Controls UserMemoriesModal visibility
+✓ showTTSSettings - Controls TTSSettingsModal visibility (currently unused)
+✓ ttsState - 'idle' | 'speaking' | 'paused'
+✓ recordingState - Audio recording state
+✓ audioLevel - Visualization level for recording
+✓ density - 'cozy' | 'compact' display mode
+
+All infrastructure is in place for adding voice buttons!
+
+================================================================================
+QUICK START: IMPLEMENTING OPTION 1 (Voice-First)
+================================================================================
+
+STEP 1: Add Voice Settings Button (Replace Memory)
+───────────────────────────────────────────────────
+File: C:\Dev\FROK\apps\web\src\app\(main)\agent\page.tsx
+Line: ~2020 (where Memory button is)
+
+Replace:
+  <button onClick={() => setShowMemoryModal(true)} ... >
+    🧠 Memory
+  </button>
+
+With:
+  <button
+    onClick={() => setShowTTSSettings(true)}
+    className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white"
+    title="Voice settings"
+  >
+    🔊
+    <span className="hidden sm:inline">Voice</span>
+  </button>
+
+STEP 2: Add Voice Record Button (Replace Notebook)
+──────────────────────────────────────────────────
+File: C:\Dev\FROK\apps\web\src\app\(main)\agent\page.tsx
+Line: ~2027 (where Notebook button is)
+
+Add state:
+  const [showVoiceMenu, setShowVoiceMenu] = React.useState(false);
+
+Replace:
+  <button onClick={() => setShowUserMemoriesModal(true)} ... >
+    📚 Notebook
+  </button>
+
+With:
+  <button
+    onClick={() => {
+      if (recordingState === 'idle') {
+        startRecording();
+      } else {
+        stopRecording();
+      }
+    }}
+    className={`inline-flex items-center gap-1.5 rounded-lg border transition ${
+      recordingState === 'recording'
+        ? 'border-red-500/40 bg-red-500/20 text-red-400'
+        : 'border-white/10 bg-white/5 text-slate-200 hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white'
+    }`}
+    title={recordingState === 'recording' ? 'Stop recording' : 'Start voice recording'}
+  >
+    🎤
+    <span className="hidden sm:inline">
+      {recordingState === 'recording' ? 'Recording' : 'Record'}
+    </span>
+  </button>
+
+STEP 3: Add Translations
+────────────────────────
+File: C:\Dev\FROK\apps\web\messages\en.json
+
+Add:
+  "voice": {
+    "title": "Voice Settings",
+    "record": "Record Audio",
+    "recording": "Recording...",
+    "recordingTitle": "Stop recording",
+    "recordTitle": "Start voice recording"
+  }
+
+File: C:\Dev\FROK\apps\web\messages\ko.json
+
+Add (Korean translations):
+  "voice": {
+    "title": "음성 설정",
+    "record": "음성 녹음",
+    "recording": "녹음 중...",
+    "recordingTitle": "녹음 중지",
+    "recordTitle": "음성 녹음 시작"
+  }
+
+STEP 4: Test
+────────────
+1. npm run dev
+2. Navigate to /agent page
+3. Click 🔊 Voice button → TTSSettingsModal opens
+4. Click 🎤 Record button → starts recording (button turns red)
+5. Click again → stops recording + transcribes
+6. Verify Memory button is removed from top bar
+
+Estimated time: 1-2 hours
+
+================================================================================
+KEY FILES TO WATCH
+================================================================================
+
+When making changes, update these files:
+
+Modified:
+  ✓ C:\Dev\FROK\apps\web\src\app\(main)\agent\page.tsx
+
+Translation:
+  ✓ C:\Dev\FROK\apps\web\messages\en.json
+  ✓ C:\Dev\FROK\apps\web\messages\ko.json
+
+Already in place (no changes needed):
+  ✓ C:\Dev\FROK\apps\web\src\hooks\useTextToSpeech.ts
+  ✓ C:\Dev\FROK\apps\web\src\hooks\useVoiceRecorder.ts
+  ✓ C:\Dev\FROK\apps\web\src\components\TTSSettings.tsx
+
+================================================================================
+TESTING CHECKLIST
+================================================================================
+
+After implementation:
+
+[ ] Voice Settings button opens TTSSettingsModal
+[ ] Can configure voice, speed, volume in modal
+[ ] Settings persist across page refresh (Zustand store)
+[ ] Record button starts recording
+[ ] Red state shows recording in progress
+[ ] Record button stops recording
+[ ] Audio transcription occurs
+[ ] Transcribed text appears in input field
+[ ] Mobile view hides text labels, shows icons only
+[ ] Blue hover state works on both buttons
+[ ] Translations appear in both EN and KO
+[ ] Memory management moved to settings menu (ThreadOptionsMenu)
+[ ] All other buttons (Cozy, Compact, Share, Export) still work
+
+================================================================================
