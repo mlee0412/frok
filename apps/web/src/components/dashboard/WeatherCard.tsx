@@ -65,9 +65,9 @@ type WeatherCardProps = {
 
 export function WeatherCard({
   defaultLocation = 'Seoul',
-  defaultUnits = 'metric',
+  defaultUnits = 'imperial', // Changed to imperial for US users
 }: WeatherCardProps) {
-  const [location] = useState(defaultLocation);
+  const [location, setLocation] = useState(defaultLocation);
   const [units, setUnits] = useState<'metric' | 'imperial'>(defaultUnits);
   const [showForecast, setShowForecast] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -76,6 +76,34 @@ export function WeatherCard({
     null
   );
   const [forecast, setForecast] = useState<WeatherForecast | null>(null);
+
+  // Detect user's current location using browser geolocation
+  const detectLocation = () => {
+    if (!navigator.geolocation) {
+      console.warn('Geolocation not supported by browser');
+      return;
+    }
+
+    setLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const coords = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+        console.log('Location detected:', coords);
+        setLocation(coords);
+      },
+      (error) => {
+        console.warn('Geolocation error:', error.message);
+        // Fall back to default location if user denies permission
+        setLocation(defaultLocation);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000, // Cache for 5 minutes
+      }
+    );
+  };
 
   // Fetch current weather
   const fetchCurrentWeather = async () => {
@@ -125,12 +153,20 @@ export function WeatherCard({
     }
   };
 
+  // Detect location on mount (only once)
+  useEffect(() => {
+    detectLocation();
+  }, []); // Run only on mount
+
   // Initial fetch and auto-refresh every 30 minutes
   useEffect(() => {
-    fetchCurrentWeather();
+    // Only fetch if location is set
+    if (location) {
+      fetchCurrentWeather();
 
-    const interval = setInterval(fetchCurrentWeather, 30 * 60 * 1000); // 30 minutes
-    return () => clearInterval(interval);
+      const interval = setInterval(fetchCurrentWeather, 30 * 60 * 1000); // 30 minutes
+      return () => clearInterval(interval);
+    }
   }, [location, units]);
 
   // Fetch forecast when toggling to forecast view
@@ -167,6 +203,17 @@ export function WeatherCard({
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-foreground">Weather</h2>
         <div className="flex items-center gap-2">
+          {/* Location detection */}
+          <button
+            onClick={detectLocation}
+            className="p-2 text-sm border border-border rounded-md hover:bg-surface-lighter transition-colors"
+            aria-label="Detect my location"
+            title="Detect my location"
+            disabled={loading}
+          >
+            📍
+          </button>
+
           {/* Unit toggle */}
           <button
             onClick={() => setUnits(units === 'metric' ? 'imperial' : 'metric')}
