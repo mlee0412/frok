@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Button } from '@frok/ui';
 import { useAgentMemories, useAddAgentMemory, useDeleteAgentMemory } from '@/hooks/queries/useMemories';
+import { useTranslations } from '@/lib/i18n/I18nProvider';
 
 type AgentMemoryModalProps = {
   agentName: string;
@@ -17,6 +18,8 @@ const MEMORY_TYPES = [
 ];
 
 export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) {
+  const t = useTranslations('memory');
+  const tCommon = useTranslations('common');
   const [newMemory, setNewMemory] = useState({ type: 'core', content: '', importance: 5 });
 
   // Use TanStack Query hooks
@@ -56,25 +59,25 @@ export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) 
         className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold mb-4">🧠 Agent Core Memory</h2>
+        <h2 className="text-lg font-semibold mb-4">🧠 {t('agentMemory.title')}</h2>
         <p className="text-sm text-gray-400 mb-4">
-          Manage persistent memories that the agent remembers across all conversations.
+          {t('agentMemory.description')}
         </p>
 
         {/* Error State */}
         {error && (
           <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
-            ⚠️ Failed to load memories. Please try refreshing.
+            ⚠️ {t('agentMemory.loadError')}
           </div>
         )}
 
         {/* Add New Memory */}
         <div className="bg-gray-800 rounded-lg p-4 mb-4">
-          <h3 className="text-sm font-medium mb-3">Add New Memory</h3>
+          <h3 className="text-sm font-medium mb-3">{t('agentMemory.addNew')}</h3>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Type</label>
+                <label className="block text-xs text-gray-400 mb-1">{t('agentMemory.type')}</label>
                 <select
                   value={newMemory.type}
                   onChange={(e) => setNewMemory({ ...newMemory, type: e.target.value })}
@@ -89,7 +92,7 @@ export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) 
               </div>
               <div>
                 <label className="block text-xs text-gray-400 mb-1">
-                  Importance (1-10): {newMemory.importance}
+                  {t('agentMemory.importance')}: {newMemory.importance}
                 </label>
                 <input
                   type="range"
@@ -102,11 +105,11 @@ export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) 
               </div>
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Content</label>
+              <label className="block text-xs text-gray-400 mb-1">{t('agentMemory.content')}</label>
               <textarea
                 value={newMemory.content}
                 onChange={(e) => setNewMemory({ ...newMemory, content: e.target.value })}
-                placeholder="Enter memory content..."
+                placeholder={t('agentMemory.contentPlaceholder')}
                 className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm resize-none"
                 rows={2}
               />
@@ -117,19 +120,19 @@ export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) 
               variant="primary"
               size="sm"
             >
-              Add Memory
+              {t('agentMemory.addButton')}
             </Button>
           </div>
         </div>
 
         {/* Existing Memories */}
         <div>
-          <h3 className="text-sm font-medium mb-3">Stored Memories ({memories.length})</h3>
+          <h3 className="text-sm font-medium mb-3">{t('agentMemory.storedTitle', { count: memories.length })}</h3>
           {loading ? (
-            <div className="text-center text-gray-500 py-8">Loading memories...</div>
+            <div className="text-center text-gray-500 py-8">{tCommon('loading')}</div>
           ) : memories.length === 0 ? (
             <div className="text-center text-gray-500 py-8">
-              No memories yet. Add your first memory above.
+              {t('agentMemory.empty')}
             </div>
           ) : (
             <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -144,7 +147,7 @@ export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) 
                         {MEMORY_TYPES.find((t) => t.id === memory.memory_type)?.name}
                       </span>
                       <span className="text-xs text-gray-500">
-                        Importance: {memory.importance}/10
+                        {t('agentMemory.importanceLabel')}: {memory.importance}/10
                       </span>
                     </div>
                     <p className="text-sm">{memory.content}</p>
@@ -169,7 +172,7 @@ export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) 
         {/* Close Button */}
         <div className="mt-6 flex justify-end">
           <Button onClick={onClose} variant="outline">
-            Close
+            {tCommon('close')}
           </Button>
         </div>
       </div>
