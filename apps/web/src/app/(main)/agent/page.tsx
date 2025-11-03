@@ -1700,9 +1700,35 @@ export default function AgentPage() {
         />
       )}
 
+      {/* Mobile menu button */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2.5 rounded-lg bg-slate-900/90 border border-white/20 hover:border-sky-400/40 hover:bg-slate-800 transition backdrop-blur-sm shadow-lg"
+        aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+      >
+        {sidebarOpen ? (
+          <svg className="w-5 h-5 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        ) : (
+          <svg className="w-5 h-5 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        )}
+      </button>
+
+      {/* Sidebar overlay on mobile */}
+      {sidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-30 bg-black/50 backdrop-blur-sm"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-40 w-72 transform border-r border-white/10 bg-slate-950/70 backdrop-blur transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-full sm:w-80 md:w-72 transform border-r border-white/10 bg-slate-950/90 backdrop-blur transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -1906,7 +1932,7 @@ export default function AgentPage() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <div className="border-b border-white/10 bg-gradient-to-r from-slate-950/95 to-slate-900/95 px-6 py-4 backdrop-blur-xl shadow-lg">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-2 md:gap-4">
             {/* Left Section - Thread Info */}
             <div className="flex-1 min-w-0 space-y-3">
               <div className="flex items-center gap-3">
@@ -1922,7 +1948,7 @@ export default function AgentPage() {
               </div>
 
               {/* Thread Title */}
-              <h1 className="text-xl font-bold text-white truncate max-w-2xl">
+              <h1 className="text-xl font-bold text-white truncate max-w-full sm:max-w-2xl">
                 {activeThread?.title || 'New Conversation'}
               </h1>
 
@@ -2071,10 +2097,54 @@ export default function AgentPage() {
             const toolSourceLabel = formatToolSource(msg.toolSource);
             const isAssistant = msg.role === 'assistant';
             const isEditing = msg.role === 'user' && editingMessageId === msg.id;
-            const bubbleWidthClass = isCompact ? 'max-w-2xl' : 'max-w-3xl';
+            const bubbleWidthClass = isCompact ? 'max-w-full sm:max-w-2xl' : 'max-w-full sm:max-w-3xl';
             const bubblePaddingClass = isCompact ? 'px-4 py-3' : 'px-5 py-4';
 
             const metadataBadges: React.ReactNode[] = [];
+
+            // Model indicator
+            if (msg.model) {
+              metadataBadges.push(
+                <span
+                  key="model"
+                  className="inline-flex items-center gap-1 rounded-full border border-purple-400/30 bg-purple-500/10 px-3 py-1 text-purple-300"
+                >
+                  🤖 {msg.model}
+                </span>
+              );
+            }
+
+            // Complexity indicator
+            if (msg.complexity) {
+              const complexityIcon = msg.complexity === 'simple' ? '⚡' : msg.complexity === 'moderate' ? '⚙️' : '🧠';
+              const complexityClass = msg.complexity === 'simple'
+                ? 'border-green-400/30 bg-green-500/10 text-green-300'
+                : msg.complexity === 'moderate'
+                ? 'border-yellow-400/30 bg-yellow-500/10 text-yellow-300'
+                : 'border-red-400/30 bg-red-500/10 text-red-300';
+
+              metadataBadges.push(
+                <span
+                  key="complexity"
+                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 ${complexityClass}`}
+                >
+                  {complexityIcon} {msg.complexity}
+                </span>
+              );
+            }
+
+            // Routing indicator
+            if (msg.routing) {
+              metadataBadges.push(
+                <span
+                  key="routing"
+                  className="inline-flex items-center gap-1 rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-blue-300"
+                >
+                  🎯 {msg.routing === 'orchestrator' ? 'Multi-agent' : 'Direct'}
+                </span>
+              );
+            }
+
             if (toolSourceLabel) {
               metadataBadges.push(
                 <span
