@@ -107,6 +107,10 @@ export default function AgentPage() {
   const abortControllerRef = React.useRef<AbortController | null>(null);
   const [showScrollButton, setShowScrollButton] = React.useState(false);
 
+  // Auto title generation state
+  const [titleGeneratingThreadId, setTitleGeneratingThreadId] = React.useState<string | null>(null);
+  const [autoTitledThreads, setAutoTitledThreads] = React.useState<Set<string>>(new Set());
+
   const { recordingState, audioLevel, startRecording, stopRecording, transcribeAudio } = useVoiceRecorder();
   const { ttsState, currentMessageId, settings: ttsSettings, voices: ttsVoices, speak, pause, resume, stop, updateSettings: updateTTSSettings } = useTextToSpeech();
   const toast = useToast();
@@ -696,10 +700,16 @@ export default function AgentPage() {
         };
 
         // Performance: Update both threads and cache
-        updateThreadMessages(currentThreadId, (prevMessages) => [
-          ...prevMessages,
-          assistantMessage,
-        ]);
+        let updatedMessages: Message[] = [];
+        updateThreadMessages(currentThreadId, (prevMessages) => {
+          updatedMessages = [...prevMessages, assistantMessage];
+          return updatedMessages;
+        });
+
+        // Auto-generate title after 3-5 messages
+        if (updatedMessages.length >= 3) {
+          autoGenerateTitle(currentThreadId, updatedMessages);
+        }
       }
     } catch (error: unknown) {
       console.error('Send message error:', error);
@@ -739,6 +749,64 @@ export default function AgentPage() {
       setLoading(false);
     }
   };
+
+  // Auto-generate thread title after 3-5 messages
+  const autoGenerateTitle = React.useCallback(async (threadId: string, messages: Message[]) => {
+    // Configuration: trigger title generation after this many messages
+    const TITLE_GENERATION_THRESHOLD = 4; // After 4 messages (2 user + 2 assistant)
+
+    // Check if we should generate title
+    const shouldGenerate =
+      messages.length >= TITLE_GENERATION_THRESHOLD &&
+      messages.length <= TITLE_GENERATION_THRESHOLD + 2 && // Only try once (within a window)
+      !autoTitledThreads.has(threadId) && // Not already auto-titled
+      titleGeneratingThreadId !== threadId; // Not currently generating
+
+    if (!shouldGenerate) return;
+
+    try {
+      setTitleGeneratingThreadId(threadId);
+      setAutoTitledThreads((prev) => new Set(prev).add(threadId));
+
+      // Prepare conversation history (first 5 messages)
+      const conversationHistory = messages.slice(0, 5).map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      // Call API to generate title
+      const res = await fetch(`/api/chat/threads/${threadId}/suggest-title`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationHistory }),
+      });
+
+      const json = await res.json();
+
+      if (json.ok && json.title) {
+        // Update thread title in database
+        await fetch(`/api/chat/threads/${threadId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: json.title }),
+        });
+
+        // Update local state
+        setThreads((prev) =>
+          prev.map((t) =>
+            t.id === threadId ? { ...t, title: json.title } : t
+          )
+        );
+
+        toast.success(`Thread title updated: "${json.title}"`);
+      }
+    } catch (error) {
+      console.error('Auto title generation failed:', error);
+      // Silently fail - not critical
+    } finally {
+      setTitleGeneratingThreadId(null);
+    }
+  }, [autoTitledThreads, titleGeneratingThreadId, toast]);
 
   const regenerateResponse = async (messageIndex: number) => {
     if (!activeThreadId || !activeThread) return;
@@ -1037,6 +1105,25 @@ export default function AgentPage() {
     }
   };
 
+  const updateThreadTitle = async (threadId: string, title: string) => {
+    try {
+      await fetch(`/api/chat/threads/${threadId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      });
+
+      setThreads((prev) =>
+        prev.map((t) => (t.id === threadId ? { ...t, title } : t))
+      );
+
+      toast.success(`Thread title updated: "${title}"`);
+    } catch (e) {
+      console.error('Failed to update title:', e);
+      toast.error('Failed to update thread title');
+    }
+  };
+
   const updateThreadTags = async (threadId: string, tags: string[]) => {
     try {
       await fetch(`/api/chat/threads/${threadId}`, {
@@ -1223,6 +1310,9 @@ export default function AgentPage() {
           <div className="min-w-0 space-y-1">
             <div className="flex items-center gap-2 text-sm font-semibold text-white">
               <span className="truncate">{thread.title}</span>
+              {titleGeneratingThreadId === thread.id && (
+                <span title="Generating title..." className="animate-spin text-sky-400">⚙️</span>
+              )}
               {thread.pinned && <span title="Pinned" className="text-yellow-300">📌</span>}
               {thread.archived && <span title="Archived" className="text-slate-400">📦</span>}
               {thread.branchedFrom && (
@@ -2566,6 +2656,7 @@ export default function AgentPage() {
       {editingOptionsThreadId && (
         <ThreadOptionsMenu
           threadId={editingOptionsThreadId}
+          currentTitle={threads.find((t) => t.id === editingOptionsThreadId)?.title}
           currentTags={threads.find((t) => t.id === editingOptionsThreadId)?.tags}
           currentFolder={threads.find((t) => t.id === editingOptionsThreadId)?.folder}
           currentTools={threads.find((t) => t.id === editingOptionsThreadId)?.enabledTools}
@@ -2573,6 +2664,7 @@ export default function AgentPage() {
           currentStyle={threads.find((t) => t.id === editingOptionsThreadId)?.agentStyle}
           allTags={allTags}
           allFolders={allFolders}
+          onUpdateTitle={(title) => updateThreadTitle(editingOptionsThreadId, title)}
           onUpdateTags={(tags) => updateThreadTags(editingOptionsThreadId, tags)}
           onUpdateFolder={(folder) => updateThreadFolder(editingOptionsThreadId, folder)}
           onUpdateTools={(tools) => updateThreadTools(editingOptionsThreadId, tools)}

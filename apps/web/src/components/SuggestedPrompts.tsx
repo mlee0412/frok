@@ -8,7 +8,14 @@ type SuggestedPromptsProps = {
   disabled?: boolean;
 };
 
-const STARTER_PROMPTS = [
+type Suggestion = {
+  icon: string;
+  text: string;
+  category: string;
+};
+
+// Fallback prompts if API fails
+const FALLBACK_PROMPTS: Suggestion[] = [
   {
     icon: '💡',
     text: 'Check the status of my smart home devices',
@@ -41,20 +48,77 @@ const STARTER_PROMPTS = [
   },
 ];
 
+// Cache duration: 5 minutes
+const CACHE_DURATION_MS = 5 * 60 * 1000;
+
+type CachedSuggestions = {
+  suggestions: Suggestion[];
+  timestamp: number;
+};
+
 export function SuggestedPrompts({ onSelect, disabled }: SuggestedPromptsProps) {
+  const [suggestions, setSuggestions] = React.useState<Suggestion[]>(FALLBACK_PROMPTS);
+  const [loading, setLoading] = React.useState(false);
+  const cacheRef = React.useRef<CachedSuggestions | null>(null);
+
+  React.useEffect(() => {
+    const fetchSuggestions = async () => {
+      // Check cache first
+      if (cacheRef.current) {
+        const age = Date.now() - cacheRef.current.timestamp;
+        if (age < CACHE_DURATION_MS) {
+          // Cache is still valid
+          setSuggestions(cacheRef.current.suggestions);
+          return;
+        }
+      }
+
+      try {
+        setLoading(true);
+        const res = await fetch('/api/agent/suggestions');
+        const data = await res.json();
+
+        if (data.ok && data.suggestions) {
+          // Update cache
+          cacheRef.current = {
+            suggestions: data.suggestions,
+            timestamp: Date.now(),
+          };
+          setSuggestions(data.suggestions);
+        } else {
+          // Fallback to static prompts
+          setSuggestions(FALLBACK_PROMPTS);
+        }
+      } catch (error) {
+        console.error('Failed to fetch suggestions:', error);
+        // Fallback to static prompts
+        setSuggestions(FALLBACK_PROMPTS);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSuggestions();
+  }, []); // Only fetch once on mount
+
   return (
     <div className="space-y-4">
       <div className="text-center text-gray-400">
-        <h3 className="text-lg font-medium mb-2">👋 How can I help you today?</h3>
+        <h3 className="text-lg font-medium mb-2">
+          👋 How can I help you today?
+          {loading && (
+            <span className="ml-2 text-xs text-sky-400">(refreshing suggestions...)</span>
+          )}
+        </h3>
         <p className="text-sm">Try one of these suggestions or type your own message</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-3xl mx-auto">
-        {STARTER_PROMPTS.map((prompt, i) => (
+        {suggestions.map((prompt, i) => (
           <Button
             key={i}
             onClick={() => onSelect(prompt.text)}
-            disabled={disabled}
+            disabled={disabled || loading}
             variant="ghost"
             className="group flex items-start gap-3 p-4 bg-gray-800 hover:bg-gray-750 rounded-xl h-auto text-left"
           >

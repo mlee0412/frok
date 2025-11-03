@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 
 type ThreadOptionsMenuProps = {
   threadId: string;
+  currentTitle?: string;
   currentTags?: string[];
   currentFolder?: string;
   currentTools?: string[];
@@ -11,6 +12,7 @@ type ThreadOptionsMenuProps = {
   currentStyle?: string;
   allTags: string[];
   allFolders: string[];
+  onUpdateTitle: (title: string) => void;
   onUpdateTags: (tags: string[]) => void;
   onUpdateFolder: (folder: string | null) => void;
   onUpdateTools: (tools: string[]) => void;
@@ -45,6 +47,7 @@ const AGENT_STYLES = [
 
 export function ThreadOptionsMenu({
   threadId: _threadId,
+  currentTitle = 'Untitled',
   currentTags = [],
   currentFolder,
   currentTools = AVAILABLE_TOOLS.map(t => t.id),
@@ -52,6 +55,7 @@ export function ThreadOptionsMenu({
   currentStyle = 'balanced',
   allTags,
   allFolders,
+  onUpdateTitle,
   onUpdateTags,
   onUpdateFolder,
   onUpdateTools,
@@ -60,6 +64,7 @@ export function ThreadOptionsMenu({
   onClose,
 }: ThreadOptionsMenuProps) {
   const [activeTab, setActiveTab] = useState<'organize' | 'tools' | 'config'>('organize');
+  const [title, setTitle] = useState<string>(currentTitle);
   const [tags, setTags] = useState<string[]>(currentTags);
   const [folder, setFolder] = useState<string>(currentFolder || '');
   const [enabledTools, setEnabledTools] = useState<string[]>(currentTools);
@@ -89,6 +94,9 @@ export function ThreadOptionsMenu({
   };
 
   const handleSave = () => {
+    if (title.trim()) {
+      onUpdateTitle(title.trim());
+    }
     onUpdateTags(tags);
     onUpdateFolder(folder || null);
     onUpdateTools(enabledTools);
@@ -141,6 +149,21 @@ export function ThreadOptionsMenu({
 
         {/* Organize Tab */}
         {activeTab === 'organize' && (<div>
+
+        {/* Title */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-2">Title</label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Enter thread title..."
+            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:border-sky-500 text-sm"
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            This title will be displayed in the thread sidebar
+          </p>
+        </div>
 
         {/* Tags */}
         <div className="mb-4">

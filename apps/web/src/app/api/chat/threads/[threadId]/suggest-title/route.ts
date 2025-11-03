@@ -8,7 +8,11 @@ import { z } from 'zod';
 import OpenAI from 'openai';
 
 const suggestTitleBodySchema = z.object({
-  firstMessage: z.string().min(1).max(10000),
+  firstMessage: z.string().min(1).max(10000).optional(),
+  conversationHistory: z.array(z.object({
+    role: z.enum(['user', 'assistant']),
+    content: z.string(),
+  })).max(10).optional(),
 });
 
 export async function POST(
@@ -38,17 +42,28 @@ export async function POST(
   if (!bodyValidation.ok) return bodyValidation.response;
 
   try {
-    const { firstMessage } = bodyValidation.data;
+    const { firstMessage, conversationHistory } = bodyValidation.data;
     const { threadId: _threadId } = paramsValidation.data;
 
     const openai = new OpenAI({
       apiKey: process.env["OPENAI_API_KEY"],
     });
 
-    // Use GPT to generate a concise title
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-5-mini',
-      messages: [
+    // Build messages for GPT based on what's provided
+    let messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
+
+    if (conversationHistory && conversationHistory.length > 0) {
+      // Use conversation history for better title generation
+      messages = [
+        {
+          role: 'system',
+          content: 'Generate a concise, descriptive title (3-6 words) for this conversation. Analyze the entire conversation to understand the main topic. Return ONLY the title, no quotes or extra text.',
+        },
+        ...conversationHistory.slice(0, 5) as Array<{ role: 'user' | 'assistant'; content: string }>, // Use first 5 messages
+      ];
+    } else if (firstMessage) {
+      // Fallback to first message only
+      messages = [
         {
           role: 'system',
           content: 'Generate a concise, descriptive title (3-6 words) for a conversation based on the first user message. Return ONLY the title, no quotes or extra text.',
@@ -57,7 +72,18 @@ export async function POST(
           role: 'user',
           content: firstMessage,
         },
-      ],
+      ];
+    } else {
+      return NextResponse.json(
+        { ok: false, error: 'Either firstMessage or conversationHistory is required' },
+        { status: 400 }
+      );
+    }
+
+    // Use GPT to generate a concise title
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-5-mini',
+      messages,
       max_tokens: 20,
       temperature: 0.7,
     });
