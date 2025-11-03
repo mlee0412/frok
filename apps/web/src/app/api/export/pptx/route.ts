@@ -268,12 +268,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate PPTX buffer
-    const pptxBuffer = await pres.write({ outputType: 'arraybuffer' });
+    const pptxBuffer = (await pres.write({ outputType: 'arraybuffer' })) as ArrayBuffer;
 
     // Return PPTX file
     const fileName = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pptx`;
 
-    return new NextResponse(pptxBuffer as ArrayBuffer, {
+    return new NextResponse(pptxBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
