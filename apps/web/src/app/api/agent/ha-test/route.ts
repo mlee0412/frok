@@ -15,7 +15,11 @@ export async function GET(req: NextRequest) {
 
     console.log('[ha-test] Running with:', q);
     const { runWorkflowHaOnly } = await import('@/lib/agent/runWorkflow-ha-only');
-    const result = await runWorkflowHaOnly({ input_as_text: q });
+    // Dev-only route: Use test user ID
+    const result = await runWorkflowHaOnly({
+      input_as_text: q,
+      userId: 'test-user-dev', // Test user ID for development
+    });
     console.log('[ha-test] Success:', result);
 
     return NextResponse.json({ ok: true, result });

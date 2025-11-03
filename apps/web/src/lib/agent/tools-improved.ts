@@ -336,5 +336,7 @@ export const haCall = tool({
   },
 });
 
-// Export other tools unchanged
-export { memoryAdd, memorySearch, webSearch } from './tools';
+// Export non-memory tools unchanged
+// NOTE: Memory tools (memoryAdd, memorySearch) are NOT exported here
+// They should be created using createUserMemoryTools(userId) from tools-user-specific.ts
+export { webSearch } from './tools';

@@ -237,14 +237,18 @@ export async function POST(req: NextRequest) {
           input_as_text
         );
 
-        const loadToolset = async () => {
+        const loadToolset = async (userId: string) => {
+          // Create user-specific memory tools for proper data isolation
+          const { createUserMemoryTools } = await import('@/lib/agent/tools-user-specific');
+          const { memoryAdd, memorySearch } = createUserMemoryTools(userId);
+
           try {
             const mod = await import('@/lib/agent/tools-improved');
             return {
               haSearch: mod.haSearch,
               haCall: mod.haCall,
-              memoryAdd: mod.memoryAdd,
-              memorySearch: mod.memorySearch,
+              memoryAdd, // ✅ User-specific
+              memorySearch, // ✅ User-specific
               webSearch: mod.webSearch,
               source: 'improved' as const,
             };
@@ -254,8 +258,8 @@ export async function POST(req: NextRequest) {
             return {
               haSearch: mod.haSearch,
               haCall: mod.haCall,
-              memoryAdd: mod.memoryAdd,
-              memorySearch: mod.memorySearch,
+              memoryAdd, // ✅ User-specific
+              memorySearch, // ✅ User-specific
               webSearch: mod.webSearch,
               source: 'basic' as const,
             };
@@ -265,6 +269,7 @@ export async function POST(req: NextRequest) {
         await withTrace('FROK Assistant Stream', async () => {
           const suite = orchestrate
             ? await createAgentSuite({
+                userId: user_id, // ✅ Pass authenticated user ID for memory isolation
                 preferFastGeneral: complexity !== 'complex',
                 models: {
                   general: selectedModel,
@@ -276,7 +281,7 @@ export async function POST(req: NextRequest) {
               })
             : null;
 
-          const toolset = suite?.tools ?? (await loadToolset());
+          const toolset = suite?.tools ?? (await loadToolset(user_id)); // ✅ Pass user_id
 
           const toolMap: Record<string, any> = {
             'home_assistant': [toolset.haSearch, toolset.haCall],

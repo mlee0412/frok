@@ -34,6 +34,7 @@ export interface AgentSuite {
 }
 
 export interface AgentSuiteOptions {
+  userId: string; // REQUIRED: Authenticated user ID for memory isolation
   models?: {
     router?: string;
     home?: string;
@@ -108,14 +109,18 @@ const outputQualityGuardrail: OutputGuardrail = {
   },
 };
 
-async function loadTools(): Promise<LoadedTools> {
+async function loadTools(userId: string): Promise<LoadedTools> {
+  // Create user-specific memory tools for proper data isolation
+  const { createUserMemoryTools } = await import('./tools-user-specific');
+  const { memoryAdd, memorySearch } = createUserMemoryTools(userId);
+
   try {
     const mod = await import('./tools-improved');
     return {
       haSearch: mod.haSearch,
       haCall: mod.haCall,
-      memoryAdd: mod.memoryAdd,
-      memorySearch: mod.memorySearch,
+      memoryAdd, // ✅ User-specific
+      memorySearch, // ✅ User-specific
       webSearch: mod.webSearch,
       source: 'improved',
     };
@@ -125,8 +130,8 @@ async function loadTools(): Promise<LoadedTools> {
     return {
       haSearch: mod.haSearch,
       haCall: mod.haCall,
-      memoryAdd: mod.memoryAdd,
-      memorySearch: mod.memorySearch,
+      memoryAdd, // ✅ User-specific
+      memorySearch, // ✅ User-specific
       webSearch: mod.webSearch,
       source: 'basic',
     };
@@ -181,8 +186,8 @@ function buildConversationPrimer(): AgentInputItem[] {
   ];
 }
 
-export async function createAgentSuite(options: AgentSuiteOptions = {}): Promise<AgentSuite> {
-  const tools = await loadTools();
+export async function createAgentSuite(options: AgentSuiteOptions): Promise<AgentSuite> {
+  const tools = await loadTools(options.userId); // ✅ Pass userId for memory isolation
   const primer = buildConversationPrimer();
 
   const routerModel =

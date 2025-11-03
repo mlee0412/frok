@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
   const rateLimit = await withRateLimit(req, rateLimitPresets.ai);
   if (!rateLimit.ok) return rateLimit.response;
 
+  const user_id = auth.user.userId; // Extract user ID for memory isolation
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -37,7 +38,9 @@ export async function POST(req: NextRequest) {
         }
 
         await withTrace('FROK Assistant Stream', async () => {
-          const suite = await createAgentSuite();
+          const suite = await createAgentSuite({
+            userId: user_id, // ✅ Pass authenticated user ID for memory isolation
+          });
 
           // Build content with text and images
           const content: InputContent[] = [];

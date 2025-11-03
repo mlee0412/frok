@@ -1,11 +1,16 @@
 import { AgentInputItem, Runner, withTrace } from '@openai/agents';
 import { createAgentSuite } from './orchestrator';
 
-export type WorkflowInput = { input_as_text: string };
+export type WorkflowInput = {
+  input_as_text: string;
+  userId: string; // REQUIRED: Authenticated user ID for memory isolation
+};
 
 export async function runWorkflow(workflow: WorkflowInput) {
   return await withTrace('FROK Assistant', async () => {
-    const suite = await createAgentSuite();
+    const suite = await createAgentSuite({
+      userId: workflow.userId, // ✅ Pass user ID for memory isolation
+    });
 
     const conversationHistory: AgentInputItem[] = [
       ...suite.primer,

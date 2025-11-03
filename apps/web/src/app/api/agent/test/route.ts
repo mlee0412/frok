@@ -15,7 +15,11 @@ export async function GET(req: NextRequest) {
     const q = url.searchParams.get('q') || 'Hello';
 
     console.log('[agent/test] Running simple workflow with:', q);
-    const result = await runWorkflowSimple({ input_as_text: q });
+    // Dev-only route: Use test user ID
+    const result = await runWorkflowSimple({
+      input_as_text: q,
+      userId: 'test-user-dev', // Test user ID for development
+    });
     console.log('[agent/test] Success:', result);
 
     return NextResponse.json({ ok: true, result });

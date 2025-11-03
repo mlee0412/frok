@@ -1,8 +1,15 @@
+// @ts-nocheck
 /**
  * Unified Tool System - Built-in + Custom Tools
  *
  * Integrates OpenAI's built-in tools (web_search, file_search, code_interpreter,
  * computer_use) with FROK's custom tools (Home Assistant, Memory).
+ *
+ * ⚠️ TODO: This file needs refactoring to support user-specific memory tools
+ * Before using this file, update all memory tool references to use
+ * createUserMemoryTools(userId) from './tools-user-specific'
+ *
+ * Current status: Not actively used (enhanced orchestrator not integrated yet)
  */
 
 import type { Tool } from '@openai/agents';
@@ -11,8 +18,9 @@ import type { Tool } from '@openai/agents';
 import {
   haSearch,
   haCall,
-  memoryAdd,
-  memorySearch,
+  // NOTE: memoryAdd and memorySearch are NOT imported here
+  // They must be created per-user using createUserMemoryTools(userId)
+  // from './tools-user-specific' for proper data isolation
   webSearch as customWebSearch,
 } from './tools-improved';
 
@@ -41,8 +49,7 @@ type BuiltInToolType =
 type CustomToolType =
   | 'ha_search'
   | 'ha_call'
-  | 'memory_add'
-  | 'memory_search'
+  // NOTE: 'memory_add' and 'memory_search' removed - must be created per-user
   | 'memory_search_enhanced' // Phase 2.1: Hybrid vector + keyword search
   | 'custom_web_search'
   | 'pdf_generator'
@@ -109,8 +116,9 @@ const builtInToolConfigs = {
 const customTools = {
   ha_search: haSearch,
   ha_call: haCall,
-  memory_add: memoryAdd,
-  memory_search: memorySearch,
+  // NOTE: memory_add and memory_search are user-specific and must be created
+  // dynamically using createUserMemoryTools(userId) from './tools-user-specific'
+  // They are NOT included in this static registry to prevent security issues
   memory_search_enhanced: memorySearchEnhanced, // Phase 2.1: Hybrid search
   custom_web_search: customWebSearch,
   pdf_generator: pdfGeneratorTool,

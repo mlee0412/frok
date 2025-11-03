@@ -12,6 +12,8 @@ export async function POST(req: NextRequest) {
   const rateLimit = await withRateLimit(req, rateLimitPresets.ai);
   if (!rateLimit.ok) return rateLimit.response;
 
+  const user_id = auth.user.userId; // Extract user ID for memory isolation
+
   try {
     const body = await req.json().catch(() => ({}));
     const input_as_text = String((body?.input_as_text ?? '')).trim();
@@ -19,7 +21,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'input_as_text_required' }, { status: 400 });
     }
 
-    const result = await runWorkflow({ input_as_text });
+    const result = await runWorkflow({ input_as_text, userId: user_id }); // ✅ Pass userId
     return NextResponse.json({ ok: true, result });
   } catch (error: unknown) {
     console.error('[agent error]', error);
@@ -38,13 +40,15 @@ export async function GET(req: NextRequest) {
   const rateLimit = await withRateLimit(req, rateLimitPresets.ai);
   if (!rateLimit.ok) return rateLimit.response;
 
+  const user_id = auth.user.userId; // Extract user ID for memory isolation
+
   try {
     const url = new URL(req.url);
     const q = (url.searchParams.get('q') || '').trim();
     if (!q) {
       return NextResponse.json({ ok: true, hint: "Use POST with { input_as_text } or GET ?q=... to run a quick test." }, { status: 200 });
     }
-    const result = await runWorkflow({ input_as_text: q });
+    const result = await runWorkflow({ input_as_text: q, userId: user_id }); // ✅ Pass userId
     return NextResponse.json({ ok: true, result }, { status: 200 });
   } catch (error: unknown) {
     const detail = error instanceof Error ? error.message : 'exception';
