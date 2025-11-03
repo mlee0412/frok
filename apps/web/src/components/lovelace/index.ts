@@ -34,6 +34,18 @@ export type { MediaPlayerEntity, MediaPlayerCardProps } from './MediaPlayerCard'
 export { RemoteControl } from './RemoteControl';
 export type { RemoteMode, RemoteAction, RemoteControlProps } from './RemoteControl';
 
+export { RemoteControlEnhanced } from './RemoteControlEnhanced';
+export type { RemoteControlEnhancedProps, MediaPlayerData } from './RemoteControlEnhanced';
+
+export { BlindsCard } from './BlindsCard';
+export type { BlindsEntity, BlindsCardProps } from './BlindsCard';
+
+export { AreaLightControl } from './AreaLightControl';
+export type { AreaLightControlProps } from './AreaLightControl';
+
+export { LightControlModal } from './LightControlModal';
+export type { LightControlModalProps } from './LightControlModal';
+
 // Layout components
 export { HorizontalStack } from './HorizontalStack';
 export type { HorizontalStackProps } from './HorizontalStack';

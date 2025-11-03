@@ -2,8 +2,8 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { headers } from 'next/headers';
 
-// Dynamic import for Lovelace Dashboard (client-heavy component)
-const LovelaceDashboard = dynamic(() => import('@/components/lovelace/LovelaceDashboard'), {
+// Dynamic import for Lovelace Dashboard Enhanced (client-heavy component)
+const LovelaceDashboardEnhanced = dynamic(() => import('@/components/lovelace/LovelaceDashboardEnhanced'), {
   loading: () => (
     <div className="animate-pulse space-y-4">
       <div className="h-20 bg-surface/50 rounded" />
@@ -34,7 +34,7 @@ export default async function SmartHomePage() {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-semibold mb-6">Smart Home</h1>
-      <LovelaceDashboard initialDevices={devices} haOk={ok} haDetail={ha?.detail} />
+      <LovelaceDashboardEnhanced initialDevices={devices} haOk={ok} haDetail={ha?.detail} />
     </div>
   );
 }
