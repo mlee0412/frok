@@ -2,37 +2,38 @@
 
 import React from 'react';
 import { Button } from '@frok/ui';
+import { useTranslations } from '@/lib/i18n/I18nProvider';
 
 type QuickAction = {
   icon: string;
-  label: string;
-  prompt: string;
+  labelKey: string;
+  promptKey: string;
   condition?: 'hasMessages' | 'always';
 };
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
     icon: '📝',
-    label: 'Summarize',
-    prompt: 'Summarize our conversation so far',
+    labelKey: 'summarize',
+    promptKey: 'summarizePrompt',
     condition: 'hasMessages',
   },
   {
     icon: '🧠',
-    label: 'My Memories',
-    prompt: 'What do you remember about me?',
+    labelKey: 'myMemories',
+    promptKey: 'myMemoriesPrompt',
     condition: 'always',
   },
   {
     icon: '💡',
-    label: 'HA Status',
-    prompt: 'Check the status of all my smart home devices',
+    labelKey: 'haStatus',
+    promptKey: 'haStatusPrompt',
     condition: 'always',
   },
   {
     icon: '🌐',
-    label: 'News',
-    prompt: 'Search for today\'s top technology news',
+    labelKey: 'news',
+    promptKey: 'newsPrompt',
     condition: 'always',
   },
 ];
@@ -44,6 +45,8 @@ type QuickActionsProps = {
 };
 
 export function QuickActions({ onAction, hasMessages, disabled }: QuickActionsProps) {
+  const t = useTranslations('agent.quickActions');
+
   const visibleActions = QUICK_ACTIONS.filter(
     (action) => action.condition === 'always' || (action.condition === 'hasMessages' && hasMessages)
   );
@@ -55,15 +58,15 @@ export function QuickActions({ onAction, hasMessages, disabled }: QuickActionsPr
       {visibleActions.map((action, i) => (
         <Button
           key={i}
-          onClick={() => onAction(action.prompt)}
+          onClick={() => onAction(t(action.promptKey))}
           disabled={disabled}
           variant="outline"
           size="sm"
           className="whitespace-nowrap"
-          title={action.prompt}
+          title={t(action.promptKey)}
         >
           <span>{action.icon}</span>
-          <span>{action.label}</span>
+          <span>{t(action.labelKey)}</span>
         </Button>
       ))}
     </div>
