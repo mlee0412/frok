@@ -1,6 +1,9 @@
 # FROK Project - Claude Code Documentation
 
-Last Updated: 2025-11-02 (Session #12)
+Last Updated: 2025-11-02 (Session #13)
+
+> 📚 **Quick Navigation**: See [DOCS_INDEX.md](DOCS_INDEX.md) for complete documentation index
+> 📍 **Current Status**: See [STATUS.md](STATUS.md) for active work and progress
 
 ## Project Overview
 

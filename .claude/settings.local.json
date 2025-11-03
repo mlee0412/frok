@@ -10,7 +10,9 @@
       "Bash(npx tsc:*)",
       "Bash(pnpm run typecheck:*)",
       "Bash(test:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)"
     ],
     "deny": [],
     "ask": []
