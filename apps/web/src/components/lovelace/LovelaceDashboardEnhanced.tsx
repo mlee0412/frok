@@ -265,6 +265,12 @@ export default function LovelaceDashboardEnhanced({
       }
     : undefined;
 
+  // Find Apple TV entity for app launching
+  const appleTvEntity = mediaPlayers.find(
+    (mp) => mp.id.includes('apple_tv') || mp.id.includes('appletv') || mp.name.toLowerCase().includes('apple tv')
+  );
+  const appleTvEntityId = appleTvEntity?.id;
+
   return (
     <div className="space-y-6">
       {/* Header Status */}
@@ -367,6 +373,7 @@ export default function LovelaceDashboardEnhanced({
           mode={remoteMode}
           customActions={hueSyncBoxActions}
           mediaPlayer={mediaPlayerData}
+          appleTvEntityId={appleTvEntityId}
           onModeChange={setRemoteMode}
           onCommand={handleRemoteCommand}
           onServiceCall={handleServiceCall}
