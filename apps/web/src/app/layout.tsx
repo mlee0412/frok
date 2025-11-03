@@ -2,12 +2,15 @@
 import '../styles/globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { NextIntlClientProvider } from 'next-intl';
 import { ThemeProvider } from '@/providers/ThemeProvider';
 import { QueryProvider } from '@/providers/QueryProvider';
 import { Toaster } from '@frok/ui';
 import { WebVitals } from '@/components/WebVitals';
 import { PerformanceMonitor } from '@/components/PerformanceMonitor';
 import { ServiceWorkerProvider } from '@/components/ServiceWorkerProvider';
+import { getLocale } from '@/lib/i18n/getLocale';
+import { getMessages } from '../../i18n';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
@@ -42,21 +45,29 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Get the current locale from middleware
+  const locale = await getLocale();
+
+  // Load messages for the current locale
+  const messages = await getMessages(locale);
+
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
+    <html lang={locale} className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body>
-        <WebVitals />
-        <PerformanceMonitor />
-        <ServiceWorkerProvider>
-          <ThemeProvider>
-            <Toaster>
-              <QueryProvider>
-                {children}
-              </QueryProvider>
-            </Toaster>
-          </ThemeProvider>
-        </ServiceWorkerProvider>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <WebVitals />
+          <PerformanceMonitor />
+          <ServiceWorkerProvider>
+            <ThemeProvider>
+              <Toaster>
+                <QueryProvider>
+                  {children}
+                </QueryProvider>
+              </Toaster>
+            </ThemeProvider>
+          </ServiceWorkerProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );
