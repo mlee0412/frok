@@ -37,66 +37,66 @@ export function IntegrationsCard() {
     setLoading(true);
     const results: IntegrationStatus[] = [];
 
-    // Check Home Assistant
+    // Check Home Assistant (correct endpoint: GET /api/ping/mcp/home-assistant)
     try {
-      const haRes = await fetch('/api/ha/ping', { method: 'POST' });
+      const haRes = await fetch('/api/ping/mcp/home-assistant');
       const haData = await haRes.json();
       results.push({
         name: 'Home Assistant',
         icon: '🏠',
         status: haData.ok ? 'connected' : 'disconnected',
         lastChecked: new Date().toISOString(),
-        error: haData.ok ? undefined : haData.error,
+        error: haData.ok ? undefined : haData.detail,
       });
-    } catch {
+    } catch (error: unknown) {
       results.push({
         name: 'Home Assistant',
         icon: '🏠',
         status: 'disconnected',
         lastChecked: new Date().toISOString(),
-        error: 'Connection failed',
+        error: error instanceof Error ? error.message : 'Connection failed',
       });
     }
 
-    // Check GitHub
+    // Check GitHub (correct endpoint: GET /api/ping/mcp/github)
     try {
-      const ghRes = await fetch('/api/github/ping', { method: 'POST' });
+      const ghRes = await fetch('/api/ping/mcp/github');
       const ghData = await ghRes.json();
       results.push({
         name: 'GitHub',
         icon: '💻',
         status: ghData.ok ? 'connected' : 'disconnected',
         lastChecked: new Date().toISOString(),
-        error: ghData.ok ? undefined : ghData.error,
+        error: ghData.ok ? undefined : ghData.detail,
       });
-    } catch {
+    } catch (error: unknown) {
       results.push({
         name: 'GitHub',
         icon: '💻',
         status: 'disconnected',
         lastChecked: new Date().toISOString(),
-        error: 'Connection failed',
+        error: error instanceof Error ? error.message : 'Connection failed',
       });
     }
 
-    // Check Supabase
+    // Check Supabase (correct endpoint: GET /api/ping/supabase-db)
     try {
-      const sbRes = await fetch('/api/supabase/ping', { method: 'POST' });
+      const sbRes = await fetch('/api/ping/supabase-db');
       const sbData = await sbRes.json();
       results.push({
         name: 'Supabase',
         icon: '🗄️',
         status: sbData.ok ? 'connected' : 'disconnected',
         lastChecked: new Date().toISOString(),
-        error: sbData.ok ? undefined : sbData.error,
+        error: sbData.ok ? undefined : sbData.detail,
       });
-    } catch {
+    } catch (error: unknown) {
       results.push({
         name: 'Supabase',
         icon: '🗄️',
         status: 'disconnected',
         lastChecked: new Date().toISOString(),
-        error: 'Connection failed',
+        error: error instanceof Error ? error.message : 'Connection failed',
       });
     }
 
