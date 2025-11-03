@@ -12,7 +12,10 @@
       "Bash(test:*)",
       "Bash(git add:*)",
       "Bash(mkdir:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm exec tsc:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

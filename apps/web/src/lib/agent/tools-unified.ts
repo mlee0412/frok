@@ -16,6 +16,9 @@ import {
   webSearch as customWebSearch,
 } from './tools-improved';
 
+// Import export tools
+import { pdfGeneratorTool } from './tools/pdfGenerator';
+
 // ============================================================================
 // Built-in Tool Types
 // ============================================================================
@@ -32,7 +35,8 @@ type CustomToolType =
   | 'ha_call'
   | 'memory_add'
   | 'memory_search'
-  | 'custom_web_search';
+  | 'custom_web_search'
+  | 'pdf_generator';
 
 type ToolType = BuiltInToolType | CustomToolType;
 
@@ -96,6 +100,7 @@ const customTools = {
   memory_add: memoryAdd,
   memory_search: memorySearch,
   custom_web_search: customWebSearch,
+  pdf_generator: pdfGeneratorTool,
 };
 
 // ============================================================================
@@ -149,6 +154,14 @@ const toolCategories = {
     description: 'Computer use and automation (experimental)',
     tools: ['computer_use'] as const,
     icon: '🤖',
+  },
+
+  // Export & Document Generation
+  export: {
+    name: 'Export & Documents',
+    description: 'Generate and export documents in various formats',
+    tools: ['pdf_generator'] as const,
+    icon: '📄',
   },
 };
 
@@ -260,6 +273,16 @@ const toolMetadata: Record<ToolType, {
     costPerUse: 'Free (DuckDuckGo) or Tavily API cost',
     requiresAuth: false,
     experimental: false,
+  },
+
+  pdf_generator: {
+    displayName: 'PDF Generator',
+    description: 'Generate professional PDF documents from text content with automatic formatting',
+    category: 'export',
+    costPerUse: 'Minimal (computation only, ~$0.001)',
+    requiresAuth: true,
+    experimental: false,
+    dependencies: ['jspdf', 'html2canvas'],
   },
 };
 
