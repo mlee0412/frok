@@ -101,6 +101,7 @@ export default function AgentPage() {
   const [showTTSSettings, setShowTTSSettings] = React.useState(false);
   const [showMemoryModal, setShowMemoryModal] = React.useState(false);
   const [showUserMemoriesModal, setShowUserMemoriesModal] = React.useState(false);
+  const [showMoreMenu, setShowMoreMenu] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const messagesContainerRef = React.useRef<HTMLDivElement>(null);
@@ -1404,6 +1405,25 @@ export default function AgentPage() {
     }
   };
 
+  const handleTTSToggle = () => {
+    if (ttsState === 'idle') {
+      // Find the last assistant message and read it
+      const assistantMessages = activeThread?.messages.filter(m => m.role === 'assistant') || [];
+      if (assistantMessages.length > 0) {
+        const lastMessage = assistantMessages[assistantMessages.length - 1];
+        if (lastMessage) {
+          speak(lastMessage.content, lastMessage.id);
+        }
+      } else {
+        toast.error('No messages to read');
+      }
+    } else if (ttsState === 'speaking') {
+      pause();
+    } else if (ttsState === 'paused') {
+      resume();
+    }
+  };
+
   const startEditMessage = (messageId: string, content: string) => {
     setEditingMessageId(messageId);
     setEditContent(content);
@@ -1676,6 +1696,19 @@ export default function AgentPage() {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, [showExportMenu]);
+
+  // Close more menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (showMoreMenu && !target.closest('.more-menu-container')) {
+        setShowMoreMenu(false);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showMoreMenu]);
 
   return (
     <Toaster>
@@ -2013,24 +2046,88 @@ export default function AgentPage() {
                 </button>
               </div>
 
-              {/* Primary Actions */}
+              {/* Voice Controls */}
               <button
-                onClick={() => setShowMemoryModal(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white"
-                title="Agent core memory"
+                onClick={handleTTSToggle}
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition ${
+                  ttsState === 'speaking'
+                    ? 'border-green-400/50 bg-green-500/20 text-green-200'
+                    : ttsState === 'paused'
+                    ? 'border-yellow-400/50 bg-yellow-500/20 text-yellow-200'
+                    : 'border-white/10 bg-white/5 text-slate-200 hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white'
+                }`}
+                title={ttsState === 'speaking' ? 'Pause speech' : ttsState === 'paused' ? 'Resume speech' : 'Read last message'}
+                disabled={!activeThread || activeThread.messages.filter(m => m.role === 'assistant').length === 0}
               >
-                🧠
-                <span className="hidden sm:inline">Memory</span>
+                {ttsState === 'speaking' ? '⏸️' : ttsState === 'paused' ? '▶️' : '🔊'}
+                <span className="hidden sm:inline">
+                  {ttsState === 'speaking' ? 'Pause' : ttsState === 'paused' ? 'Resume' : 'TTS'}
+                </span>
               </button>
 
               <button
-                onClick={() => setShowUserMemoriesModal(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white"
-                title="View stored user memories"
+                onClick={handleVoiceInput}
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition ${
+                  recordingState === 'recording'
+                    ? 'border-red-400/50 bg-red-500/20 text-red-200 animate-pulse'
+                    : recordingState === 'processing'
+                    ? 'border-blue-400/50 bg-blue-500/20 text-blue-200'
+                    : 'border-white/10 bg-white/5 text-slate-200 hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white'
+                }`}
+                title={recordingState === 'recording' ? 'Stop recording' : 'Record voice input'}
+                disabled={recordingState === 'processing'}
               >
-                📚
-                <span className="hidden sm:inline">Notebook</span>
+                🎤
+                <span className="hidden sm:inline">
+                  {recordingState === 'recording' ? 'Stop' : recordingState === 'processing' ? 'Processing...' : 'Voice'}
+                </span>
               </button>
+
+              {/* More Menu */}
+              <div className="relative more-menu-container">
+                <button
+                  onClick={() => setShowMoreMenu(!showMoreMenu)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white"
+                  title="More options"
+                >
+                  ⚙️
+                  <span className="hidden sm:inline">More</span>
+                </button>
+                {showMoreMenu && (
+                  <div className="absolute right-0 top-full mt-2 min-w-[180px] overflow-hidden rounded-lg border border-white/10 bg-slate-900/98 shadow-2xl backdrop-blur-xl z-50">
+                    <button
+                      onClick={() => {
+                        setShowMemoryModal(true);
+                        setShowMoreMenu(false);
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-200 transition hover:bg-sky-500/10 hover:text-white"
+                    >
+                      <span>🧠</span>
+                      <span>Agent Memory</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowUserMemoriesModal(true);
+                        setShowMoreMenu(false);
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-200 transition hover:bg-sky-500/10 hover:text-white"
+                    >
+                      <span>📚</span>
+                      <span>My Notebook</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowTTSSettings(true);
+                        setShowMoreMenu(false);
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-200 transition hover:bg-sky-500/10 hover:text-white"
+                    >
+                      <span>🎚️</span>
+                      <span>Voice Settings</span>
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {activeThread && activeThread.messages.length > 0 && (
                 <>
