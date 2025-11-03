@@ -92,7 +92,8 @@
     "greaterThan": "~보다 큼",
     "lessThan": "~보다 작음",
     "between": "사이",
-    "notBetween": "사이가 아님"
+    "notBetween": "사이가 아님",
+    "allSystemsNominal": "모든 시스템 정상"
   },
   "nav": {
     "dashboard": "대시보드",
@@ -511,6 +512,13 @@
       "subtitle": "환영합니다! 계정에 로그인하세요",
       "email": "이메일",
       "password": "비밀번호",
+      "emailLabel": "이메일",
+      "emailPlaceholder": "이메일을 입력하세요",
+      "sending": "전송 중...",
+      "sendButton": "매직 링크 전송",
+      "successMessage": "이메일에서 매직 링크를 확인하세요!",
+      "errorSending": "매직 링크 전송 실패",
+      "redirectMessage": "로그인 후 리다이렉트됩니다.",
       "rememberMe": "로그인 상태 유지",
       "forgotPassword": "비밀번호를 잊으셨나요?",
       "submit": "로그인",
@@ -591,6 +599,14 @@
     "processing": "처리 중...",
     "uploading": "업로드 중...",
     "downloading": "다운로드 중..."
+  },
+  "error": {
+    "title": "⚠️ 문제가 발생했습니다",
+    "description": "예기치 않은 오류가 발생했습니다. 페이지를 새로고침하세요.",
+    "errorId": "오류 ID",
+    "details": "오류 상세",
+    "reload": "페이지 새로고침",
+    "tryAgain": "다시 시도"
   },
   "pwa": {
     "install": {

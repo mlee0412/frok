@@ -11,7 +11,7 @@ type I18nContextType = {
   t: (key: string, variables?: Record<string, string | number>) => string;
 };
 
-const I18nContext = createContext<I18nContextType | null>(null);
+export const I18nContext = createContext<I18nContextType | null>(null);
 
 export function I18nProvider({
   children,

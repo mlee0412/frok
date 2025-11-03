@@ -600,6 +600,14 @@
     "uploading": "Uploading...",
     "downloading": "Downloading..."
   },
+  "error": {
+    "title": "⚠️ Something went wrong",
+    "description": "An unexpected error occurred. Please try refreshing the page.",
+    "errorId": "Error ID",
+    "details": "Error details",
+    "reload": "Reload Page",
+    "tryAgain": "Try Again"
+  },
   "pwa": {
     "install": {
       "title": "Install FROK",

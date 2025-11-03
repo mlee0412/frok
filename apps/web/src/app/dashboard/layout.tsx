@@ -4,6 +4,7 @@ import { AppShell } from '@frok/ui';
 import DashboardNav from './DashboardNav';
 import Breadcrumbs from './Breadcrumbs';
 import { useTranslations } from '@/lib/i18n/I18nProvider';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations('nav');
@@ -25,7 +26,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <AppShell
-      sideNav={<DashboardNav items={nav} header={<div className="px-4 pb-4 text-primary font-bold">FROK</div>} footer={<div className="mt-auto px-4 pt-4 text-xs opacity-60">© {new Date().getFullYear()} FROK</div>} />}
+      sideNav={
+        <DashboardNav
+          items={nav}
+          header={<div className="px-4 pb-4 text-primary font-bold">FROK</div>}
+          footer={
+            <div className="mt-auto space-y-3">
+              <div className="px-4">
+                <LanguageSwitcher variant="dropdown" />
+              </div>
+              <div className="px-4 pt-4 text-xs opacity-60">© {new Date().getFullYear()} FROK</div>
+            </div>
+          }
+        />
+      }
       header={<Breadcrumbs />}
       footer={<div>© {new Date().getFullYear()} FROK · {tCommon('allSystemsNominal')}</div>}
     >
