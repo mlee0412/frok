@@ -44,5 +44,5 @@ pnpm dev:api    # api only
 
 ## Links
 
-- `QUICKSTART.md` — cheat sheet
-- `SETUP_GUIDE.md` — full setup guide
+- [`docs/guides/QUICKSTART.md`](docs/guides/QUICKSTART.md) — cheat sheet
+- [`docs/guides/SETUP_GUIDE.md`](docs/guides/SETUP_GUIDE.md) — full setup guide

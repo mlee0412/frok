@@ -55,8 +55,8 @@ See [STATUS.md](STATUS.md) for detailed current status and next steps.
   Complete internationalization guide (English/Korean support, 660+ translation keys)
 
 ### Testing Guides
-- **[TESTING.md](TESTING.md)** (if exists)
-  E2E testing with Playwright, unit testing with Vitest
+- **[apps/web/TESTING.md](apps/web/TESTING.md)** - E2E and unit testing guide
+  Comprehensive guide for Playwright E2E tests and Vitest unit tests
 
 ---
 

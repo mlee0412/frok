@@ -292,7 +292,7 @@ Components
 **3. Comprehensive Normalization Audit (Completed)**
 - Conducted full-stack audit of codebase consistency, modularity, and maintainability
 - Identified **critical architecture gaps** preventing production readiness
-- Created detailed normalization plan: `NORMALIZATION_PLAN.md`
+- Created detailed normalization plan: [`docs/architecture/NORMALIZATION_PLAN.md`](docs/architecture/NORMALIZATION_PLAN.md)
 - See audit report in Git history for full details
 
 **4. Phase 1 Implementation (Completed) - State Management & Component Cleanup**
@@ -1495,9 +1495,9 @@ const tcs = msg.tool_calls || [];  // Works!
 7. `UPGRADE_IMPLEMENTATION_COMPLETE.md` - Implementation documentation
 
 **Files Analyzed** (for context):
-1. `NORMALIZATION_PLAN.md` - Reviewed completed normalization work
-2. `NORMALIZATION_COMPLETE_SUMMARY.md` - Session #4-5 security improvements
-3. `AGENT_ROUTES_SECURITY_AUDIT.md` - Session #6 agent security audit
+1. [`docs/architecture/NORMALIZATION_PLAN.md`](docs/architecture/NORMALIZATION_PLAN.md) - Reviewed completed normalization work
+2. [`docs/archive/NORMALIZATION_COMPLETE_SUMMARY.md`](docs/archive/NORMALIZATION_COMPLETE_SUMMARY.md) - Session #4-5 security improvements
+3. [`docs/architecture/AGENT_ROUTES_SECURITY_AUDIT.md`](docs/architecture/AGENT_ROUTES_SECURITY_AUDIT.md) - Session #6 agent security audit
 4. `apps/web/src/app/api/agent/smart-stream/route.ts` - Original smart stream route
 5. `apps/web/src/lib/agent/orchestrator.ts` - Original orchestrator
 6. `apps/web/src/lib/agent/tools-improved.ts` - Custom tools with caching
@@ -1917,7 +1917,7 @@ NEXT_PUBLIC_API_URL=
 
 ## Coding Standards & Best Practices
 
-> **📌 IMPORTANT**: Following the comprehensive audit in Session #4, these standards must be followed for all new code. See `NORMALIZATION_PLAN.md` for migration of existing code.
+> **📌 IMPORTANT**: Following the comprehensive audit in Session #4, these standards must be followed for all new code. See [`docs/architecture/NORMALIZATION_PLAN.md`](docs/architecture/NORMALIZATION_PLAN.md) for migration of existing code.
 
 ### State Management
 
@@ -2175,7 +2175,7 @@ import type { ChatThreadRow, ChatMessageRow } from '@/types/database';
 
 ## 🚨 Before Starting New Features
 
-**CRITICAL**: A comprehensive audit in Session #4 identified architectural gaps that must be addressed before production deployment. See `NORMALIZATION_PLAN.md` for:
+**CRITICAL**: A comprehensive audit in Session #4 identified architectural gaps that must be addressed before production deployment. See [`docs/architecture/NORMALIZATION_PLAN.md`](docs/architecture/NORMALIZATION_PLAN.md) for:
 
 - **Phase 1 (CRITICAL)**: State management foundation, component deduplication, error handling
 - **Phase 2 (SECURITY)**: Authentication, type safety, request validation, rate limiting

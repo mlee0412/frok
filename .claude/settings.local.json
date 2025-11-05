@@ -18,7 +18,13 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(awk:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(tree:*)",
+      "Bash(for file in \"NORMALIZATION_PLAN.md\" \"STATUS.md\" \"DOCS_INDEX.md\")",
+      "Bash(do test -f \"$file\")",
+      "Bash(echo:*)",
+      "Bash(done)",
+      "Bash(git mv:*)"
     ],
     "deny": [],
     "ask": []
