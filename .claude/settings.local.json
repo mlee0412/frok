@@ -24,7 +24,9 @@
       "Bash(do test -f \"$file\")",
       "Bash(echo:*)",
       "Bash(done)",
-      "Bash(git mv:*)"
+      "Bash(git mv:*)",
+      "Bash(for session in 5 6 7 8 9 10 3 2)",
+      "Bash(do sed -n \"/^### Session #$session:/,/^###/p\" CLAUDE.md)"
     ],
     "deny": [],
     "ask": []

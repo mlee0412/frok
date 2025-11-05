@@ -17,9 +17,10 @@ See [STATUS.md](STATUS.md) for detailed current status and next steps.
 ## 📋 Essential Documents
 
 ### Core Documentation
-- **[CLAUDE.md](CLAUDE.md)** - 🔥 **START HERE** - Complete project documentation, tech stack, coding standards
+- **[CLAUDE.md](CLAUDE.md)** - 🔥 **START HERE** - Concise project context (optimized for Claude Code, 288 lines)
 - **[README.md](README.md)** - Project overview and quick start
 - **[STATUS.md](STATUS.md)** - Current status, active tasks, and immediate next steps
+- **[docs/development/SESSION_HISTORY.md](docs/development/SESSION_HISTORY.md)** - Complete session logs (Sessions #2-12)
 
 ### Quick Reference
 - **[docs/guides/QUICKSTART.md](docs/guides/QUICKSTART.md)** - Get started in 5 minutes
@@ -86,7 +87,17 @@ See [STATUS.md](STATUS.md) for detailed current status and next steps.
 
 ## 📜 Session History
 
+### Complete Session Logs
+- **[docs/development/SESSION_HISTORY.md](docs/development/SESSION_HISTORY.md)** - Complete detailed logs for all sessions (#2-12)
+  - 630 lines of implementation details, metrics, and outcomes
+  - Includes: code changes, architecture decisions, known limitations, next steps
+  - **Note**: Session logs moved from CLAUDE.md to improve context efficiency (87% size reduction)
+
 ### Recent Sessions (Last 6 Months)
+
+#### Session #13: CLAUDE.md Optimization ✅ IN PROGRESS
+- **Summary**: Optimized CLAUDE.md for Claude Code performance (2187 → 288 lines, 87% reduction)
+- **Impact**: High - Improved context efficiency, better organization, directory-specific docs
 
 #### Session #12: Internationalization ✅ COMPLETE
 - **File**: [docs/sessions/SESSION_11_SUMMARY.md](docs/sessions/SESSION_11_SUMMARY.md)
