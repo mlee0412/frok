@@ -75,8 +75,13 @@ export function ClimateCardEnhanced({
   };
 
   const handleTempChange = async (temp: number) => {
-    if (!onSetTemp) return;
-    await onSetTemp(entity.id, temp);
+    if (!onSetTemp || pending) return;
+    setPending(true);
+    try {
+      await onSetTemp(entity.id, temp);
+    } finally {
+      setPending(false);
+    }
   };
 
   const getModeIcon = (mode: string) => {
