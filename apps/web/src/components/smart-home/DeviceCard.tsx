@@ -156,7 +156,7 @@ export const DeviceCard = forwardRef<HTMLDivElement, DeviceCardProps>(
         `}
       >
         <div className="p-4 space-y-4">
-          {/* @ts-ignore */}
+          {/* @ts-expect-error - Complex nested component type inference issue */}
           {/* Header */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3 flex-1 min-w-0">
