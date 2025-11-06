@@ -2,12 +2,10 @@ import { forwardRef, type ComponentPropsWithoutRef } from 'react';
 import { Card } from '@frok/ui';
 import { Skeleton } from '@/components/ui/Skeleton';
 
-export interface QuickActionCardSkeletonProps extends ComponentPropsWithoutRef<'div'> {}
-
 /**
  * QuickActionCardSkeleton - Loading placeholder for QuickActionCard
  */
-export const QuickActionCardSkeleton = forwardRef<HTMLDivElement, QuickActionCardSkeletonProps>(
+export const QuickActionCardSkeleton = forwardRef<HTMLDivElement, ComponentPropsWithoutRef<'div'>>(
   ({ className }, ref) => {
     return (
       <div ref={ref}>
