@@ -7,6 +7,8 @@ import { RoomCard } from '@/components/smart-home/RoomCard';
 import { QuickActionCard } from '@/components/smart-home/QuickActionCard';
 import type { QuickAction } from '@/components/smart-home/QuickActionCard';
 import { ConnectionStatus } from '@/components/smart-home/ConnectionStatus';
+import { RoomCardSkeleton } from '@/components/smart-home/RoomCardSkeleton';
+import { QuickActionCardSkeleton } from '@/components/smart-home/QuickActionCardSkeleton';
 import { callHAService, turnOn, sceneTurnOn, scriptTurnOn } from '@frok/clients';
 import { useHAWebSocket, useHADevices } from '@/lib/homeassistant/useHAWebSocket';
 
@@ -14,6 +16,8 @@ export default function SmartHomeView({ initialDevices, haOk, haDetail }: { init
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [pollMs, setPollMs] = useState<number>(4000);
   const [useWebSocket] = useState(true);
+  const [isLoading, setIsLoading] = useState(initialDevices.length === 0);
+  const [error, setError] = useState<string | null>(null);
   const timer = useRef<number | null>(null);
 
   // Use WebSocket for real-time updates
@@ -22,6 +26,13 @@ export default function SmartHomeView({ initialDevices, haOk, haDetail }: { init
   // Connect to WebSocket if enabled
   const wsBaseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const { connect: wsConnect, isConnected } = useHAWebSocket();
+
+  // Clear loading state when devices are loaded
+  useEffect(() => {
+    if (devices.length > 0) {
+      setIsLoading(false);
+    }
+  }, [devices.length]);
 
   // Connect to WebSocket on mount if HA is available
   useEffect(() => {
@@ -32,10 +43,14 @@ export default function SmartHomeView({ initialDevices, haOk, haDetail }: { init
         .then(config => {
           if (config.baseUrl && config.token) {
             wsConnect(config.baseUrl, config.token);
+            setError(null); // Clear any previous errors
+          } else {
+            setError('Failed to retrieve Home Assistant configuration');
           }
         })
         .catch(err => {
           console.error('[SmartHomeView] Failed to fetch HA config:', err);
+          setError('Unable to connect to Home Assistant');
         });
     }
   }, [haOk, useWebSocket, wsBaseUrl, wsConnect]);
@@ -60,10 +75,16 @@ export default function SmartHomeView({ initialDevices, haOk, haDetail }: { init
             const j = await r.json();
             if (Array.isArray(j)) {
               setLastUpdated(new Date());
+              setIsLoading(false);
+              setError(null);
               // Note: devices are now managed by useHADevices hook
             }
+          } else {
+            setError('Failed to fetch devices');
           }
-        } catch {}
+        } catch (err) {
+          setError('Network error while fetching devices');
+        }
         schedule();
       }, pollMs) as unknown as number;
     }
@@ -110,9 +131,11 @@ export default function SmartHomeView({ initialDevices, haOk, haDetail }: { init
         await callHAService({ domain: 'light', service: 'turn_off', entity_id: allLightIds });
       }
       setLastUpdated(new Date());
-    } catch {
+      setError(null); // Clear any errors on successful action
+    } catch (err) {
       // Revert optimistic update on error - WebSocket will sync actual state
-      console.error('[SmartHomeView] Failed to execute quick action');
+      console.error('[SmartHomeView] Failed to execute quick action', err);
+      setError('Failed to control lights. Please try again.');
     }
   }
 
@@ -120,14 +143,22 @@ export default function SmartHomeView({ initialDevices, haOk, haDetail }: { init
     try {
       await sceneTurnOn(id);
       setLastUpdated(new Date());
-    } catch {}
+      setError(null);
+    } catch (err) {
+      console.error('[SmartHomeView] Failed to run scene', err);
+      setError('Failed to activate scene. Please try again.');
+    }
   }
 
   async function runScript(id: string) {
     try {
       await scriptTurnOn(id);
       setLastUpdated(new Date());
-    } catch {}
+      setError(null);
+    } catch (err) {
+      console.error('[SmartHomeView] Failed to run script', err);
+      setError('Failed to run script. Please try again.');
+    }
   }
 
   // Quick actions for QuickActionCard
@@ -206,6 +237,29 @@ export default function SmartHomeView({ initialDevices, haOk, haDetail }: { init
             <div className="text-sm text-foreground/60">{haDetail || ''}</div>
           </div>
 
+          {/* Error Banner */}
+          {error && (
+            <div className="p-3 rounded-lg bg-danger/10 border border-danger/30 text-danger text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Error:</span>
+                  <span>{error}</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setError(null);
+                    setIsLoading(true);
+                    // Trigger a re-fetch by updating lastUpdated
+                    window.location.reload();
+                  }}
+                  className="px-3 py-1 rounded-md bg-danger/20 hover:bg-danger/30 text-danger font-medium transition-colors"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div className="space-y-1">
@@ -252,31 +306,41 @@ export default function SmartHomeView({ initialDevices, haOk, haDetail }: { init
         </div>
       </Card>
 
-      {/* Quick Actions Card */}
-      <QuickActionCard
-        title="Quick Actions"
-        description="Control lights globally or run scenes and scripts"
-        actions={quickActions}
-        scenes={scenes}
-        scripts={scripts}
-        onSceneActivate={runScene}
-        onScriptRun={runScript}
-        layout="grid"
-      />
-
-      {/* Room Cards */}
-      <div className="space-y-4">
-        {areas.map((area) => (
-          <RoomCard
-            key={area}
-            room={area}
-            devices={groups.get(area) || []}
-            onAllLightsOn={() => turnOnRoomLights(area)}
-            onAllLightsOff={() => turnOffRoomLights(area)}
-            initiallyExpanded={areas.length <= 3}
+      {/* Loading State */}
+      {isLoading ? (
+        <>
+          <QuickActionCardSkeleton />
+          <RoomCardSkeleton count={3} deviceCount={4} />
+        </>
+      ) : (
+        <>
+          {/* Quick Actions Card */}
+          <QuickActionCard
+            title="Quick Actions"
+            description="Control lights globally or run scenes and scripts"
+            actions={quickActions}
+            scenes={scenes}
+            scripts={scripts}
+            onSceneActivate={runScene}
+            onScriptRun={runScript}
+            layout="grid"
           />
-        ))}
-      </div>
+
+          {/* Room Cards */}
+          <div className="space-y-4">
+            {areas.map((area) => (
+              <RoomCard
+                key={area}
+                room={area}
+                devices={groups.get(area) || []}
+                onAllLightsOn={() => turnOnRoomLights(area)}
+                onAllLightsOff={() => turnOffRoomLights(area)}
+                initiallyExpanded={areas.length <= 3}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

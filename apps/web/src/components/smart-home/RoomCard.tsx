@@ -131,7 +131,7 @@ export const RoomCard = forwardRef<HTMLDivElement, RoomCardProps>(
       >
         {/* Room Header */}
         <div
-          className="p-4 cursor-pointer"
+          className="p-4 cursor-pointer hover:bg-surface/50 transition-colors duration-200 rounded-t-lg"
           onClick={() => setIsExpanded(!isExpanded)}
           role="button"
           tabIndex={0}
