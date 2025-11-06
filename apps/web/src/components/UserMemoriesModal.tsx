@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '@frok/ui';
+import { Button, Modal } from '@frok/ui';
 import { useUserMemories, useDeleteUserMemory, useAddUserMemory } from '@/hooks/queries/useMemories';
 import { useTranslations } from '@/lib/i18n/I18nProvider';
 
@@ -60,32 +60,23 @@ export function UserMemoriesModal({ onClose }: UserMemoriesModalProps) {
   ).sort();
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div
-        className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-semibold">📚 {t('title')}</h2>
-            <p className="text-sm text-gray-400 mt-1">
-              {t('description')}
-            </p>
-          </div>
-          <Button
-            onClick={onClose}
-            variant="ghost"
-            size="sm"
-            className="text-2xl leading-none"
-          >
-            ×
-          </Button>
-        </div>
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title={`📚 ${t('title')}`}
+      description={t('description')}
+      size="xl"
+      footer={
+        <Button onClick={onClose} variant="outline">
+          {tCommon('close')}
+        </Button>
+      }
+    >
 
         {/* Tag Filter */}
         {allTags.length > 0 && (
           <div className="mb-4">
-            <label className="block text-xs text-gray-400 mb-2">{t('filterByTag')}:</label>
+            <label className="block text-xs text-foreground/70 mb-2">{t('filterByTag')}:</label>
             <div className="flex flex-wrap gap-2">
               <Button
                 onClick={() => setSelectedTag(null)}
@@ -112,7 +103,7 @@ export function UserMemoriesModal({ onClose }: UserMemoriesModalProps) {
 
         {/* Error State */}
         {error && (
-          <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+          <div className="mb-4 p-4 bg-danger/10 border border-danger/30 rounded-lg text-danger text-sm">
             ⚠️ {t('loadError')}
           </div>
         )}
@@ -128,7 +119,7 @@ export function UserMemoriesModal({ onClose }: UserMemoriesModalProps) {
               + {t('addNew')}
             </Button>
           ) : (
-            <div className="bg-gray-800 rounded-lg p-4 space-y-3">
+            <div className="bg-surface rounded-lg p-4 space-y-3">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium">{t('addNew')}</h3>
                 <Button
@@ -138,31 +129,31 @@ export function UserMemoriesModal({ onClose }: UserMemoriesModalProps) {
                   }}
                   variant="ghost"
                   size="sm"
-                  className="text-gray-400"
+                  className="text-foreground/70"
                 >
                   {tCommon('cancel')}
                 </Button>
               </div>
 
               <div>
-                <label className="block text-xs text-gray-400 mb-1">{t('contentLabel')} *</label>
+                <label className="block text-xs text-foreground/70 mb-1">{t('contentLabel')} *</label>
                 <textarea
                   value={newMemory.content}
                   onChange={(e) => setNewMemory({ ...newMemory, content: e.target.value })}
                   placeholder={t('contentPlaceholder')}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm resize-none"
+                  className="w-full px-3 py-2 bg-surface border border-border rounded text-sm resize-none"
                   rows={3}
                 />
               </div>
 
               <div>
-                <label className="block text-xs text-gray-400 mb-1">{t('tagsLabel')}</label>
+                <label className="block text-xs text-foreground/70 mb-1">{t('tagsLabel')}</label>
                 <input
                   type="text"
                   value={newMemory.tags}
                   onChange={(e) => setNewMemory({ ...newMemory, tags: e.target.value })}
                   placeholder={t('tagsPlaceholder')}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm"
+                  className="w-full px-3 py-2 bg-surface border border-border rounded text-sm"
                 />
               </div>
 
@@ -185,12 +176,12 @@ export function UserMemoriesModal({ onClose }: UserMemoriesModalProps) {
           </h3>
 
           {loading ? (
-            <div className="text-center text-gray-500 py-12">
-              <div className="inline-block w-6 h-6 border-2 border-gray-600 border-t-sky-500 rounded-full animate-spin mb-2"></div>
+            <div className="text-center text-foreground/60 py-12">
+              <div className="inline-block w-6 h-6 border-2 border-border border-t-primary rounded-full animate-spin mb-2"></div>
               <p>{tCommon('loading')}</p>
             </div>
           ) : memories.length === 0 ? (
-            <div className="text-center text-gray-500 py-12">
+            <div className="text-center text-foreground/60 py-12">
               <p className="text-4xl mb-2">📭</p>
               <p>{t('noMemories')}</p>
               <p className="text-xs mt-1">
@@ -204,7 +195,7 @@ export function UserMemoriesModal({ onClose }: UserMemoriesModalProps) {
               {memories.map((memory) => (
                 <div
                   key={memory.id}
-                  className="bg-gray-800 rounded-lg p-4 flex items-start gap-3 hover:bg-gray-750 transition group"
+                  className="bg-surface rounded-lg p-4 flex items-start gap-3 hover:bg-surface/80 transition group"
                 >
                   <div className="flex-1">
                     <p className="text-sm mb-2">{memory.content}</p>
@@ -215,7 +206,7 @@ export function UserMemoriesModal({ onClose }: UserMemoriesModalProps) {
                           {memory.tags.map((tag, i) => (
                             <span
                               key={i}
-                              className="text-xs px-2 py-0.5 bg-sky-500/20 text-sky-400 rounded cursor-pointer hover:bg-sky-500/30 transition"
+                              className="text-xs px-2 py-0.5 bg-info/20 text-info rounded cursor-pointer hover:bg-info/30 transition"
                               onClick={() => setSelectedTag(tag)}
                             >
                               {tag}
@@ -223,8 +214,8 @@ export function UserMemoriesModal({ onClose }: UserMemoriesModalProps) {
                           ))}
                         </div>
                       )}
-                      
-                      <span className="text-xs text-gray-500">
+
+                      <span className="text-xs text-foreground/60">
                         {new Date(memory.created_at).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
@@ -240,7 +231,7 @@ export function UserMemoriesModal({ onClose }: UserMemoriesModalProps) {
                     onClick={() => deleteMemory(memory.id)}
                     variant="ghost"
                     size="sm"
-                    className="text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 hover:bg-red-500/10"
+                    className="text-foreground/70 hover:text-danger opacity-0 group-hover:opacity-100 hover:bg-danger/10"
                     title={tCommon('delete')}
                   >
                     🗑️
@@ -252,8 +243,8 @@ export function UserMemoriesModal({ onClose }: UserMemoriesModalProps) {
         </div>
 
         {/* Info Section */}
-        <div className="mt-6 pt-4 border-t border-gray-800">
-          <div className="flex items-start gap-2 text-xs text-gray-400">
+        <div className="mt-6 pt-4 border-t border-border">
+          <div className="flex items-start gap-2 text-xs text-foreground/70">
             <span>💡</span>
             <div>
               <p className="font-medium mb-1">{t('aboutTitle')}:</p>
@@ -266,14 +257,6 @@ export function UserMemoriesModal({ onClose }: UserMemoriesModalProps) {
             </div>
           </div>
         </div>
-
-        {/* Close Button */}
-        <div className="mt-6 flex justify-end">
-          <Button onClick={onClose} variant="outline">
-            {tCommon('close')}
-          </Button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

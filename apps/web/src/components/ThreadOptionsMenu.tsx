@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Button } from '@frok/ui';
 import { useTranslations } from '@/lib/i18n/I18nProvider';
 
 type ThreadOptionsMenuProps = {
@@ -111,19 +112,19 @@ export function ThreadOptionsMenu({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
       <div
-        className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+        className="bg-surface border border-border rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-lg font-semibold mb-4">{t('title')}</h2>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-4 border-b border-gray-700">
+        <div className="flex gap-2 mb-4 border-b border-border">
           <button
             onClick={() => setActiveTab('organize')}
             className={`px-4 py-2 text-sm transition ${
               activeTab === 'organize'
-                ? 'border-b-2 border-sky-500 text-sky-400'
-                : 'text-gray-400 hover:text-gray-300'
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-foreground/70 hover:text-foreground'
             }`}
           >
             📁 {t('organize')}
@@ -132,8 +133,8 @@ export function ThreadOptionsMenu({
             onClick={() => setActiveTab('tools')}
             className={`px-4 py-2 text-sm transition ${
               activeTab === 'tools'
-                ? 'border-b-2 border-sky-500 text-sky-400'
-                : 'text-gray-400 hover:text-gray-300'
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-foreground/70 hover:text-foreground'
             }`}
           >
             🔧 {t('tools')}
@@ -142,8 +143,8 @@ export function ThreadOptionsMenu({
             onClick={() => setActiveTab('config')}
             className={`px-4 py-2 text-sm transition ${
               activeTab === 'config'
-                ? 'border-b-2 border-sky-500 text-sky-400'
-                : 'text-gray-400 hover:text-gray-300'
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-foreground/70 hover:text-foreground'
             }`}
           >
             ⚙️ {t('config')}
@@ -161,9 +162,9 @@ export function ThreadOptionsMenu({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder={t('titlePlaceholder')}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:border-sky-500 text-sm"
+            className="w-full px-3 py-2 bg-surface border border-border rounded focus:outline-none focus:border-primary text-sm"
           />
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-foreground/60">
             {t('titleDescription')}
           </p>
         </div>
@@ -175,10 +176,10 @@ export function ThreadOptionsMenu({
             {tags.map((tag) => (
               <span
                 key={tag}
-                className="bg-sky-500 text-white px-2 py-1 rounded text-sm flex items-center gap-1"
+                className="bg-primary text-white px-2 py-1 rounded text-sm flex items-center gap-1"
               >
                 {tag}
-                <button onClick={() => handleRemoveTag(tag)} className="hover:text-red-300">
+                <button onClick={() => handleRemoveTag(tag)} className="hover:text-danger">
                   ×
                 </button>
               </span>
@@ -191,18 +192,19 @@ export function ThreadOptionsMenu({
               onChange={(e) => setNewTag(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
               placeholder={t('tagsPlaceholder')}
-              className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:border-sky-500 text-sm"
+              className="flex-1 px-3 py-2 bg-surface border border-border rounded focus:outline-none focus:border-primary text-sm"
             />
-            <button
+            <Button
               onClick={handleAddTag}
-              className="px-4 py-2 bg-sky-500 hover:bg-sky-600 rounded text-sm transition"
+              variant="primary"
+              size="sm"
             >
               {tCommon('add')}
-            </button>
+            </Button>
           </div>
           {allTags.length > 0 && (
             <div className="mt-2">
-              <p className="text-xs text-gray-500 mb-1">Existing tags:</p>
+              <p className="text-xs text-foreground/60 mb-1">Existing tags:</p>
               <div className="flex flex-wrap gap-1">
                 {allTags
                   .filter((t) => !tags.includes(t))
@@ -210,7 +212,7 @@ export function ThreadOptionsMenu({
                     <button
                       key={tag}
                       onClick={() => setTags([...tags, tag])}
-                      className="bg-gray-800 text-gray-400 px-2 py-0.5 rounded text-xs hover:bg-gray-700"
+                      className="bg-surface text-foreground/70 px-2 py-0.5 rounded text-xs hover:bg-surface/80"
                     >
                       + {tag}
                     </button>
@@ -227,7 +229,7 @@ export function ThreadOptionsMenu({
             <select
               value={folder}
               onChange={(e) => setFolder(e.target.value)}
-              className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:border-sky-500 text-sm"
+              className="flex-1 px-3 py-2 bg-surface border border-border rounded focus:outline-none focus:border-primary text-sm"
             >
               <option value="">No folder</option>
               {allFolders.map((f) => (
@@ -246,21 +248,21 @@ export function ThreadOptionsMenu({
               if (e.target.value) setFolder(e.target.value);
             }}
             placeholder="Or create new folder..."
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:border-sky-500 text-sm"
+            className="w-full px-3 py-2 bg-surface border border-border rounded focus:outline-none focus:border-primary text-sm"
           />
         </div></div>)}
 
         {/* Tools Tab */}
         {activeTab === 'tools' && (
           <div>
-            <p className="text-sm text-gray-400 mb-4">
+            <p className="text-sm text-foreground/70 mb-4">
               Select which tools the agent can use in this conversation.
             </p>
             <div className="space-y-2">
               {AVAILABLE_TOOLS.map((tool) => (
                 <label
                   key={tool.id}
-                  className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750 transition"
+                  className="flex items-center gap-3 p-3 bg-surface rounded-lg cursor-pointer hover:bg-surface/80 transition"
                 >
                   <input
                     type="checkbox"
@@ -286,7 +288,7 @@ export function ThreadOptionsMenu({
                 {AVAILABLE_MODELS.map((model) => (
                   <label
                     key={model.id}
-                    className="flex items-start gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750 transition"
+                    className="flex items-start gap-3 p-3 bg-surface rounded-lg cursor-pointer hover:bg-surface/80 transition"
                   >
                     <input
                       type="radio"
@@ -298,16 +300,16 @@ export function ThreadOptionsMenu({
                     <div className="flex-1">
                       <div className="text-sm font-medium">
                         {model.name}
-                        {model.id === 'auto' && <span className="ml-2 text-xs text-green-400">✓ Default</span>}
+                        {model.id === 'auto' && <span className="ml-2 text-xs text-success">✓ Default</span>}
                       </div>
                       {model.description && (
-                        <div className="text-xs text-gray-500 mt-0.5">{model.description}</div>
+                        <div className="text-xs text-foreground/60 mt-0.5">{model.description}</div>
                       )}
                     </div>
                   </label>
                 ))}
               </div>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-foreground/60 mt-2">
                 💡 <strong>Auto mode</strong> analyzes your query and selects the optimal model for speed and accuracy
               </p>
             </div>
@@ -319,7 +321,7 @@ export function ThreadOptionsMenu({
                 {AGENT_STYLES.map((style) => (
                   <label
                     key={style.id}
-                    className="flex items-start gap-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750 transition"
+                    className="flex items-start gap-3 p-3 bg-surface rounded-lg cursor-pointer hover:bg-surface/80 transition"
                   >
                     <input
                       type="radio"
@@ -330,7 +332,7 @@ export function ThreadOptionsMenu({
                     />
                     <div className="flex-1">
                       <div className="text-sm font-medium">{style.name}</div>
-                      <div className="text-xs text-gray-500">{style.description}</div>
+                      <div className="text-xs text-foreground/60">{style.description}</div>
                     </div>
                   </label>
                 ))}
@@ -344,10 +346,10 @@ export function ThreadOptionsMenu({
                 value={folder}
                 onChange={(e) => setFolder(e.target.value)}
                 placeholder="Add context about this project or conversation topic..."
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:border-sky-500 text-sm resize-none"
+                className="w-full px-3 py-2 bg-surface border border-border rounded focus:outline-none focus:border-primary text-sm resize-none"
                 rows={3}
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-foreground/60 mt-1">
                 Help the agent understand the project scope and maintain context
               </p>
             </div>
@@ -356,18 +358,18 @@ export function ThreadOptionsMenu({
 
         {/* Actions */}
         <div className="flex gap-2 justify-end">
-          <button
+          <Button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded transition"
+            variant="outline"
           >
             {tCommon('cancel')}
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleSave}
-            className="px-4 py-2 bg-sky-500 hover:bg-sky-600 rounded transition"
+            variant="primary"
           >
             {tCommon('save')}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -114,9 +114,9 @@ export function ConfirmDialog({
   if (!open) return null;
 
   const variantStyles = {
-    danger: 'border-red-500/20 bg-red-500/5',
-    warning: 'border-yellow-500/20 bg-yellow-500/5',
-    info: 'border-sky-500/20 bg-sky-500/5',
+    danger: 'border-danger/20 bg-danger/5',
+    warning: 'border-warning/20 bg-warning/5',
+    info: 'border-info/20 bg-info/5',
   };
 
   return (
@@ -158,7 +158,7 @@ export function ConfirmDialog({
             variant="primary"
             onClick={handleConfirm}
             disabled={isLoading || loading}
-            className={variant === 'danger' ? 'border-red-500 text-red-500 hover:bg-red-500/10' : ''}
+            className={variant === 'danger' ? 'border-danger text-danger hover:bg-danger/10' : ''}
           >
             {isLoading || loading ? 'Loading...' : confirmLabel}
           </Button>

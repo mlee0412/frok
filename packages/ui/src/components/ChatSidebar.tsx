@@ -93,7 +93,7 @@ export function ChatSidebar({ threads, currentId, onSelect, onNew, search, onSea
               <div className="flex items-center gap-1 text-xs">
                 <button type="button" className="border rounded px-1 py-0.5" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPin?.(thread.id, !thread.pinned); }}>{thread.pinned ? t('unpin') : t('pin')}</button>
                 <button type="button" className="border rounded px-1 py-0.5" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onArchive?.(thread.id, !thread.archived); }}>{thread.archived ? t('unarchive') : t('archive')}</button>
-                <button type="button" className="border rounded px-1 py-0.5 hover:border-red-500 hover:text-red-500 transition" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirmId(thread.id); }}>{t('delete')}</button>
+                <button type="button" className="border rounded px-1 py-0.5 hover:border-danger hover:text-danger transition" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirmId(thread.id); }}>{t('delete')}</button>
               </div>
             </div>
           </div>

@@ -12,7 +12,9 @@
       "Bash(pnpm test:run:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(pnpm typecheck:*)"
+      "Bash(pnpm typecheck:*)",
+      "Bash(git push:*)",
+      "mcp__vercel__list_deployments"
     ],
     "deny": [],
     "ask": []

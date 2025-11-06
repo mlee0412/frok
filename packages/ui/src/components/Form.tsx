@@ -21,7 +21,7 @@ export function FormField({ label, error, required, description, ...inputProps }
           className="block text-sm font-medium text-foreground"
         >
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span className="text-danger ml-1">*</span>}
         </label>
       )}
       <Input
@@ -31,7 +31,7 @@ export function FormField({ label, error, required, description, ...inputProps }
         aria-describedby={error ? `${id}-error` : description ? `${id}-description` : undefined}
         className={[
           inputProps.className,
-          error ? 'border-red-500 focus:border-red-500' : '',
+          error ? 'border-danger focus:border-danger' : '',
         ].filter(Boolean).join(' ')}
       />
       {description && !error && (
@@ -42,7 +42,7 @@ export function FormField({ label, error, required, description, ...inputProps }
       {error && (
         <p
           id={`${id}-error`}
-          className="text-xs text-red-500"
+          className="text-xs text-danger"
           role="alert"
         >
           {error}

@@ -78,17 +78,17 @@ export function Modal({
       aria-labelledby="modal-title"
     >
       <div
-        className={`bg-gray-900 border border-gray-700 rounded-lg ${sizeClasses[size]} w-full max-h-[90vh] overflow-y-auto`}
+        className={`bg-surface border border-border rounded-lg ${sizeClasses[size]} w-full max-h-[90vh] overflow-y-auto`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between p-6 border-b border-gray-800">
+        <div className="flex items-start justify-between p-6 border-b border-border">
           <div className="flex-1">
             <h2 id="modal-title" className="text-lg font-semibold">
               {title}
             </h2>
             {description && (
-              <p className="text-sm text-gray-400 mt-1">{description}</p>
+              <p className="text-sm text-foreground/70 mt-1">{description}</p>
             )}
           </div>
           {showCloseButton && (
@@ -109,7 +109,7 @@ export function Modal({
 
         {/* Footer */}
         {footer && (
-          <div className="flex gap-2 justify-end p-6 border-t border-gray-800">
+          <div className="flex gap-2 justify-end p-6 border-t border-border">
             {footer}
           </div>
         )}

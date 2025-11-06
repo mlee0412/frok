@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '@frok/ui';
+import { Button, Modal } from '@frok/ui';
 import { useAgentMemories, useAddAgentMemory, useDeleteAgentMemory } from '@/hooks/queries/useMemories';
 import { useTranslations } from '@/lib/i18n/I18nProvider';
 
@@ -54,34 +54,37 @@ export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div
-        className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-lg font-semibold mb-4">🧠 {t('agentMemory.title')}</h2>
-        <p className="text-sm text-gray-400 mb-4">
-          {t('agentMemory.description')}
-        </p>
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title={`🧠 ${t('agentMemory.title')}`}
+      description={t('agentMemory.description')}
+      size="lg"
+      footer={
+        <Button onClick={onClose} variant="outline">
+          {tCommon('close')}
+        </Button>
+      }
+    >
 
         {/* Error State */}
         {error && (
-          <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+          <div className="mb-4 p-4 bg-danger/10 border border-danger/30 rounded-lg text-danger text-sm">
             ⚠️ {t('agentMemory.loadError')}
           </div>
         )}
 
         {/* Add New Memory */}
-        <div className="bg-gray-800 rounded-lg p-4 mb-4">
+        <div className="bg-surface rounded-lg p-4 mb-4">
           <h3 className="text-sm font-medium mb-3">{t('agentMemory.addNew')}</h3>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-400 mb-1">{t('agentMemory.type')}</label>
+                <label className="block text-xs text-foreground/70 mb-1">{t('agentMemory.type')}</label>
                 <select
                   value={newMemory.type}
                   onChange={(e) => setNewMemory({ ...newMemory, type: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm"
+                  className="w-full px-3 py-2 bg-surface border border-border rounded text-sm"
                 >
                   {MEMORY_TYPES.map((type) => (
                     <option key={type.id} value={type.id}>
@@ -91,7 +94,7 @@ export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) 
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">
+                <label className="block text-xs text-foreground/70 mb-1">
                   {t('agentMemory.importance')}: {newMemory.importance}
                 </label>
                 <input
@@ -105,12 +108,12 @@ export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) 
               </div>
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">{t('agentMemory.content')}</label>
+              <label className="block text-xs text-foreground/70 mb-1">{t('agentMemory.content')}</label>
               <textarea
                 value={newMemory.content}
                 onChange={(e) => setNewMemory({ ...newMemory, content: e.target.value })}
                 placeholder={t('agentMemory.contentPlaceholder')}
-                className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm resize-none"
+                className="w-full px-3 py-2 bg-surface border border-border rounded text-sm resize-none"
                 rows={2}
               />
             </div>
@@ -129,9 +132,9 @@ export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) 
         <div>
           <h3 className="text-sm font-medium mb-3">{t('agentMemory.storedTitle', { count: memories.length })}</h3>
           {loading ? (
-            <div className="text-center text-gray-500 py-8">{tCommon('loading')}</div>
+            <div className="text-center text-foreground/60 py-8">{tCommon('loading')}</div>
           ) : memories.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
+            <div className="text-center text-foreground/60 py-8">
               {t('agentMemory.empty')}
             </div>
           ) : (
@@ -139,19 +142,19 @@ export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) 
               {memories.map((memory) => (
                 <div
                   key={memory.id}
-                  className="bg-gray-800 rounded-lg p-3 flex items-start gap-3"
+                  className="bg-surface rounded-lg p-3 flex items-start gap-3"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs px-2 py-0.5 bg-sky-500/20 text-sky-400 rounded">
+                      <span className="text-xs px-2 py-0.5 bg-info/20 text-info rounded">
                         {MEMORY_TYPES.find((t) => t.id === memory.memory_type)?.name}
                       </span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-foreground/60">
                         {t('agentMemory.importanceLabel')}: {memory.importance}/10
                       </span>
                     </div>
                     <p className="text-sm">{memory.content}</p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-foreground/60 mt-1">
                       Added {new Date(memory.created_at).toLocaleDateString()}
                     </p>
                   </div>
@@ -159,7 +162,7 @@ export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) 
                     onClick={() => deleteMemory(memory.id)}
                     variant="ghost"
                     size="sm"
-                    className="text-gray-400 hover:text-red-400"
+                    className="text-foreground/70 hover:text-danger"
                   >
                     ✕
                   </Button>
@@ -168,14 +171,6 @@ export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) 
             </div>
           )}
         </div>
-
-        {/* Close Button */}
-        <div className="mt-6 flex justify-end">
-          <Button onClick={onClose} variant="outline">
-            {tCommon('close')}
-          </Button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

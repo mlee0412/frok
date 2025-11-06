@@ -67,22 +67,22 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       const t = this.context?.t || ((key: string) => key);
 
       return (
-        <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-gray-900 border border-gray-800 rounded-lg p-6">
-            <h1 className="text-xl font-bold mb-4 text-red-500">{t('error.title')}</h1>
-            <p className="text-gray-400 mb-4">
+        <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-surface border border-border rounded-lg p-6">
+            <h1 className="text-xl font-bold mb-4 text-danger">{t('error.title')}</h1>
+            <p className="text-foreground/70 mb-4">
               {t('error.description')}
             </p>
             {this.state.errorId && (
-              <p className="text-xs text-gray-500 mb-4">
-                {t('error.errorId')}: <code className="bg-gray-950 px-1 py-0.5 rounded">{this.state.errorId}</code>
+              <p className="text-xs text-foreground/60 mb-4">
+                {t('error.errorId')}: <code className="bg-background px-1 py-0.5 rounded">{this.state.errorId}</code>
               </p>
             )}
             <details className="mb-4">
-              <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-400">
+              <summary className="cursor-pointer text-sm text-foreground/60 hover:text-foreground/70">
                 {t('error.details')}
               </summary>
-              <pre className="mt-2 text-xs bg-gray-950 p-3 rounded overflow-auto text-red-400 max-h-40">
+              <pre className="mt-2 text-xs bg-background p-3 rounded overflow-auto text-danger max-h-40">
                 {this.state.error?.message}
                 {this.state.error?.stack && (
                   <>
@@ -95,13 +95,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             <div className="flex gap-2">
               <button
                 onClick={() => window.location.reload()}
-                className="flex-1 px-4 py-2 bg-sky-500 hover:bg-sky-600 rounded transition"
+                className="flex-1 px-4 py-2 bg-primary hover:bg-primary/90 rounded transition"
               >
                 {t('error.reload')}
               </button>
               <button
                 onClick={() => this.setState({ hasError: false, error: null, errorId: null })}
-                className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded transition"
+                className="flex-1 px-4 py-2 bg-surface hover:bg-surface/80 rounded transition"
               >
                 {t('error.tryAgain')}
               </button>
