@@ -26,6 +26,9 @@ Thumbs.db
 !.vscode/settings.json
 !.vscode/extensions.json
 
+# Claude Code settings (may contain secrets)
+.claude/settings.json
+
 # Turbo cache
 .turbo/
 
