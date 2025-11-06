@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Device } from '@frok/clients';
 import ColorWheel from './ColorWheel';
+import { ThermostatDial } from './ThermostatDial';
 import {
   toggle,
   turnOn,
@@ -60,6 +61,7 @@ export default function DeviceControls({ device }: { device: Device }) {
     return typeof t === 'number' ? t : '';
   });
   const [wheelOpen, setWheelOpen] = useState(false);
+  const [dialOpen, setDialOpen] = useState(false);
   const [tempLow, setTempLow] = useState<number | ''>(() => {
     const a = device.attrs || {};
     const v = a['target_temp_low'] as number | undefined;
@@ -339,6 +341,7 @@ export default function DeviceControls({ device }: { device: Device }) {
             <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
               <input type="number" step="0.5" value={temp} onChange={(e) => setTemp(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-24" placeholder="Temp" />
               <button disabled={pending || temp === ''} className="border rounded px-2 py-1" onClick={() => temp !== '' && run(() => climateSetTemperature(device.id, Number(temp)))}>Set</button>
+              <button disabled={pending} className="border rounded px-2 py-1" onClick={() => setDialOpen(true)}>Dial</button>
             </div>
           )}
           {supportsRange && (
@@ -350,6 +353,27 @@ export default function DeviceControls({ device }: { device: Device }) {
           )}
           {msg && <span className="text-xs text-foreground/60">{msg}</span>}
         </div>
+        {dialOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="rounded-lg border border-primary bg-background p-6 shadow-xl">
+              <div className="flex flex-col items-center gap-4">
+                <h3 className="text-lg font-semibold text-foreground">Set Temperature</h3>
+                <ThermostatDial
+                  size={240}
+                  value={typeof temp === 'number' ? temp : 20}
+                  min={10}
+                  max={35}
+                  step={0.5}
+                  onChange={(value) => setTemp(value)}
+                />
+                <div className="flex items-center gap-3 w-full">
+                  <button className="flex-1 border rounded-lg px-4 py-2 text-foreground hover:bg-surface transition-colors" onClick={() => setDialOpen(false)}>Cancel</button>
+                  <button className="flex-1 border border-primary rounded-lg px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium" onClick={() => run(() => climateSetTemperature(device.id, Number(temp || 20))).then(() => setDialOpen(false))}>Apply</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
