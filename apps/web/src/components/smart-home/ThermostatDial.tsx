@@ -124,9 +124,9 @@ export const ThermostatDial = forwardRef<HTMLDivElement, ThermostatDialProps>(
     const backgroundArc = createArcPath(startAngle, endAngle, radius);
     const valueArc = createArcPath(startAngle, currentAngle, radius);
 
-    // Handle pointer interaction
+    // Handle pointer interaction with improved angle calculation
     const handlePointerMove = (clientX: number, clientY: number) => {
-      if (disabled) return;
+      if (disabled || !onChange) return;
 
       const svg = dialRef.current;
       if (!svg) return;
@@ -135,60 +135,74 @@ export const ThermostatDial = forwardRef<HTMLDivElement, ThermostatDialProps>(
       const x = clientX - rect.left - centerX;
       const y = clientY - rect.top - centerY;
 
-      // Calculate angle from center
+      // Calculate angle from center (in radians, then convert to degrees)
       let angle = Math.atan2(y, x) * (180 / Math.PI);
 
-      // Normalize angle to 0-360
+      // Normalize angle to 0-360 range
       if (angle < 0) angle += 360;
 
-      // Map angle to value range (210° to 510° = -150° to 150° in standard coords)
-      // Adjust angle to match our 210-510 range
-      let adjustedAngle = angle;
-      if (angle >= 0 && angle < 210) {
-        adjustedAngle = angle + 360; // Handle wrap-around
+      // Our dial uses 210° to 510° (wraps around 0°)
+      // Convert to our coordinate system:
+      // - Bottom left (210°) should map to min value
+      // - Bottom right (510° = 150°) should map to max value
+      let mappedAngle: number;
+
+      if (angle >= 210 && angle <= 360) {
+        // Left side of dial (210° to 360°)
+        mappedAngle = angle;
+      } else if (angle >= 0 && angle <= 150) {
+        // Right side of dial (0° to 150° = 360° to 510°)
+        mappedAngle = angle + 360;
+      } else {
+        // Outside valid range (150° to 210°) - snap to nearest edge
+        const distToStart = Math.min(Math.abs(angle - 210), Math.abs(angle - (210 - 360)));
+        const distToEnd = Math.abs(angle - 150);
+        mappedAngle = distToStart < distToEnd ? 210 : 510;
       }
 
       // Clamp to valid range
-      if (adjustedAngle < startAngle || adjustedAngle > endAngle) {
-        // Find closest valid angle
-        const distToStart = Math.abs(adjustedAngle - startAngle);
-        const distToEnd = Math.abs(adjustedAngle - endAngle);
-        adjustedAngle = distToStart < distToEnd ? startAngle : endAngle;
-      }
+      mappedAngle = Math.max(startAngle, Math.min(endAngle, mappedAngle));
 
-      // Convert angle to value
-      const normalizedAngle = (adjustedAngle - startAngle) / angleRange;
-      const newValue = min + normalizedAngle * (max - min);
+      // Convert angle to value (0 to 1)
+      const normalizedAngle = (mappedAngle - startAngle) / angleRange;
+      const rawValue = min + normalizedAngle * (max - min);
 
-      // Round to step
-      const steppedValue = Math.round(newValue / step) * step;
+      // Round to step and clamp
+      const steppedValue = Math.round(rawValue / step) * step;
       const clampedValue = Math.max(min, Math.min(max, steppedValue));
 
-      if (clampedValue !== value) {
-        onChange?.(clampedValue);
+      // Only call onChange if value actually changed
+      if (Math.abs(clampedValue - value) >= step / 2) {
+        onChange(clampedValue);
       }
     };
 
-    // Mouse events
+    // Mouse events with improved event handling
     const handleMouseDown = (e: React.MouseEvent) => {
+      if (disabled) return;
       e.preventDefault();
+      e.stopPropagation();
       setIsDragging(true);
       handlePointerMove(e.clientX, e.clientY);
     };
 
     useEffect(() => {
       const handleMouseMove = (e: MouseEvent) => {
-        if (isDragging) {
+        if (isDragging && !disabled) {
+          e.preventDefault();
           handlePointerMove(e.clientX, e.clientY);
         }
       };
 
-      const handleMouseUp = () => {
-        setIsDragging(false);
+      const handleMouseUp = (e: MouseEvent) => {
+        if (isDragging) {
+          e.preventDefault();
+          setIsDragging(false);
+        }
       };
 
       if (isDragging) {
-        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mousemove', handleMouseMove, { passive: false });
         window.addEventListener('mouseup', handleMouseUp);
       }
 
@@ -196,11 +210,13 @@ export const ThermostatDial = forwardRef<HTMLDivElement, ThermostatDialProps>(
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
       };
-    }, [isDragging]);
+    }, [isDragging, disabled]);
 
-    // Touch events
+    // Touch events with improved event handling
     const handleTouchStart = (e: React.TouchEvent) => {
+      if (disabled) return;
       e.preventDefault();
+      e.stopPropagation();
       setIsDragging(true);
       const touch = e.touches[0];
       if (touch) {
@@ -209,15 +225,19 @@ export const ThermostatDial = forwardRef<HTMLDivElement, ThermostatDialProps>(
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
-      if (isDragging) {
-        const touch = e.touches[0];
-        if (touch) {
-          handlePointerMove(touch.clientX, touch.clientY);
-        }
+      if (!isDragging || disabled) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const touch = e.touches[0];
+      if (touch) {
+        handlePointerMove(touch.clientX, touch.clientY);
       }
     };
 
-    const handleTouchEnd = () => {
+    const handleTouchEnd = (e: React.TouchEvent) => {
+      if (disabled) return;
+      e.preventDefault();
+      e.stopPropagation();
       setIsDragging(false);
     };
 
@@ -279,6 +299,7 @@ export const ThermostatDial = forwardRef<HTMLDivElement, ThermostatDialProps>(
           aria-valuemax={max}
           aria-valuenow={value}
           aria-valuetext={`${value}${unit}`}
+          style={{ touchAction: 'none' }}
         >
           {/* Background arc */}
           <path

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BaseCard } from './BaseCard';
 import { gradients } from './theme';
 import { ThermostatDial } from '../smart-home/ThermostatDial';
@@ -30,6 +30,17 @@ export interface ClimateCardEnhancedProps {
   onSetMode?: (entityId: string, mode: string) => Promise<void>;
 }
 
+type TempUnit = 'C' | 'F';
+
+// Temperature conversion utilities
+const celsiusToFahrenheit = (celsius: number): number => {
+  return (celsius * 9) / 5 + 32;
+};
+
+const fahrenheitToCelsius = (fahrenheit: number): number => {
+  return ((fahrenheit - 32) * 5) / 9;
+};
+
 export function ClimateCardEnhanced({
   entity,
   height = 'auto',
@@ -38,17 +49,41 @@ export function ClimateCardEnhanced({
 }: ClimateCardEnhancedProps) {
   const [showThermostat, setShowThermostat] = useState(false);
   const [pending, setPending] = useState(false);
+  const [tempUnit, setTempUnit] = useState<TempUnit>('C');
+
+  // Load temperature unit preference from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('frok-temp-unit');
+    if (saved === 'F' || saved === 'C') {
+      setTempUnit(saved);
+    }
+  }, []);
+
+  // Save temperature unit preference
+  const toggleTempUnit = () => {
+    const newUnit: TempUnit = tempUnit === 'C' ? 'F' : 'C';
+    setTempUnit(newUnit);
+    localStorage.setItem('frok-temp-unit', newUnit);
+  };
 
   const attrs = entity.attrs || {};
-  const currentTemp = attrs.current_temperature != null
-    ? Math.round(attrs.current_temperature)
+  const currentTempC = attrs.current_temperature != null
+    ? attrs.current_temperature
     : null;
-  const targetTemp = attrs.target_temp || attrs.target_temperature || 22;
+  const targetTempC = attrs.target_temp || attrs.target_temperature || 22;
   const hvacMode = attrs.hvac_mode || entity.state;
   const hvacAction = attrs.hvac_action;
   const hvacModes = attrs.hvac_modes || ['off', 'heat', 'cool', 'auto'];
-  const minTemp = attrs.min_temp || 16;
-  const maxTemp = attrs.max_temp || 30;
+  const minTempC = attrs.min_temp || 16;
+  const maxTempC = attrs.max_temp || 30;
+
+  // Convert temperatures based on selected unit
+  const currentTemp = currentTempC != null
+    ? (tempUnit === 'F' ? celsiusToFahrenheit(currentTempC) : currentTempC)
+    : null;
+  const targetTemp = tempUnit === 'F' ? celsiusToFahrenheit(targetTempC) : targetTempC;
+  const minTemp = tempUnit === 'F' ? celsiusToFahrenheit(minTempC) : minTempC;
+  const maxTemp = tempUnit === 'F' ? celsiusToFahrenheit(maxTempC) : maxTempC;
 
   // Determine gradient based on hvac_action
   let gradient = gradients['blue-purple'];
@@ -78,7 +113,9 @@ export function ClimateCardEnhanced({
     if (!onSetTemp || pending) return;
     setPending(true);
     try {
-      await onSetTemp(entity.id, temp);
+      // Convert back to Celsius if needed (HA uses Celsius)
+      const tempInCelsius = tempUnit === 'F' ? fahrenheitToCelsius(temp) : temp;
+      await onSetTemp(entity.id, tempInCelsius);
     } finally {
       setPending(false);
     }
@@ -117,7 +154,7 @@ export function ClimateCardEnhanced({
         disabled={pending}
       >
         <div className="flex flex-col h-full gap-3 p-2">
-          {/* Temperature Display */}
+          {/* Temperature Display with Unit Toggle */}
           <div className="flex items-center justify-between">
             <div className="flex-1">
               {currentTemp != null && (
@@ -130,7 +167,7 @@ export function ClimateCardEnhanced({
                     lineHeight: 1,
                   }}
                 >
-                  {currentTemp}°
+                  {Math.round(currentTemp)}°{tempUnit}
                 </div>
               )}
               {targetTemp != null && (
@@ -142,36 +179,52 @@ export function ClimateCardEnhanced({
                     marginTop: '4px',
                   }}
                 >
-                  Target: {Math.round(targetTemp)}°
+                  Target: {Math.round(targetTemp)}°{tempUnit}
                 </div>
               )}
             </div>
 
-            {/* Dial Button */}
-            {onSetTemp && (
+            {/* Unit Toggle Button */}
+            <div className="flex flex-col gap-2">
               <button
-                onClick={() => setShowThermostat(true)}
-                disabled={pending}
-                className="p-3 rounded-lg transition-all"
+                onClick={toggleTempUnit}
+                className="px-3 py-2 rounded-lg transition-all text-xs font-bold"
                 style={{
-                  background: 'rgba(34,211,238,0.2)',
-                  border: '1px solid rgba(34,211,238,0.4)',
+                  background: 'rgba(34,211,238,0.15)',
+                  border: '1px solid rgba(34,211,238,0.3)',
                   color: '#22d3ee',
                 }}
+                title={`Switch to ${tempUnit === 'C' ? 'Fahrenheit' : 'Celsius'}`}
               >
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 6v6l4 2" />
-                </svg>
+                °{tempUnit}
               </button>
-            )}
+
+              {/* Dial Button */}
+              {onSetTemp && (
+                <button
+                  onClick={() => setShowThermostat(true)}
+                  disabled={pending}
+                  className="p-3 rounded-lg transition-all"
+                  style={{
+                    background: 'rgba(34,211,238,0.2)',
+                    border: '1px solid rgba(34,211,238,0.4)',
+                    color: '#22d3ee',
+                  }}
+                >
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 6v6l4 2" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Mode/Action Status */}
@@ -219,13 +272,28 @@ export function ClimateCardEnhanced({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="rounded-xl border border-primary bg-background p-6 shadow-2xl max-w-md w-full mx-4">
             <div className="flex flex-col items-center gap-4">
-              <h3 className="text-xl font-semibold text-foreground">Set Temperature</h3>
+              <div className="flex items-center justify-between w-full">
+                <h3 className="text-xl font-semibold text-foreground">Set Temperature</h3>
+                <button
+                  onClick={toggleTempUnit}
+                  className="px-3 py-1.5 rounded-lg transition-all text-sm font-bold"
+                  style={{
+                    background: 'rgba(34,211,238,0.15)',
+                    border: '1px solid rgba(34,211,238,0.3)',
+                    color: '#22d3ee',
+                  }}
+                  title={`Switch to ${tempUnit === 'C' ? 'Fahrenheit' : 'Celsius'}`}
+                >
+                  °{tempUnit === 'C' ? 'F' : 'C'}
+                </button>
+              </div>
               <ThermostatDial
                 size={260}
                 value={targetTemp}
                 min={minTemp}
                 max={maxTemp}
-                step={0.5}
+                step={tempUnit === 'F' ? 1 : 0.5}
+                unit={`°${tempUnit}`}
                 onChange={handleTempChange}
               />
               <button

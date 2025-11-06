@@ -15,7 +15,10 @@ export interface LightEntity {
     color_temp_kelvin?: number;
     rgb_color?: [number, number, number];
     hs_color?: [number, number];
+    xy_color?: [number, number];
     effect?: string;
+    effect_list?: string[];
+    supported_color_modes?: string[];
   };
 }
 

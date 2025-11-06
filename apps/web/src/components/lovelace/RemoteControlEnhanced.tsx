@@ -515,34 +515,6 @@ export function RemoteControlEnhanced({
           </button>
         </div>
 
-        {/* Samsung TV HDMI Source Selector */}
-        {samsungTVEntityId && onSamsungTVSource && (
-          <div className="space-y-2">
-            <div className="text-xs font-semibold opacity-70 px-1" style={{ color: 'white' }}>
-              Samsung TV - HDMI Source
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {['HDMI 1', 'HDMI 2', 'HDMI 3', 'HDMI 4'].map((source) => (
-                <button
-                  key={source}
-                  disabled={pending}
-                  onClick={() => handleSamsungTVSource(source)}
-                  className="px-3 py-2.5 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2))',
-                    border: '1px solid rgba(59, 130, 246, 0.5)',
-                    color: 'white',
-                    fontSize: '12px',
-                    boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)',
-                  }}
-                >
-                  <span style={{ fontSize: '16px' }}>📺</span>
-                  <span>{source}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* App Shortcuts - Apple TV Apps */}
         <div className="space-y-2">
@@ -564,20 +536,58 @@ export function RemoteControlEnhanced({
               <span style={{ fontSize: '20px' }}>🏠</span>
               <span>Home</span>
             </button>
-            <button
-              disabled={pending}
-              onClick={() => handleCommand('top_menu')}
-              className="px-3 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
-              style={{
-                background: 'linear-gradient(135deg, rgba(100, 116, 139, 0.3), rgba(71, 85, 105, 0.2))',
-                border: '1px solid rgba(100, 116, 139, 0.5)',
-                color: 'white',
-                fontSize: '13px',
-              }}
-            >
-              <span style={{ fontSize: '20px' }}>⬆️</span>
-              <span>Menu</span>
-            </button>
+
+            {/* Samsung TV HDMI Source Dropdown (Replaces Menu Button) */}
+            {samsungTVEntityId && onSamsungTVSource ? (
+              <div className="relative">
+                <select
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      handleSamsungTVSource(e.target.value);
+                      e.target.value = ''; // Reset after selection
+                    }
+                  }}
+                  disabled={pending}
+                  className="w-full px-3 py-3 rounded-lg font-semibold transition-all appearance-none cursor-pointer text-center"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2))',
+                    border: '1px solid rgba(59, 130, 246, 0.5)',
+                    color: 'white',
+                    fontSize: '13px',
+                    paddingRight: '30px',
+                  }}
+                >
+                  <option value="" disabled>📺 HDMI Source</option>
+                  <option value="HDMI 1">HDMI 1</option>
+                  <option value="HDMI 2">HDMI 2</option>
+                  <option value="HDMI 3">HDMI 3</option>
+                  <option value="HDMI 4">HDMI 4</option>
+                  <option value="HDMI Arc">HDMI Arc</option>
+                </select>
+                <div
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
+                  style={{ color: 'white' }}
+                >
+                  ▼
+                </div>
+              </div>
+            ) : (
+              <button
+                disabled={pending}
+                onClick={() => handleCommand('top_menu')}
+                className="px-3 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(100, 116, 139, 0.3), rgba(71, 85, 105, 0.2))',
+                  border: '1px solid rgba(100, 116, 139, 0.5)',
+                  color: 'white',
+                  fontSize: '13px',
+                }}
+              >
+                <span style={{ fontSize: '20px' }}>⬆️</span>
+                <span>Menu</span>
+              </button>
+            )}
           </div>
           <div className="grid grid-cols-3 gap-2">
             {/* YouTube */}

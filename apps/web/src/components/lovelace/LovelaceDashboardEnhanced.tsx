@@ -14,6 +14,9 @@ import {
   callHAService,
   lightSetBrightnessPct,
   lightSetColorTemp,
+  lightSetEffect,
+  lightSetHS,
+  lightSetRGB,
 } from '@frok/clients';
 import {
   SceneCard,
@@ -81,8 +84,12 @@ export default function LovelaceDashboardEnhanced({
   // Find specific HVAC entity
   const hvacEntity = devices.find((d) => d.id === 'climate.simon_aire_inc');
 
-  // Find Samsung TV for HDMI source selector
-  const samsungTV = mediaPlayers.find((d) => d.id.toLowerCase().includes('samsung') || d.name.toLowerCase().includes('samsung'));
+  // Find Samsung TV for HDMI source selector (remote.tv_samsung_7_series_65 or auto-detect)
+  const samsungTV = devices.find((d) =>
+    d.id === 'remote.tv_samsung_7_series_65' ||
+    d.id.toLowerCase().includes('samsung') ||
+    d.name.toLowerCase().includes('samsung')
+  );
 
   // Convert helpers
   const convertToSwitch = (d: Device): SwitchEntity => ({
@@ -143,6 +150,21 @@ export default function LovelaceDashboardEnhanced({
 
   const handleColorTempChange = async (entityId: string, colorTemp: number) => {
     await lightSetColorTemp(entityId, colorTemp);
+    await refresh();
+  };
+
+  const handleEffectChange = async (entityId: string, effect: string) => {
+    await lightSetEffect(entityId, effect);
+    await refresh();
+  };
+
+  const handleHSColorChange = async (entityId: string, h: number, s: number) => {
+    await lightSetHS(entityId, h, s);
+    await refresh();
+  };
+
+  const handleRGBColorChange = async (entityId: string, r: number, g: number, b: number) => {
+    await lightSetRGB(entityId, r, g, b);
     await refresh();
   };
 
@@ -375,6 +397,9 @@ export default function LovelaceDashboardEnhanced({
             onAreaToggle={handleAreaToggle}
             onBrightnessChange={handleBrightnessChange}
             onColorTempChange={handleColorTempChange}
+            onEffectChange={handleEffectChange}
+            onHSColorChange={handleHSColorChange}
+            onRGBColorChange={handleRGBColorChange}
           />
         </div>
       )}
