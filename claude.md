@@ -1,6 +1,6 @@
 # FROK Project - Claude Code Instructions
 
-**Last Updated**: 2025-11-05 (Session #13 - CLAUDE.md Optimization)
+**Last Updated**: 2025-11-05 (Session #14 - UI Design Consistency - 100% Compliance Achieved)
 
 > 📚 **Complete Documentation**: [DOCS_INDEX.md](DOCS_INDEX.md) | [Current Status](STATUS.md) | [Session History](docs/development/SESSION_HISTORY.md)
 > 🏗️ **Architecture**: [System Architecture](docs/ARCHITECTURE.md) | [Agent System](docs/AGENTS.md)
@@ -183,17 +183,70 @@ import type { ChatThreadRow, ChatMessageRow } from '@/types/database';
 
 ### Styling Standards
 
-**Always use CSS variables** (never hardcoded colors):
+**CRITICAL: Always use CSS variables** (never hardcoded colors):
 
 ```typescript
-// ❌ Wrong
-className = 'bg-gray-900 text-gray-400';
+// ❌ Wrong - Hardcoded colors
+className = 'bg-gray-900 text-gray-400 border-red-500';
 
-// ✅ Correct
-className = 'bg-surface text-foreground/70';
+// ✅ Correct - Semantic tokens
+className = 'bg-surface text-foreground/70 border-danger';
 ```
 
-**Available variables**: `--color-primary`, `--color-surface`, `--color-border`, `--color-foreground`
+**Design Token System** (Session #14 - 100% compliance achieved):
+
+All colors MUST use semantic CSS variables from `packages/ui/styles/tokens.css`:
+
+#### Layout & Backgrounds
+- `bg-background` - Page backgrounds (#0a0a0a)
+- `bg-surface` - Cards, modals, inputs (rgba(255,255,255,0.04))
+- `border-border` - All borders (rgba(255,255,255,0.1))
+
+#### Text Colors
+- `text-foreground` - Primary text (#ededed)
+- `text-foreground/70` - Secondary text
+- `text-foreground/60` - Tertiary/help text
+
+#### Semantic Colors
+- `text-primary` / `bg-primary` / `border-primary` - Primary actions (#22d3ee)
+- `text-danger` / `bg-danger` / `border-danger` - Errors, delete actions (#ef4444)
+- `text-warning` / `bg-warning` / `border-warning` - Warning states (#f59e0b)
+- `text-success` / `bg-success` / `border-success` - Success states (#22c55e)
+- `text-info` / `bg-info` / `border-info` - Info badges (#06b6d4)
+- `text-accent` / `bg-accent` / `border-accent` - Accent elements (#3b82f6)
+
+#### Common Patterns
+
+**Buttons**: Always use `<Button>` component from `@frok/ui`
+```typescript
+<Button variant="primary">Save</Button>
+<Button variant="outline">Cancel</Button>
+<Button variant="ghost">Close</Button>
+```
+
+**Modals**: Always use `<Modal>` component from `@frok/ui`
+```typescript
+<Modal isOpen={true} onClose={onClose} title="Title" size="lg">
+  {/* Content */}
+</Modal>
+```
+
+**Error States**:
+```typescript
+className = 'bg-danger/10 border-danger/30 text-danger'
+```
+
+**Info Badges**:
+```typescript
+className = 'bg-info/20 text-info'
+```
+
+**Loading Skeletons**:
+```typescript
+className = 'bg-surface/50 animate-pulse'
+```
+
+**⚠️ NEVER use**: `gray-*`, `red-*`, `blue-*`, `sky-*`, `green-*`, `yellow-*` color classes
 
 ## Documentation Requirements
 
