@@ -15,3 +15,4 @@ export { ConfirmDialog, useConfirmDialog } from './components/ConfirmDialog';
 export { Modal } from './components/Modal';
 export { useModal } from './hooks/useModal';
 export { Form, FormField } from './components/Form';
+export { DigitalClock } from './components/DigitalClock';

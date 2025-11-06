@@ -1,83 +1,122 @@
 # 🚀 FROK Project Status
 
-**Last Updated**: 2025-11-02
+**Last Updated**: 2025-11-05
 **Current Session**: #13
-**Active Sprint**: Multi-Phase Implementation
+**Active Sprint**: Code Review Follow-up & Mobile Enhancement (5-Week Plan)
 
 ---
 
 ## 📍 Current Location
 
 ```
-✅ Phase 0: Quick Wins (COMPLETE)
-   ├─ Auto thread titles
-   ├─ Context-aware suggestions
-   └─ Cost tracking & analytics
+✅ Previous Sessions Complete
+   ├─ Session #10-12: Foundation (OpenAI Agent, i18n, PWA)
+   ├─ Phase 1: File Generation (PDF, PPTX, DOCX)
+   ├─ Phase 2: Performance (Memory, Streaming, Tool Approval)
+   └─ Phase 3.1: Weather Integration
 
-✅ Session #10-12: Foundation Complete (COMPLETE)
-   ├─ OpenAI Agent Upgrade (structured outputs, guardrails, caching)
-   ├─ Internationalization (English + Korean, 660+ keys)
-   └─ PWA + Testing Framework
+🔍 Session #13: Code Review Complete (2025-11-05)
+   ├─ ✅ Home Assistant audit (90% score, found security issues)
+   ├─ ✅ Agent system review (91% complete, 29 test failures)
+   └─ ✅ UI/UX analysis (Desktop 95%, Mobile 60%)
 
-✅ Phase 1: File Generation & Export (COMPLETE - Session #13)
-   ├─ ✅ PDF Generation (text documents, auto-formatting)
-   ├─ ✅ PowerPoint Generation (multi-slide presentations)
-   └─ ✅ Word Document Generation (rich text with markdown)
+⏳ NEW: 5-Week Implementation Plan (163 hours, 25 tasks)
+   Week 1: Foundation & Critical Fixes
+   ├─ ⏳ Fix 29 failing agent tests (configure Vitest)
+   ├─ ⏳ 🔴 P0: Secure 4 HA API routes (auth + rate limiting)
+   ├─ ⏳ Build mobile header (clock + weather + shortcuts)
+   └─ ⏳ Create circular tooltip selector (radial menu)
 
-✅ Phase 2: Performance Improvements (COMPLETE - Session #13)
-   ├─ ✅ Phase 2.1: Memory search optimization (hybrid vector + keyword)
-   ├─ ✅ Phase 2.2: Streaming progress indicators (real-time execution visibility)
-   └─ ✅ Phase 2.3: Tool approval system (safety guardrails for dangerous operations)
+   Week 2: Radial Menu & UI Consistency
+   ├─ Add media actions (volume mute, play/pause)
+   ├─ Fix Modal/Button design inconsistencies
+   └─ Implement HA entity registry sync
 
-✅ Phase 3.1: Weather Integration (COMPLETE - Session #13)
-   ├─ ✅ Weather agent tool (natural language queries)
-   ├─ ✅ Weather API endpoint (auth + rate limiting)
-   ├─ ✅ WeatherCard dashboard component (current + 5-day forecast)
-   └─ ✅ OpenWeatherMap integration (free tier, 1k calls/day)
+   Week 3: Mobile UI Overhaul (32 hours)
+   ├─ Bottom tab navigation
+   ├─ Responsive design system updates
+   └─ Touch targets + gestures
 
-⏳ Phase 3.2-3.4: Smart Dashboard Integrations (NEXT)
-   ├─ Google Calendar (OAuth + scheduling)
-   ├─ Gmail integration (OAuth + email management)
-   └─ Daily Brief generation (aggregates weather + calendar + email)
+   Week 4: Advanced HA Features (42 hours)
+   ├─ WebSocket real-time updates
+   ├─ Multi-select bulk actions
+   └─ Historical analytics dashboard
+
+   Week 5: Agent System & Advanced Mobile (32 hours)
+   ├─ Route consolidation + tool approval UI
+   ├─ Offline mode + PWA enhancements
+   └─ Camera integration + voice optimization
 ```
 
 ---
 
 ## 🎯 Active Work (This Sprint)
 
-### ✅ Phase 1: File Generation & Export - COMPLETE
-**Goal**: Enable professional document generation from conversations and agent responses
-**Timeline**: 2-3 weeks (Completed in 4 hours!)
+### 🔍 Session #13: Comprehensive Code Review - COMPLETE
+**Goal**: Audit entire codebase for Home Assistant, Agent, and UI/UX issues
+**Timeline**: 2 days (Completed!)
 **Status**: ✅ **COMPLETE**
 
-#### Completed Tasks
-- [x] **PDF Generation** ✅
-  - Installed jspdf + html2canvas
-  - Created `/api/export/pdf` endpoint (245 lines)
-  - Added `pdf_generator` tool to agent system
-  - Supports auto-formatting, headers, bullet points
-  - Rate limited: 60 req/min
+#### Code Review Results
+- **Home Assistant Integration**: 90% score
+  - ✅ 18 Lovelace components, 4 API endpoints, 30+ helper functions
+  - 🔴 **CRITICAL**: 4 API routes lack authentication/rate limiting
+  - ⚠️ Hardcoded entity IDs (not portable)
+  - ⚠️ Database tables exist but unused (no entity sync)
+  - ⚠️ Mobile touch targets too small (32-44px vs 48px minimum)
 
-- [x] **PowerPoint Generation** ✅
-  - Installed pptxgenjs
-  - Created `/api/export/pptx` endpoint (297 lines)
-  - Added `pptx_generator` tool to agent system
-  - 5 slide layouts, 4 themes, speaker notes
-  - Rate limited: 30 req/min
+- **Agent System**: 91% complete
+  - ✅ 6-agent orchestration fully functional
+  - ✅ 16 production tools (6 OpenAI + 5 custom + 5 file generation)
+  - ✅ Performance excellent (30-50% cache hit rate, <2s responses)
+  - 🔴 **CRITICAL**: 29/34 tests failing (environment configuration issue)
+  - ⚠️ Route duplication (smart-stream vs smart-stream-enhanced)
+  - ⚠️ Structured outputs 90% done but not enabled by default
 
-- [x] **Word Document Generation** ✅
-  - Installed docx library
-  - Created `/api/export/docx` endpoint (383 lines)
-  - Added `docx_generator` tool to agent system
-  - Rich text formatting with markdown support
-  - Rate limited: 60 req/min
+- **UI/UX Design System**: Desktop 95%, Mobile 60%
+  - ✅ 54 components (14 core + 40 app-specific)
+  - ✅ Design token system solid
+  - ⚠️ Only 20% mobile-responsive coverage
+  - ⚠️ Modal uses hardcoded `bg-gray-900` instead of CSS variables
+  - ⚠️ Button primary variant looks like outline (should be filled)
+  - ⚠️ No mobile-first patterns (bottom nav, swipeable views, full-screen modals)
 
-**Total**: 3 file formats, 6 new files, ~1,730 lines of code
+#### Documentation Created
+- [x] `docs/development/IMPLEMENTATION_PLAN_SESS13.md` (633 lines)
+  - 5-week plan with 25 tasks (163 hours)
+  - Week-by-week breakdown with checkpoints
+  - Technical specifications for new features
+  - Risk mitigation strategies
 
-### 🚧 Phase 2: Performance Improvements - NEXT
-**Goal**: Optimize memory search, add streaming progress, implement tool approval
-**Timeline**: 2-3 weeks
+### 🚧 Week 1: Foundation & Critical Fixes - IN PROGRESS
+**Goal**: Fix tests, secure HA routes, build mobile header + radial menu
+**Timeline**: 5 days (40 hours)
 **Status**: ⏳ **READY TO START**
+
+#### Tasks
+- [ ] **Day 1-2**: Fix agent test environment (8 hours)
+  - Configure Vitest with jsdom or @vitest/browser
+  - Verify all 34 tests pass
+  - **Checkpoint**: `pnpm test` shows 34/34 passing
+
+- [ ] **Day 2-3**: 🔴 P0 Security - Secure HA routes (6 hours)
+  - Add auth + rate limiting to 4 routes: `/api/ha/search`, `/api/ha/call`, `/api/ha/service`, `/api/devices`
+  - Create Zod validation schemas
+  - **Checkpoint**: Routes return 401 without auth, 429 when rate limited
+
+- [ ] **Day 3-4**: Build mobile header component (12 hours)
+  - Digital clock (Date/Day/Time)
+  - Simplified weather widget (badges/indicators)
+  - Smart home control panel shortcut
+  - All lights on/off toggle
+  - **Checkpoint**: Mobile header renders correctly on <768px
+
+- [ ] **Day 5**: Create circular tooltip selector (8 hours)
+  - Long-press gesture detection (800ms)
+  - Radial menu UI with 6+ slots
+  - Volume mute action (media_player.sonos)
+  - Play/pause action (media_player.living_room)
+  - **Checkpoint**: Radial menu opens on long-press with 2 working actions
 
 ---
 

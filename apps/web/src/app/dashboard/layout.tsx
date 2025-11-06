@@ -3,6 +3,7 @@
 import { AppShell } from '@frok/ui';
 import DashboardNav from './DashboardNav';
 import Breadcrumbs from './Breadcrumbs';
+import { MobileHeader } from '@/components/mobile/MobileHeader';
 import { useTranslations } from '@/lib/i18n/I18nProvider';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
@@ -38,7 +39,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }
         />
       }
-      header={<Breadcrumbs />}
+      header={
+        <>
+          {/* Mobile-only header with clock, weather, and shortcuts */}
+          <MobileHeader
+            timeFormat="12h"
+            locale="en-US"
+            weatherLocation="Seoul"
+            temperatureUnits="imperial"
+          />
+          {/* Desktop breadcrumbs (hidden on mobile) */}
+          <div className="hidden md:block">
+            <Breadcrumbs />
+          </div>
+        </>
+      }
       footer={<div>© {new Date().getFullYear()} FROK · {tCommon('allSystemsNominal')}</div>}
     >
       {children}
