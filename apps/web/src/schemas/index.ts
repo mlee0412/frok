@@ -10,3 +10,4 @@ export * from './chat';
 export * from './finance';
 export * from './memory';
 export * from './agent';
+export * from './homeAssistant';

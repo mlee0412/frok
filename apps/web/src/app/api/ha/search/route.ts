@@ -1,4 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/withAuth';
+import { validateBody } from '@/lib/api/withValidation';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/withRateLimit';
+import { HASearchSchema } from '@/schemas';
 
 // Home Assistant API types
 type HAEntityState = {
@@ -22,23 +26,25 @@ function getHA() {
   return { base: base.replace(/\/$/, ''), token };
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // 1. Rate limiting
+  const rateLimitResult = await withRateLimit(req, rateLimitPresets.standard);
+  if (!rateLimitResult.ok) return rateLimitResult.response;
+
+  // 2. Authentication
+  const auth = await withAuth(req);
+  if (!auth.ok) return auth.response;
+
+  // 3. Validation
+  const validated = await validateBody(req, HASearchSchema);
+  if (!validated.ok) return validated.response;
+
+  const { query, domain } = validated.data;
+  const queryLower = query.trim().toLowerCase();
+  const domainLower = domain?.trim().toLowerCase();
+
   const ha = getHA();
   if (!ha) return NextResponse.json({ ok: false, error: 'missing_home_assistant_env' }, { status: 400 });
-
-  let body: { query?: string; domain?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ ok: false, error: 'invalid_json' }, { status: 400 });
-  }
-
-  const query = String(body?.query || '').trim().toLowerCase();
-  const domain = String(body?.domain || '').trim().toLowerCase();
-
-  if (!query) {
-    return NextResponse.json({ ok: false, error: 'query_required' }, { status: 400 });
-  }
 
   try {
     // Fetch states (entities)
@@ -56,8 +62,8 @@ export async function POST(req: Request) {
       .filter((s) => {
         const entityId = String(s.entity_id || '').toLowerCase();
         const friendlyName = String(s.attributes?.["friendly_name"] || '').toLowerCase();
-        const matchesQuery = entityId.includes(query) || friendlyName.includes(query);
-        const matchesDomain = domain ? entityId.startsWith(`${domain}.`) : true;
+        const matchesQuery = entityId.includes(queryLower) || friendlyName.includes(queryLower);
+        const matchesDomain = domainLower ? entityId.startsWith(`${domainLower}.`) : true;
         return matchesQuery && matchesDomain;
       })
       .slice(0, 20)
@@ -77,7 +83,7 @@ export async function POST(req: Request) {
     const matchingAreas = areas
       .filter((a) => {
         const name = String(a.name || '').toLowerCase();
-        return name.includes(query);
+        return name.includes(queryLower);
       })
       .slice(0, 10)
       .map((a) => ({
