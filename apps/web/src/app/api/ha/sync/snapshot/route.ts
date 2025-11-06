@@ -1,5 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
+import { withAuth } from '@/lib/api/withAuth';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/withRateLimit';
 
 function getHA() {
   const base = (process.env["HOME_ASSISTANT_URL"] || process.env["HA_BASE_URL"] || '').trim();
@@ -15,7 +17,15 @@ function getSB() {
   return { url: url.replace(/\/$/, ''), key };
 }
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  // 1. Rate limiting
+  const rateLimitResult = await withRateLimit(req, rateLimitPresets.standard);
+  if (!rateLimitResult.ok) return rateLimitResult.response;
+
+  // 2. Authentication
+  const auth = await withAuth(req);
+  if (!auth.ok) return auth.response;
+
   const ha = getHA();
   const sb = getSB();
   if (!ha) return NextResponse.json({ ok: false, error: 'missing_home_assistant_env' }, { status: 400 });

@@ -1,6 +1,7 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { headers } from 'next/headers';
+import { HASyncSettings } from '@/components/smart-home/HASyncSettings';
 
 // Dynamic import for Lovelace Dashboard Enhanced (client-heavy component)
 const LovelaceDashboardEnhanced = dynamic(() => import('@/components/lovelace/LovelaceDashboardEnhanced'), {
@@ -32,8 +33,13 @@ export default async function SmartHomePage() {
   const ok = !!(ha && typeof ha.ok === 'boolean' ? ha.ok : false);
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-6">Smart Home</h1>
+    <div className="p-6 space-y-6">
+      <h1 className="text-2xl font-semibold">Smart Home</h1>
+
+      {/* HA Sync Settings */}
+      <HASyncSettings />
+
+      {/* Lovelace Dashboard */}
       <LovelaceDashboardEnhanced initialDevices={devices} haOk={ok} haDetail={ha?.detail} />
     </div>
   );
