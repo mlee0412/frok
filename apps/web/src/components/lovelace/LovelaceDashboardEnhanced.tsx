@@ -18,22 +18,20 @@ import {
 import {
   SceneCard,
   SwitchCard,
-  ClimateCard,
   TimeCard,
   HorizontalStack,
   VerticalStack,
   GridLayout,
   AreaLightControl,
-  BlindsCard,
   RemoteControlEnhanced,
   type SceneEntity,
   type SwitchEntity,
-  type ClimateEntity,
-  type BlindsEntity,
   type RemoteMode,
   type RemoteAction,
   type MediaPlayerData,
 } from './index';
+import { ClimateCardEnhanced, type ClimateEntity } from './ClimateCardEnhanced';
+import { BlindsCardEnhanced, type BlindsEntity } from './BlindsCardEnhanced';
 
 export interface LovelaceDashboardEnhancedProps {
   initialDevices: Device[];
@@ -82,6 +80,9 @@ export default function LovelaceDashboardEnhanced({
 
   // Find specific HVAC entity
   const hvacEntity = devices.find((d) => d.id === 'climate.simon_aire_inc');
+
+  // Find Samsung TV for HDMI source selector
+  const samsungTV = mediaPlayers.find((d) => d.id.toLowerCase().includes('samsung') || d.name.toLowerCase().includes('samsung'));
 
   // Convert helpers
   const convertToSwitch = (d: Device): SwitchEntity => ({
@@ -157,6 +158,39 @@ export default function LovelaceDashboardEnhanced({
 
   const handleCoverStop = async (entityId: string) => {
     await coverStop(entityId);
+    await refresh();
+  };
+
+  // Climate handlers
+  const handleClimateSetTemp = async (entityId: string, temperature: number) => {
+    await callHAService({
+      domain: 'climate',
+      service: 'set_temperature',
+      entity_id: entityId,
+      data: { temperature },
+    });
+    await refresh();
+  };
+
+  const handleClimateSetMode = async (entityId: string, hvac_mode: string) => {
+    await callHAService({
+      domain: 'climate',
+      service: 'set_hvac_mode',
+      entity_id: entityId,
+      data: { hvac_mode },
+    });
+    await refresh();
+  };
+
+  // Samsung TV HDMI source handler
+  const handleSamsungTVSource = async (source: string) => {
+    if (!samsungTV) return;
+    await callHAService({
+      domain: 'media_player',
+      service: 'select_source',
+      entity_id: samsungTV.id,
+      data: { source },
+    });
     await refresh();
   };
 
@@ -317,10 +351,12 @@ export default function LovelaceDashboardEnhanced({
       {/* Climate Control - Simon Aire HVAC */}
       {hvacEntity && (
         <div>
-          <h3 className="text-lg font-semibold mb-3 text-blue-400">🌡️ Climate Control</h3>
-          <HorizontalStack>
-            <ClimateCard entity={convertToClimate(hvacEntity)} />
-          </HorizontalStack>
+          <h3 className="text-lg font-semibold mb-3 text-primary">🌡️ Climate Control</h3>
+          <ClimateCardEnhanced
+            entity={convertToClimate(hvacEntity)}
+            onSetTemp={handleClimateSetTemp}
+            onSetMode={handleClimateSetMode}
+          />
         </div>
       )}
 
@@ -328,7 +364,7 @@ export default function LovelaceDashboardEnhanced({
       {allLights.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-semibold text-yellow-400">💡 Lights & Switches</h3>
+            <h3 className="text-lg font-semibold text-warning">💡 Lights & Switches</h3>
             <span className="text-sm text-foreground/60">
               {allLights.length} {allLights.length === 1 ? 'device' : 'devices'}
             </span>
@@ -346,13 +382,13 @@ export default function LovelaceDashboardEnhanced({
       {/* Window Blinds */}
       {covers.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold mb-3 text-green-400">🪟 Window Blinds</h3>
+          <h3 className="text-lg font-semibold mb-3 text-success">🪟 Window Blinds</h3>
           <GridLayout columns={2} gap="12px">
             {covers.map((device) => (
-              <BlindsCard
+              <BlindsCardEnhanced
                 key={device.id}
                 entity={convertToBlinds(device)}
-                height="180px"
+                height="auto"
                 onOpen={handleCoverOpen}
                 onClose={handleCoverClose}
                 onStop={handleCoverStop}
@@ -365,18 +401,20 @@ export default function LovelaceDashboardEnhanced({
 
       {/* Media & Remote Control - Integrated */}
       <div>
-        <h3 className="text-lg font-semibold mb-3 text-cyan-400">📱 Media Control</h3>
+        <h3 className="text-lg font-semibold mb-3 text-info">📱 Media Control</h3>
         <RemoteControlEnhanced
           remoteId={remoteEntityId}
           mode={remoteMode}
           customActions={hueSyncBoxActions}
           mediaPlayer={mediaPlayerData}
           appleTvEntityId={appleTvEntityId}
+          samsungTVEntityId={samsungTV?.id}
           onModeChange={setRemoteMode}
           onCommand={handleRemoteCommand}
           onServiceCall={handleServiceCall}
           onVolumeSet={handleVolumeSet}
           onVolumeMute={handleVolumeMute}
+          onSamsungTVSource={handleSamsungTVSource}
         />
       </div>
 

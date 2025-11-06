@@ -1,7 +1,6 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { headers } from 'next/headers';
-import Link from 'next/link';
 import { BarChart3 } from 'lucide-react';
 import { HASyncSettings } from '@/components/smart-home/HASyncSettings';
 
@@ -36,15 +35,15 @@ export default async function SmartHomePage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <h1 className="text-2xl font-semibold text-foreground">Smart Home</h1>
-        <Link
+        <a
           href="/dashboard/smart-home/analytics"
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary bg-primary/10 hover:bg-primary/20 transition-colors text-primary font-medium"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-primary bg-primary/10 hover:bg-primary/20 active:bg-primary/30 transition-all text-primary font-medium cursor-pointer shadow-sm hover:shadow-md"
         >
           <BarChart3 size={20} />
           <span>Analytics</span>
-        </Link>
+        </a>
       </div>
 
       {/* HA Sync Settings */}

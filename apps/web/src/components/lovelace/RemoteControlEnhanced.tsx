@@ -29,11 +29,13 @@ export interface RemoteControlEnhancedProps {
   customActions?: RemoteAction[];
   mediaPlayer?: MediaPlayerData;
   appleTvEntityId?: string; // For launching apps via select_source
+  samsungTVEntityId?: string; // For Samsung TV HDMI source selector
   onModeChange?: (mode: RemoteMode) => void;
   onCommand?: (remoteId: string, command: string) => Promise<void>;
   onServiceCall?: (entityId: string, service: string, data?: Record<string, unknown>) => Promise<void>;
   onVolumeSet?: (entityId: string, volume: number) => Promise<void>;
   onVolumeMute?: (entityId: string, muted: boolean) => Promise<void>;
+  onSamsungTVSource?: (source: string) => Promise<void>;
 }
 
 export function RemoteControlEnhanced({
@@ -42,11 +44,13 @@ export function RemoteControlEnhanced({
   customActions = [],
   mediaPlayer,
   appleTvEntityId,
+  samsungTVEntityId,
   onModeChange,
   onCommand,
   onServiceCall,
   onVolumeSet,
   onVolumeMute,
+  onSamsungTVSource,
 }: RemoteControlEnhancedProps) {
   const [pending, setPending] = useState(false);
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
@@ -75,6 +79,16 @@ export function RemoteControlEnhanced({
     try {
       // Use media_player.select_source to launch apps on Apple TV
       await onServiceCall(appleTvEntityId, 'media_player.select_source', { source: appName });
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleSamsungTVSource = async (source: string) => {
+    if (!onSamsungTVSource || pending) return;
+    setPending(true);
+    try {
+      await onSamsungTVSource(source);
     } finally {
       setPending(false);
     }
@@ -501,10 +515,39 @@ export function RemoteControlEnhanced({
           </button>
         </div>
 
+        {/* Samsung TV HDMI Source Selector */}
+        {samsungTVEntityId && onSamsungTVSource && (
+          <div className="space-y-2">
+            <div className="text-xs font-semibold opacity-70 px-1" style={{ color: 'white' }}>
+              Samsung TV - HDMI Source
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {['HDMI 1', 'HDMI 2', 'HDMI 3', 'HDMI 4'].map((source) => (
+                <button
+                  key={source}
+                  disabled={pending}
+                  onClick={() => handleSamsungTVSource(source)}
+                  className="px-3 py-2.5 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2))',
+                    border: '1px solid rgba(59, 130, 246, 0.5)',
+                    color: 'white',
+                    fontSize: '12px',
+                    boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)',
+                  }}
+                >
+                  <span style={{ fontSize: '16px' }}>📺</span>
+                  <span>{source}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* App Shortcuts - Apple TV Apps */}
         <div className="space-y-2">
           <div className="text-xs font-semibold opacity-70 px-1" style={{ color: 'white' }}>
-            Quick Launch
+            Quick Launch - Apple TV
           </div>
           <div className="grid grid-cols-2 gap-2">
             <button

@@ -14,7 +14,6 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@frok/ui';
-import { useToast } from '@frok/ui';
 
 interface SyncStats {
   lastSyncTime: string | null;
@@ -24,8 +23,8 @@ interface SyncStats {
 }
 
 export function HASyncSettings() {
-  const { success, error } = useToast();
   const [isSyncing, setIsSyncing] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState<{type: 'success' | 'error'; text: string} | null>(null);
   const [stats, setStats] = useState<SyncStats>({
     lastSyncTime: null,
     entityCount: 0,
@@ -33,6 +32,14 @@ export function HASyncSettings() {
     areaCount: 0,
   });
   const [autoSync, setAutoSync] = useState(false);
+
+  // Clear feedback after 5 seconds
+  useEffect(() => {
+    if (feedbackMessage) {
+      const timer = setTimeout(() => setFeedbackMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [feedbackMessage]);
 
   // Load auto-sync preference from localStorage
   useEffect(() => {
@@ -44,7 +51,10 @@ export function HASyncSettings() {
   const handleAutoSyncToggle = (enabled: boolean) => {
     setAutoSync(enabled);
     localStorage.setItem('frok-ha-auto-sync', enabled.toString());
-    success(enabled ? 'Auto-sync enabled' : 'Auto-sync disabled');
+    setFeedbackMessage({
+      type: 'success',
+      text: enabled ? 'Auto-sync enabled' : 'Auto-sync disabled'
+    });
   };
 
   // Trigger manual sync
@@ -70,10 +80,16 @@ export function HASyncSettings() {
         areaCount: data.areas || 0,
       });
 
-      success(`Synced ${data.entities} entities, ${data.devices} devices, ${data.areas} areas`);
+      setFeedbackMessage({
+        type: 'success',
+        text: `Synced ${data.entities} entities, ${data.devices} devices, ${data.areas} areas`
+      });
     } catch (err: unknown) {
       console.error('[HASyncSettings] Sync error:', err);
-      error(err instanceof Error ? err.message : 'Failed to sync');
+      setFeedbackMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to sync'
+      });
     } finally {
       setIsSyncing(false);
     }
@@ -122,6 +138,17 @@ export function HASyncSettings() {
           <span className="text-foreground">
             {new Date(stats.lastSyncTime).toLocaleString()}
           </span>
+        </div>
+      )}
+
+      {/* Feedback Message */}
+      {feedbackMessage && (
+        <div className={`p-3 rounded-lg text-sm font-medium ${
+          feedbackMessage.type === 'success'
+            ? 'bg-success/10 border border-success/30 text-success'
+            : 'bg-danger/10 border border-danger/30 text-danger'
+        }`}>
+          {feedbackMessage.type === 'success' ? '✓' : '✗'} {feedbackMessage.text}
         </div>
       )}
 
