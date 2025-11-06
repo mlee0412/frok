@@ -4,9 +4,9 @@ import path from 'path';
 export default defineConfig({
   plugins: [],
   test: {
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['node_modules', 'e2e', '.next', 'dist'],
-    environment: 'happy-dom',
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'tests/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['node_modules', 'e2e', '.next', 'dist', '**/*.spec.ts'],
+    environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
     css: true,
