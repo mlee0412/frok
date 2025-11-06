@@ -35,7 +35,7 @@ export function AreaLightControl({
 
     // Specific entity ID mappings
     if (id === 'switch.kitchen') return 'Kitchen';
-    if (id === 'switch.bathroom') return 'Bathroom';
+    if (id === 'switch.bath_room') return 'Bathroom';
 
     // Specific device name mappings for Living Room
     if (name.includes('window tree') || name.includes('tree lamp')) return 'Living Room';

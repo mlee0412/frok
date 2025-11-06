@@ -67,21 +67,29 @@ export function ClimateCardEnhanced({
   };
 
   const attrs = entity.attrs || {};
+
+  // Check if temperature values are likely in Fahrenheit (> 45 would be extremely hot for Celsius)
+  // Most thermostats in Fahrenheit mode have min_temp around 45-50°F
+  const isLikelyFahrenheit = (attrs.min_temp && attrs.min_temp > 45) ||
+                              (attrs.current_temperature && attrs.current_temperature > 45);
+
+  // Convert from Fahrenheit to Celsius if needed
   const currentTempC = attrs.current_temperature != null
-    ? attrs.current_temperature
+    ? (isLikelyFahrenheit ? fahrenheitToCelsius(attrs.current_temperature) : attrs.current_temperature)
     : null;
   const targetTempC = attrs.target_temp || attrs.target_temperature || 22;
+  const targetTempCConverted = isLikelyFahrenheit && targetTempC ? fahrenheitToCelsius(targetTempC) : targetTempC;
   const hvacMode = attrs.hvac_mode || entity.state;
   const hvacAction = attrs.hvac_action;
   const hvacModes = attrs.hvac_modes || ['off', 'heat', 'cool', 'auto'];
-  const minTempC = attrs.min_temp || 16;
-  const maxTempC = attrs.max_temp || 30;
+  const minTempC = isLikelyFahrenheit && attrs.min_temp ? fahrenheitToCelsius(attrs.min_temp) : (attrs.min_temp || 16);
+  const maxTempC = isLikelyFahrenheit && attrs.max_temp ? fahrenheitToCelsius(attrs.max_temp) : (attrs.max_temp || 30);
 
   // Convert temperatures based on selected unit
   const currentTemp = currentTempC != null
     ? (tempUnit === 'F' ? celsiusToFahrenheit(currentTempC) : currentTempC)
     : null;
-  const targetTemp = tempUnit === 'F' ? celsiusToFahrenheit(targetTempC) : targetTempC;
+  const targetTemp = tempUnit === 'F' ? celsiusToFahrenheit(targetTempCConverted) : targetTempCConverted;
   const minTemp = tempUnit === 'F' ? celsiusToFahrenheit(minTempC) : minTempC;
   const maxTemp = tempUnit === 'F' ? celsiusToFahrenheit(maxTempC) : maxTempC;
 
@@ -113,9 +121,16 @@ export function ClimateCardEnhanced({
     if (!onSetTemp || pending) return;
     setPending(true);
     try {
-      // Convert back to Celsius if needed (HA uses Celsius)
-      const tempInCelsius = tempUnit === 'F' ? fahrenheitToCelsius(temp) : temp;
-      await onSetTemp(entity.id, tempInCelsius);
+      // Convert to correct unit for Home Assistant
+      let tempToSend: number;
+      if (isLikelyFahrenheit) {
+        // HA expects Fahrenheit for this device
+        tempToSend = tempUnit === 'C' ? celsiusToFahrenheit(temp) : temp;
+      } else {
+        // HA expects Celsius for this device
+        tempToSend = tempUnit === 'F' ? fahrenheitToCelsius(temp) : temp;
+      }
+      await onSetTemp(entity.id, tempToSend);
     } finally {
       setPending(false);
     }
