@@ -92,11 +92,19 @@ export function RadialMenuItem({
         ${className || ''}
       `}
       style={{
+        left: '50%',
+        top: '50%',
         width: `${size}px`,
         height: `${size}px`,
         transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
-        animation: `radial-item-appear 0.3s ease-out ${animationDelay}ms both`,
+        opacity: 1,
         willChange: 'transform, opacity',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        WebkitTouchCallout: 'none',
+        WebkitTapHighlightColor: 'transparent',
+        touchAction: 'manipulation',
+        transitionDelay: `${animationDelay}ms`,
       }}
       aria-label={label}
       role="menuitem"

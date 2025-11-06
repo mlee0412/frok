@@ -253,7 +253,14 @@ export function RadialMenu({
       <div
         {...handlers}
         className={`fixed inset-0 touch-none pointer-events-auto ${className || ''}`}
-        style={{ zIndex: isOpen ? -1 : 0 }}
+        style={{
+          zIndex: isOpen ? -1 : 0,
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          WebkitTouchCallout: 'none',
+          WebkitTapHighlightColor: 'transparent',
+          touchAction: 'pan-y', // Allow vertical scrolling but prevent other touch actions
+        }}
       />
 
       {/* Radial menu (appears on long-press) */}
