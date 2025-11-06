@@ -4,6 +4,7 @@ import { AppShell } from '@frok/ui';
 import DashboardNav from './DashboardNav';
 import Breadcrumbs from './Breadcrumbs';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
+import { BottomTabBar } from '@/components/mobile/BottomTabBar';
 import { useTranslations } from '@/lib/i18n/I18nProvider';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
@@ -56,7 +57,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
       footer={<div>© {new Date().getFullYear()} FROK · {tCommon('allSystemsNominal')}</div>}
     >
-      {children}
+      {/* Main content with bottom padding on mobile for tab bar clearance */}
+      <div className="pb-20 md:pb-0">
+        {children}
+      </div>
+
+      {/* Mobile-only bottom navigation */}
+      <BottomTabBar />
     </AppShell>
   );
 }
