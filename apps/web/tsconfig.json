@@ -4,6 +4,7 @@
     "jsx": "preserve",
     "noEmit": true,
     "baseUrl": "src",
+    "types": ["@testing-library/jest-dom"],
     "paths": {
       "@/*": [
         "*"

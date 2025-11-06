@@ -32,13 +32,13 @@ export interface ClimateCardEnhancedProps {
 
 type TempUnit = 'C' | 'F';
 
-// Temperature conversion utilities
+// Temperature conversion utilities with proper rounding
 const celsiusToFahrenheit = (celsius: number): number => {
-  return (celsius * 9) / 5 + 32;
+  return Math.round((celsius * 9) / 5 + 32);
 };
 
 const fahrenheitToCelsius = (fahrenheit: number): number => {
-  return ((fahrenheit - 32) * 5) / 9;
+  return Math.round(((fahrenheit - 32) * 5) / 9 * 10) / 10; // Round to 1 decimal for Celsius
 };
 
 export function ClimateCardEnhanced({

@@ -76,7 +76,7 @@ describe('ConfirmDialog Component', () => {
   });
 
   it('shows loading state when confirming', async () => {
-    const handleConfirm = vi.fn(() => new Promise((resolve) => setTimeout(resolve, 100)));
+    const handleConfirm = vi.fn(() => new Promise<void>((resolve) => setTimeout(resolve, 100)));
     const user = userEvent.setup();
 
     render(<ConfirmDialog {...defaultProps} onConfirm={handleConfirm} />);

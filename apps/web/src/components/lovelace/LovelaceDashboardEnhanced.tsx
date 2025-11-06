@@ -1,9 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Device } from '@frok/clients';
 import {
   toggle,
+  turnOn,
+  turnOff,
+  lightTurnOn,
+  lightTurnOff,
   sceneTurnOn,
   coverOpen,
   coverClose,
@@ -51,7 +55,7 @@ export default function LovelaceDashboardEnhanced({
   const [remoteMode, setRemoteMode] = useState<RemoteMode>('touchpad');
   const [switchesExpanded, setSwitchesExpanded] = useState(false);
 
-  // Refresh devices
+  // Enhanced refresh with better error handling
   const refresh = async () => {
     try {
       const r = await fetch('/api/devices', { cache: 'no-store' });
@@ -59,10 +63,28 @@ export default function LovelaceDashboardEnhanced({
         const j = await r.json();
         if (Array.isArray(j)) {
           setDevices(j);
+          return true;
         }
       }
-    } catch {}
+      return false;
+    } catch (error) {
+      console.error('Failed to refresh devices:', error);
+      return false;
+    }
   };
+
+  // Auto-refresh for real-time updates
+  useEffect(() => {
+    if (!haOk) return;
+
+    // Initial load
+    refresh();
+
+    // Set up polling for real-time updates (2.5s interval for responsive feel)
+    const interval = setInterval(refresh, 2500);
+
+    return () => clearInterval(interval);
+  }, [haOk]);
 
   // Group devices - Move Kitchen/Bathroom light switches to lights
   const isLightSwitch = (device: Device) => {
@@ -75,8 +97,21 @@ export default function LovelaceDashboardEnhanced({
     );
   };
 
-  // Separate lights and light switches from regular switches
-  const allLights = devices.filter((d) => d.type === 'light' || isLightSwitch(d));
+  // Check if an entity is a light group (should be excluded from individual lights)
+  const isLightGroup = (device: Device): boolean => {
+    const id = device.id.toLowerCase();
+    // Exclude known light groups
+    return (
+      id === 'light.living_room' ||
+      id === 'light.bedroom_lights' ||
+      id === 'light.entry' ||
+      id.includes('_lights') || // Generic pattern for light groups ending in "_lights"
+      !!(device.attrs && 'entity_id' in device.attrs) // Groups typically have entity_id array attribute
+    );
+  };
+
+  // Separate lights and light switches from regular switches, excluding groups
+  const allLights = devices.filter((d) => (d.type === 'light' || isLightSwitch(d)) && !isLightGroup(d));
   const regularSwitches = devices.filter((d) => d.type === 'switch' && !isLightSwitch(d));
   const covers = devices.filter((d) => d.type === 'cover');
   const mediaPlayers = devices.filter((d) => d.type === 'media_player');
@@ -115,13 +150,23 @@ export default function LovelaceDashboardEnhanced({
     attrs: d.attrs as BlindsEntity['attrs'],
   });
 
-  // Handlers
+  // Handlers with optimistic updates for instant feedback
   const handleLightToggle = async (entityId: string) => {
+    // Optimistic update for instant visual feedback
+    setDevices(prev => prev.map(d =>
+      d.id === entityId ? { ...d, state: d.state === 'on' ? 'off' : 'on' } : d
+    ));
+
     await toggle(entityId, 'light');
-    await refresh();
+    await refresh(); // Get actual state from server
   };
 
   const handleSwitchToggle = async (entityId: string) => {
+    // Optimistic update
+    setDevices(prev => prev.map(d =>
+      d.id === entityId ? { ...d, state: d.state === 'on' ? 'off' : 'on' } : d
+    ));
+
     await toggle(entityId, 'switch');
     await refresh();
   };
@@ -132,13 +177,51 @@ export default function LovelaceDashboardEnhanced({
   };
 
   const handleAreaToggle = async (area: string) => {
-    const areaLights = allLights.filter((d) => (d.area || 'Other') === area);
+    // Helper function to infer area from device name (matching AreaLightControl logic)
+    const inferAreaFromName = (device: Device): string => {
+      const name = device.name.toLowerCase();
+      const id = device.id.toLowerCase();
+
+      // Specific entity ID mappings
+      if (id === 'switch.kitchen') return 'Kitchen';
+      if (id === 'switch.bathroom') return 'Bathroom';
+
+      // Specific device name mappings
+      if (name.includes('window tree') || name.includes('tree lamp')) return 'Living Room';
+      if (name.includes('window floor') || name.includes('floor lamp')) return 'Living Room';
+      if (name.includes('hue play 1')) return 'Living Room';
+      if (name.includes('hue play 2')) return 'Living Room';
+      if (name === 'window') return 'Living Room';
+      if (name.includes('bedside')) return 'Bedroom';
+      if (id.includes('elk-bledom02')) return 'Bedroom';
+      if (id.includes('eld-bledom0c')) return 'Desk';
+
+      // General area inference
+      if (name.includes('bedroom')) return 'Bedroom';
+      if (name.includes('living') || name.includes('lounge')) return 'Living Room';
+      if (name.includes('kitchen')) return 'Kitchen';
+      if (name.includes('bathroom') || name.includes('bath')) return 'Bathroom';
+      if (name.includes('desk') || name.includes('office') || name.includes('study')) return 'Desk';
+      if (name.includes('entrance') || name.includes('entry') || name.includes('entryway')) return 'Entrance';
+      if (name.includes('entertainment')) return 'Entertainment';
+
+      return device.area?.trim() || 'Other Lights';
+    };
+
+    // Filter lights for this area using the same inference logic as AreaLightControl
+    const areaLights = allLights.filter((d) => inferAreaFromName(d) === area);
+
+    // Determine if we should turn all on or all off
+    const lightsOn = areaLights.filter((d) => d.state === 'on').length;
+    const shouldTurnOff = lightsOn > 0;
+
     const promises = areaLights.map((light) => {
       if (isLightSwitch(light)) {
-        return toggle(light.id, 'switch');
+        return shouldTurnOff ? turnOff(light.id, 'switch') : turnOn(light.id, 'switch');
       }
-      return toggle(light.id, 'light');
+      return shouldTurnOff ? lightTurnOff(light.id) : lightTurnOn(light.id);
     });
+
     await Promise.all(promises);
     await refresh();
   };
