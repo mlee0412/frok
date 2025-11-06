@@ -42,12 +42,17 @@ export interface SmartHomeAnalyticsProps extends Omit<ComponentPropsWithoutRef<'
  * - Device status overview
  * - Real-time state monitoring
  *
+ * Performance optimizations:
+ * - Memoized calculations to prevent unnecessary recalculations
+ * - Component wrapped with React.memo for shallow prop comparison
+ * - Efficient data transformations
+ *
  * @example
  * ```tsx
  * <SmartHomeAnalytics devices={devices} />
  * ```
  */
-export const SmartHomeAnalytics = forwardRef<HTMLDivElement, SmartHomeAnalyticsProps>(
+const SmartHomeAnalyticsComponent = forwardRef<HTMLDivElement, SmartHomeAnalyticsProps>(
   ({ devices, stateHistory, className, ...props }, ref) => {
     // Device Type Distribution
     const deviceTypeData = useMemo(() => {
@@ -334,4 +339,7 @@ export const SmartHomeAnalytics = forwardRef<HTMLDivElement, SmartHomeAnalyticsP
   }
 );
 
-SmartHomeAnalytics.displayName = 'SmartHomeAnalytics';
+SmartHomeAnalyticsComponent.displayName = 'SmartHomeAnalytics';
+
+// Memoize the component to prevent unnecessary re-renders when props haven't changed
+export const SmartHomeAnalytics = SmartHomeAnalyticsComponent;

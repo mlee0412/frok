@@ -49,6 +49,7 @@ export function HASyncSettings() {
 
   // Save auto-sync preference
   const handleAutoSyncToggle = (enabled: boolean) => {
+    console.log('[HASyncSettings] Auto-sync toggled:', enabled);
     setAutoSync(enabled);
     localStorage.setItem('frok-ha-auto-sync', enabled.toString());
     setFeedbackMessage({
@@ -59,36 +60,44 @@ export function HASyncSettings() {
 
   // Trigger manual sync
   const handleSync = async () => {
+    console.log('[HASyncSettings] Starting manual sync...');
     setIsSyncing(true);
+    setFeedbackMessage(null);
 
     try {
       const response = await fetch('/api/ha/sync/registries', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       const data = await response.json();
+      console.log('[HASyncSettings] Sync response:', data);
 
-      if (!data.ok) {
-        throw new Error(data.error || 'Failed to sync entities');
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || `Sync failed with status ${response.status}`);
       }
 
       // Update stats
-      setStats({
+      const newStats = {
         lastSyncTime: new Date().toISOString(),
         entityCount: data.entities || 0,
         deviceCount: data.devices || 0,
         areaCount: data.areas || 0,
-      });
+      };
+      setStats(newStats);
+      console.log('[HASyncSettings] Stats updated:', newStats);
 
       setFeedbackMessage({
         type: 'success',
-        text: `Synced ${data.entities} entities, ${data.devices} devices, ${data.areas} areas`
+        text: `Synced ${data.entities || 0} entities, ${data.devices || 0} devices, ${data.areas || 0} areas`
       });
     } catch (err: unknown) {
       console.error('[HASyncSettings] Sync error:', err);
       setFeedbackMessage({
         type: 'error',
-        text: err instanceof Error ? err.message : 'Failed to sync'
+        text: err instanceof Error ? err.message : 'Failed to sync. Please try again.'
       });
     } finally {
       setIsSyncing(false);
@@ -172,12 +181,14 @@ export function HASyncSettings() {
         </Button>
 
         {/* Auto-Sync Toggle */}
-        <label className="flex items-center gap-2 cursor-pointer">
+        <label className="flex items-center gap-2 cursor-pointer select-none">
           <input
             type="checkbox"
             checked={autoSync}
             onChange={(e) => handleAutoSyncToggle(e.target.checked)}
-            className="w-4 h-4 rounded border-border bg-surface checked:bg-primary checked:border-primary focus:ring-2 focus:ring-primary/50 transition"
+            disabled={isSyncing}
+            className="w-4 h-4 rounded border-border bg-surface checked:bg-primary checked:border-primary focus:ring-2 focus:ring-primary/50 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            aria-label="Enable auto-sync on app start"
           />
           <span className="text-sm text-foreground/70">Auto-sync on app start</span>
         </label>

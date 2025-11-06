@@ -1,6 +1,7 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { headers } from 'next/headers';
 import { SmartHomeHeader } from '@/components/smart-home/SmartHomeHeader';
 import { HASyncSettings } from '@/components/smart-home/HASyncSettings';
 
@@ -13,25 +14,51 @@ const LovelaceDashboardEnhanced = dynamic(() => import('@/components/lovelace/Lo
       <div className="h-32 bg-surface/50 rounded" />
     </div>
   ),
+  ssr: false,
 });
 
-// ISR with 15-second revalidation for smart home data
-export const revalidate = 15;
+export default function SmartHomePage() {
+  const [devices, setDevices] = useState<any[]>([]);
+  const [haOk, setHaOk] = useState(false);
+  const [haDetail, setHaDetail] = useState<string | undefined>();
+  const [isLoading, setIsLoading] = useState(true);
 
-export default async function SmartHomePage() {
-  const h = await headers();
-  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
-  const proto = h.get('x-forwarded-proto') ?? 'http';
-  const base = `${proto}://${host}`;
-  const f = (p: string) => fetch(`${base}${p}`, { next: { revalidate: 15 } });
-  const [haRes, devRes] = await Promise.all([
-    f('/api/ping/mcp/home-assistant'),
-    f('/api/devices'),
-  ]);
-  const ha = await haRes.json().catch(() => ({ ok: false, detail: 'error' }));
-  const devicesList = await devRes.json().catch(() => []);
-  const devices = Array.isArray(devicesList) ? devicesList : [];
-  const ok = !!(ha && typeof ha.ok === 'boolean' ? ha.ok : false);
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [haRes, devRes] = await Promise.all([
+          fetch('/api/ping/mcp/home-assistant', { cache: 'no-store' }),
+          fetch('/api/devices', { cache: 'no-store' }),
+        ]);
+        const ha = await haRes.json().catch(() => ({ ok: false, detail: 'error' }));
+        const devicesList = await devRes.json().catch(() => []);
+
+        setDevices(Array.isArray(devicesList) ? devicesList : []);
+        setHaOk(!!(ha && typeof ha.ok === 'boolean' ? ha.ok : false));
+        setHaDetail(ha?.detail);
+      } catch (error) {
+        console.error('[SmartHomePage] Failed to fetch data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+
+    // Set up polling for real-time updates
+    const interval = setInterval(fetchData, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-6 animate-pulse">
+        <div className="h-12 bg-surface/50 rounded" />
+        <div className="h-32 bg-surface/50 rounded" />
+        <div className="h-64 bg-surface/50 rounded" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -42,7 +69,7 @@ export default async function SmartHomePage() {
       <HASyncSettings />
 
       {/* Lovelace Dashboard */}
-      <LovelaceDashboardEnhanced initialDevices={devices} haOk={ok} haDetail={ha?.detail} />
+      <LovelaceDashboardEnhanced initialDevices={devices} haOk={haOk} haDetail={haDetail} />
     </div>
   );
 }
