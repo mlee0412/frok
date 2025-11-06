@@ -50,8 +50,8 @@ export class HAWebSocketManager {
   private status: ConnectionStatus = 'disconnected';
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;
-  private reconnectTimeout: NodeJS.Timeout | null = null;
-  private heartbeatInterval: NodeJS.Timeout | null = null;
+  private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+  private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
   private stateChangeCallbacks: Set<StateChangeCallback> = new Set();
   private statusChangeCallbacks: Set<StatusChangeCallback> = new Set();
@@ -118,6 +118,18 @@ export class HAWebSocketManager {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
     }
+  }
+
+  /**
+   * Destroy the manager and clean up all resources
+   */
+  destroy(): void {
+    this.disconnect();
+    // Clear all callbacks to prevent memory leaks
+    this.stateChangeCallbacks.clear();
+    this.statusChangeCallbacks.clear();
+    this.wsUrl = null;
+    this.token = null;
   }
 
   /**
@@ -294,23 +306,41 @@ export class HAWebSocketManager {
   }
 
   private cleanup(): void {
-    if (this.ws) {
-      this.ws.onopen = null;
-      this.ws.onmessage = null;
-      this.ws.onerror = null;
-      this.ws.onclose = null;
-      if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
-        this.ws.close();
-      }
-      this.ws = null;
-    }
-
+    // Clear heartbeat interval first
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
     }
 
+    // Clear reconnect timeout
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+
+    // Clean up WebSocket
+    if (this.ws) {
+      // Remove all event listeners to prevent memory leaks
+      this.ws.onopen = null;
+      this.ws.onmessage = null;
+      this.ws.onerror = null;
+      this.ws.onclose = null;
+
+      // Close connection if still open or connecting
+      if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
+        try {
+          this.ws.close(1000, 'Normal closure');
+        } catch (error) {
+          console.error('[HA WS] Error closing WebSocket:', error);
+        }
+      }
+
+      this.ws = null;
+    }
+
+    // Reset state
     this.subscriptionId = null;
+    this.messageId = 1;
   }
 }
 

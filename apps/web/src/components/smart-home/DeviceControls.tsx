@@ -4,6 +4,17 @@ import { useRouter } from 'next/navigation';
 import type { Device } from '@frok/clients';
 import ColorWheel from './ColorWheel';
 import { ThermostatDial } from './ThermostatDial';
+import { DebouncedSlider } from './DebouncedSlider';
+import {
+  validateBrightness,
+  validateColorTemp,
+  validateRGB,
+  validateHS,
+  validateTemperature,
+  validateTemperatureRange,
+  validateTransition,
+  hexToRGB
+} from '@/lib/homeassistant/validation';
 import {
   toggle,
   turnOn,
@@ -186,10 +197,10 @@ export default function DeviceControls({ device }: { device: Device }) {
     return (
       <div className="relative -mx-2 overflow-x-auto scroll-x-neon text-sm">
         <div className="inline-flex items-center gap-2 px-2 min-w-max">
-          <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
-            <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => toggle(device.id, d))}>Toggle</button>
-            <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => turnOn(device.id, d))}>On</button>
-            <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => turnOff(device.id, d))}>Off</button>
+          <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1" role="group" aria-label={`Basic controls for ${device.name}`}>
+            <button disabled={pending} className="border border-border rounded px-2 py-1 text-foreground bg-surface hover:bg-surface/80 transition-colors disabled:opacity-50" onClick={() => run(() => toggle(device.id, d))} aria-label={`Toggle ${device.name}`}>Toggle</button>
+            <button disabled={pending} className="border border-border rounded px-2 py-1 text-foreground bg-surface hover:bg-surface/80 transition-colors disabled:opacity-50" onClick={() => run(() => turnOn(device.id, d))} aria-label={`Turn on ${device.name}`}>On</button>
+            <button disabled={pending} className="border border-border rounded px-2 py-1 text-foreground bg-surface hover:bg-surface/80 transition-colors disabled:opacity-50" onClick={() => run(() => turnOff(device.id, d))} aria-label={`Turn off ${device.name}`}>Off</button>
           </div>
           {d === 'light' && (
             <>
@@ -200,23 +211,46 @@ export default function DeviceControls({ device }: { device: Device }) {
               </div>
               {supportsBrightness && (
               <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
-                <span className="text-xs">B</span>
-                <input className="neon-range" type="range" min={0} max={100} value={brightness} onChange={(e) => setBrightness(Number(e.currentTarget.value))} />
-                <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => lightSetBrightnessPct(device.id, brightness, transition))}>Set</button>
+                <DebouncedSlider
+                  value={brightness}
+                  onChange={(value) => setBrightness(value)}
+                  onChangeEnd={(value) => run(() => {
+                    try {
+                      const validBrightness = validateBrightness(value);
+                      const validTransition = validateTransition(transition);
+                      return lightSetBrightnessPct(device.id, validBrightness, validTransition);
+                    } catch (error) {
+                      setMsg(error instanceof Error ? error.message : 'Invalid value');
+                      throw error;
+                    }
+                  })}
+                  min={0}
+                  max={100}
+                  step={1}
+                  disabled={pending}
+                  className="neon-range w-24"
+                  label="B"
+                  ariaLabel="Brightness control"
+                  debounceMs={300}
+                />
               </div>
               )}
               {supportsCT && (
               <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
                 <span className="text-xs">CT</span>
-                <input type="number" value={colorTemp} onChange={(e) => setColorTemp(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-24" />
+                <input type="number" value={colorTemp} onChange={(e) => setColorTemp(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-24 bg-background text-foreground" />
                 <button disabled={pending || colorTemp === ''} className="border rounded px-2 py-1" onClick={() => colorTemp !== '' && run(() => {
-                  let v = Number(colorTemp);
-                  const a = (device.attrs || {}) as Record<string, unknown>;
-                  const min = typeof a['min_mireds'] === 'number' ? (a['min_mireds'] as number) : undefined;
-                  const max = typeof a['max_mireds'] === 'number' ? (a['max_mireds'] as number) : undefined;
-                  if (typeof min === 'number') v = Math.max(min, v);
-                  if (typeof max === 'number') v = Math.min(max, v);
-                  return lightSetColorTemp(device.id, v, transition);
+                  try {
+                    const a = (device.attrs || {}) as Record<string, unknown>;
+                    const min = typeof a['min_mireds'] === 'number' ? (a['min_mireds'] as number) : undefined;
+                    const max = typeof a['max_mireds'] === 'number' ? (a['max_mireds'] as number) : undefined;
+                    const validColorTemp = validateColorTemp(Number(colorTemp), min, max);
+                    const validTransition = validateTransition(transition);
+                    return lightSetColorTemp(device.id, validColorTemp, validTransition);
+                  } catch (error) {
+                    setMsg(error instanceof Error ? error.message : 'Invalid value');
+                    throw error;
+                  }
                 })}>Set</button>
               </div>
               )}
@@ -225,7 +259,16 @@ export default function DeviceControls({ device }: { device: Device }) {
                 <span className="text-xs">HS</span>
                 <input type="number" placeholder="H" value={hsH} onChange={(e) => setHsH(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-16" />
                 <input type="number" placeholder="S" value={hsS} onChange={(e) => setHsS(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-16" />
-                <button disabled={pending || hsH === '' || hsS === ''} className="border rounded px-2 py-1" onClick={() => hsH !== '' && hsS !== '' && run(() => lightSetHS(device.id, Number(hsH), Number(hsS), transition))}>Set</button>
+                <button disabled={pending || hsH === '' || hsS === ''} className="border rounded px-2 py-1" onClick={() => hsH !== '' && hsS !== '' && run(() => {
+                  try {
+                    const [validH, validS] = validateHS(Number(hsH), Number(hsS));
+                    const validTransition = validateTransition(transition);
+                    return lightSetHS(device.id, validH, validS, validTransition);
+                  } catch (error) {
+                    setMsg(error instanceof Error ? error.message : 'Invalid value');
+                    throw error;
+                  }
+                })}>Set</button>
                 <button disabled={pending} className="border rounded px-2 py-1" onClick={() => setWheelOpen(true)}>Wheel</button>
               </div>
               )}
@@ -235,19 +278,31 @@ export default function DeviceControls({ device }: { device: Device }) {
                 <input type="number" placeholder="R" value={rgbR} onChange={(e) => setRgbR(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-16" />
                 <input type="number" placeholder="G" value={rgbG} onChange={(e) => setRgbG(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-16" />
                 <input type="number" placeholder="B" value={rgbB} onChange={(e) => setRgbB(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-16" />
-                <button disabled={pending || rgbR === '' || rgbG === '' || rgbB === ''} className="border rounded px-2 py-1" onClick={() => rgbR !== '' && rgbG !== '' && rgbB !== '' && run(() => lightSetRGB(device.id, Number(rgbR), Number(rgbG), Number(rgbB), transition))}>Set</button>
+                <button disabled={pending || rgbR === '' || rgbG === '' || rgbB === ''} className="border rounded px-2 py-1" onClick={() => rgbR !== '' && rgbG !== '' && rgbB !== '' && run(() => {
+                  try {
+                    const [validR, validG, validB] = validateRGB(Number(rgbR), Number(rgbG), Number(rgbB));
+                    const validTransition = validateTransition(transition);
+                    return lightSetRGB(device.id, validR, validG, validB, validTransition);
+                  } catch (error) {
+                    setMsg(error instanceof Error ? error.message : 'Invalid value');
+                    throw error;
+                  }
+                })}>Set</button>
               </div>
               )}
               {supportsRGB && (
               <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
                 <span className="text-xs">Color</span>
                 <input type="color" value={colorHex} onChange={(e) => setColorHex(e.currentTarget.value)} />
-                <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => {
-                  const v = colorHex.replace('#','');
-                  const r = parseInt(v.substring(0,2), 16);
-                  const g = parseInt(v.substring(2,4), 16);
-                  const b = parseInt(v.substring(4,6), 16);
-                  return lightSetRGB(device.id, r, g, b, transition);
+                <button disabled={pending} className="border border-border rounded px-2 py-1 text-foreground bg-surface hover:bg-surface/80 transition-colors disabled:opacity-50" onClick={() => run(() => {
+                  try {
+                    const [validR, validG, validB] = hexToRGB(colorHex);
+                    const validTransition = validateTransition(transition);
+                    return lightSetRGB(device.id, validR, validG, validB, validTransition);
+                  } catch (error) {
+                    setMsg(error instanceof Error ? error.message : 'Invalid color');
+                    throw error;
+                  }
                 })}>Apply</button>
               </div>
               )}
@@ -262,7 +317,7 @@ export default function DeviceControls({ device }: { device: Device }) {
               {supportsEffect && (
                 <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
                   <span className="text-xs">Effect</span>
-                  <select value={effect} onChange={(e) => setEffect(e.currentTarget.value)} className="border border-border rounded px-2 py-1 text-sm">
+                  <select value={effect} onChange={(e) => setEffect(e.currentTarget.value)} className="border border-border rounded px-2 py-1 text-sm bg-background text-foreground">
                     <option value=""></option>
                     {effectList.map((ef) => (
                       <option key={ef} value={ef}>{ef}</option>
@@ -276,13 +331,13 @@ export default function DeviceControls({ device }: { device: Device }) {
           {msg && <span className="text-xs text-foreground/60">{msg}</span>}
         </div>
         {wheelOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="rounded-lg border border-primary bg-background p-4 shadow-xl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
+            <div className="rounded-lg border border-primary bg-surface p-4 shadow-xl">
               <div className="flex flex-col items-center gap-3">
                 <ColorWheel size={200} h={typeof hsH === 'number' ? hsH : 0} s={typeof hsS === 'number' ? hsS : 100} onChange={(H,S) => { setHsH(H); setHsS(S); }} />
                 <div className="flex items-center gap-2">
-                  <button className="border rounded px-3 py-1" onClick={() => setWheelOpen(false)}>Cancel</button>
-                  <button className="border rounded px-3 py-1" onClick={() => run(() => lightSetHS(device.id, Number(hsH || 0), Number(hsS || 100), transition)).then(() => setWheelOpen(false))}>Apply</button>
+                  <button className="border border-border rounded px-3 py-1 text-foreground bg-surface hover:bg-surface/80 transition-colors" onClick={() => setWheelOpen(false)}>Cancel</button>
+                  <button className="border border-primary rounded px-3 py-1 text-primary bg-primary/10 hover:bg-primary/20 transition-colors" onClick={() => run(() => lightSetHS(device.id, Number(hsH || 0), Number(hsS || 100), transition)).then(() => setWheelOpen(false))}>Apply</button>
                 </div>
               </div>
             </div>
@@ -300,9 +355,19 @@ export default function DeviceControls({ device }: { device: Device }) {
             <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => mediaPlayPause(device.id))}>Play/Pause</button>
           </div>
           <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
-            <span className="text-xs">Vol</span>
-            <input type="range" min={0} max={1} step={0.01} value={volume} onChange={(e) => setVolume(Number(e.currentTarget.value))} />
-            <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(() => mediaVolumeSet(device.id, volume))}>Set</button>
+            <DebouncedSlider
+              value={volume * 100} // Convert to percentage
+              onChange={(value) => setVolume(value / 100)}
+              onChangeEnd={(value) => run(() => mediaVolumeSet(device.id, value / 100))}
+              min={0}
+              max={100}
+              step={1}
+              disabled={pending}
+              className="w-24"
+              label="Vol"
+              ariaLabel="Volume control"
+              debounceMs={200}
+            />
           </div>
           <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
             <button disabled={pending} className="border rounded px-2 py-1" onClick={() => run(async () => { setMuted(!muted); return mediaVolumeMute(device.id, !muted); })}>{muted ? 'Unmute' : 'Mute'}</button>
@@ -339,23 +404,39 @@ export default function DeviceControls({ device }: { device: Device }) {
           </div>
           {!supportsRange && (
             <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
-              <input type="number" step="0.5" value={temp} onChange={(e) => setTemp(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-24" placeholder="Temp" />
-              <button disabled={pending || temp === ''} className="border rounded px-2 py-1" onClick={() => temp !== '' && run(() => climateSetTemperature(device.id, Number(temp)))}>Set</button>
+              <input type="number" step="0.5" value={temp} onChange={(e) => setTemp(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-24 bg-background text-foreground" placeholder="Temp" />
+              <button disabled={pending || temp === ''} className="border rounded px-2 py-1" onClick={() => temp !== '' && run(() => {
+                try {
+                  const validTemp = validateTemperature(Number(temp));
+                  return climateSetTemperature(device.id, validTemp);
+                } catch (error) {
+                  setMsg(error instanceof Error ? error.message : 'Invalid temperature');
+                  throw error;
+                }
+              })}>Set</button>
               <button disabled={pending} className="border rounded px-2 py-1" onClick={() => setDialOpen(true)}>Dial</button>
             </div>
           )}
           {supportsRange && (
             <div className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1">
-              <input type="number" step="0.5" value={tempLow} onChange={(e) => setTempLow(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-24" placeholder="Low" />
-              <input type="number" step="0.5" value={tempHigh} onChange={(e) => setTempHigh(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-24" placeholder="High" />
-              <button disabled={pending || tempLow === '' || tempHigh === ''} className="border rounded px-2 py-1" onClick={() => tempLow !== '' && tempHigh !== '' && run(() => climateSetTemperatureRange(device.id, Number(tempLow), Number(tempHigh)))}>Set</button>
+              <input type="number" step="0.5" value={tempLow} onChange={(e) => setTempLow(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-24 bg-background text-foreground" placeholder="Low" />
+              <input type="number" step="0.5" value={tempHigh} onChange={(e) => setTempHigh(e.currentTarget.value === '' ? '' : Number(e.currentTarget.value))} className="border border-border rounded px-2 py-1 w-24 bg-background text-foreground" placeholder="High" />
+              <button disabled={pending || tempLow === '' || tempHigh === ''} className="border rounded px-2 py-1" onClick={() => tempLow !== '' && tempHigh !== '' && run(() => {
+                try {
+                  const [validLow, validHigh] = validateTemperatureRange(Number(tempLow), Number(tempHigh));
+                  return climateSetTemperatureRange(device.id, validLow, validHigh);
+                } catch (error) {
+                  setMsg(error instanceof Error ? error.message : 'Invalid temperature range');
+                  throw error;
+                }
+              })}>Set</button>
             </div>
           )}
           {msg && <span className="text-xs text-foreground/60">{msg}</span>}
         </div>
         {dialOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="rounded-lg border border-primary bg-background p-6 shadow-xl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
+            <div className="rounded-lg border border-primary bg-surface p-6 shadow-xl">
               <div className="flex flex-col items-center gap-4">
                 <h3 className="text-lg font-semibold text-foreground">Set Temperature</h3>
                 <ThermostatDial

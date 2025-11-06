@@ -3,12 +3,29 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Device } from '@frok/clients';
 import { Card } from '@frok/ui';
 import SyncButtons from '@/components/smart-home/SyncButtons';
-import { RoomCard } from '@/components/smart-home/RoomCard';
-import { QuickActionCard } from '@/components/smart-home/QuickActionCard';
+import dynamic from 'next/dynamic';
 import type { QuickAction } from '@/components/smart-home/QuickActionCard';
 import { ConnectionStatus } from '@/components/smart-home/ConnectionStatus';
 import { RoomCardSkeleton } from '@/components/smart-home/RoomCardSkeleton';
 import { QuickActionCardSkeleton } from '@/components/smart-home/QuickActionCardSkeleton';
+import { ErrorBoundary } from '@/components/smart-home/ErrorBoundary';
+
+// Lazy load heavy components
+const RoomCard = dynamic(
+  () => import('@/components/smart-home/RoomCard').then(mod => ({ default: mod.RoomCard })),
+  {
+    loading: () => <RoomCardSkeleton deviceCount={4} />,
+    ssr: true,
+  }
+);
+
+const QuickActionCard = dynamic(
+  () => import('@/components/smart-home/QuickActionCard').then(mod => ({ default: mod.QuickActionCard })),
+  {
+    loading: () => <QuickActionCardSkeleton />,
+    ssr: true,
+  }
+);
 import { callHAService, turnOn, sceneTurnOn, scriptTurnOn } from '@frok/clients';
 import { useHAWebSocket, useHADevices } from '@/lib/homeassistant/useHAWebSocket';
 
@@ -21,7 +38,7 @@ export default function SmartHomeView({ initialDevices, haOk, haDetail }: { init
   const timer = useRef<number | null>(null);
 
   // Use WebSocket for real-time updates
-  const { devices, updateDevice } = useHADevices(initialDevices);
+  const { devices, updateDevice, setDevices } = useHADevices(initialDevices);
 
   // Connect to WebSocket if enabled
   const wsBaseUrl = typeof window !== 'undefined' ? window.location.origin : '';
@@ -77,7 +94,8 @@ export default function SmartHomeView({ initialDevices, haOk, haDetail }: { init
               setLastUpdated(new Date());
               setIsLoading(false);
               setError(null);
-              // Note: devices are now managed by useHADevices hook
+              // Update devices when polling (fallback when WebSocket disconnected)
+              setDevices(j as Device[]);
             }
           } else {
             setError('Failed to fetch devices');
@@ -90,7 +108,7 @@ export default function SmartHomeView({ initialDevices, haOk, haDetail }: { init
     }
     schedule();
     return () => { if (timer.current) window.clearTimeout(timer.current); };
-  }, [pollMs, isConnected]);
+  }, [pollMs, isConnected, setDevices]);
 
   const groups = useMemo(() => {
     const m = new Map<string, Device[]>();
@@ -315,28 +333,46 @@ export default function SmartHomeView({ initialDevices, haOk, haDetail }: { init
       ) : (
         <>
           {/* Quick Actions Card */}
-          <QuickActionCard
-            title="Quick Actions"
-            description="Control lights globally or run scenes and scripts"
-            actions={quickActions}
-            scenes={scenes}
-            scripts={scripts}
-            onSceneActivate={runScene}
-            onScriptRun={runScript}
-            layout="grid"
-          />
+          <ErrorBoundary
+            componentName="Quick Actions"
+            fallbackComponent={
+              <Card className="p-4 border-danger/30 bg-danger/5">
+                <div className="text-sm text-danger">Failed to load quick actions</div>
+              </Card>
+            }
+          >
+            <QuickActionCard
+              title="Quick Actions"
+              description="Control lights globally or run scenes and scripts"
+              actions={quickActions}
+              scenes={scenes}
+              scripts={scripts}
+              onSceneActivate={runScene}
+              onScriptRun={runScript}
+              layout="grid"
+            />
+          </ErrorBoundary>
 
           {/* Room Cards */}
           <div className="space-y-4">
             {areas.map((area) => (
-              <RoomCard
+              <ErrorBoundary
                 key={area}
-                room={area}
-                devices={groups.get(area) || []}
-                onAllLightsOn={() => turnOnRoomLights(area)}
-                onAllLightsOff={() => turnOffRoomLights(area)}
-                initiallyExpanded={areas.length <= 3}
-              />
+                componentName={`Room: ${area}`}
+                fallbackComponent={
+                  <Card className="p-4 border-danger/30 bg-danger/5">
+                    <div className="text-sm text-danger">Failed to load room: {area}</div>
+                  </Card>
+                }
+              >
+                <RoomCard
+                  room={area}
+                  devices={groups.get(area) || []}
+                  onAllLightsOn={() => turnOnRoomLights(area)}
+                  onAllLightsOff={() => turnOffRoomLights(area)}
+                  initiallyExpanded={areas.length <= 3}
+                />
+              </ErrorBoundary>
             ))}
           </div>
         </>

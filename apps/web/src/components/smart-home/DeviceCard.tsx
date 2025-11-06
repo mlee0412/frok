@@ -146,11 +146,27 @@ export const DeviceCard = forwardRef<HTMLDivElement, DeviceCardProps>(
         onMouseDown={handleTouchStart}
         onMouseUp={handleTouchEnd}
         onMouseLeave={handleTouchEnd}
+        role="article"
+        aria-label={`${device.name} ${device.type} device`}
+        aria-selected={isSelected}
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && onLongPress) {
+            e.preventDefault();
+            if (e.repeat) {
+              // Long press simulation for keyboard
+              onLongPress(device);
+            } else {
+              setShowControls(!showControls);
+            }
+          }
+        }}
       >
       <Card
         className={`
           transition-all duration-200
           hover:shadow-lg hover:border-primary/30
+          focus-within:ring-2 focus-within:ring-primary/50
           ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}
           ${className || ''}
         `}
@@ -222,6 +238,9 @@ export const DeviceCard = forwardRef<HTMLDivElement, DeviceCardProps>(
                 variant="ghost"
                 onClick={() => setShowControls(!showControls)}
                 className="w-full h-10 justify-between"
+                aria-expanded={showControls}
+                aria-controls={`device-controls-${device.id}`}
+                aria-label={showControls ? `Hide controls for ${device.name}` : `Show controls for ${device.name}`}
               >
                 <span className="text-sm">
                   {showControls ? 'Hide Controls' : 'Show Controls'}
@@ -229,13 +248,19 @@ export const DeviceCard = forwardRef<HTMLDivElement, DeviceCardProps>(
                 <ChevronRight
                   size={16}
                   className={`transition-transform ${showControls ? 'rotate-90' : ''}`}
+                  aria-hidden="true"
                 />
               </Button>
             )}
 
             {/* Advanced controls */}
             {showControls && (
-              <div className="pt-2 border-t border-border">
+              <div
+                id={`device-controls-${device.id}`}
+                className="pt-2 border-t border-border"
+                role="region"
+                aria-label={`Advanced controls for ${device.name}`}
+              >
                 <DeviceControls device={device} />
               </div>
             )}

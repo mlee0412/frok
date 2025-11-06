@@ -1,1 +1,0 @@
-import{r as e}from"./index-BfiH1CDa.js";import"./_commonjsHelpers-Cpj98o6Y.js";const o={layout:"fullscreen"},c=[r=>e.createElement("div",{className:"min-h-screen p-8 container-app"},e.createElement(r))];export{c as decorators,o as parameters};
