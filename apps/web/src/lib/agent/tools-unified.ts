@@ -51,8 +51,7 @@ type BuiltInToolType =
 type CustomToolType =
   | 'ha_search'
   | 'ha_call'
-  // NOTE: 'memory_add' and 'memory_search' removed - must be created per-user
-  | 'memory_search_enhanced' // Phase 2.1: Hybrid vector + keyword search
+  // NOTE: memory tools removed - must be created per-user (memory_add, memory_search, memory_search_enhanced)
   | 'custom_web_search'
   | 'pdf_generator'
   | 'pptx_generator'
@@ -162,7 +161,7 @@ const toolCategories = {
   memory: {
     name: 'Memory & Preferences',
     description: 'Store and retrieve long-term memories and user preferences with hybrid search',
-    tools: ['memory_search_enhanced'] as const, // NOTE: memory_add and memory_search are user-specific
+    tools: [] as const, // NOTE: memory tools are user-specific and added dynamically
     icon: '🧠',
   },
 
@@ -280,17 +279,7 @@ const toolMetadata: Record<ToolType, {
     dependencies: ['HOME_ASSISTANT_URL', 'HOME_ASSISTANT_TOKEN'],
   },
 
-  // NOTE: memory_add and memory_search removed - user-specific tools created via createUserMemoryTools()
-
-  memory_search_enhanced: {
-    displayName: 'Enhanced Memory Search',
-    description: 'Hybrid vector + keyword search with tag filtering, date ranges, and weighted relevance scoring (Phase 2.1)',
-    category: 'memory',
-    costPerUse: 'Embedding cost (~$0.0001)',
-    requiresAuth: true,
-    experimental: false,
-    dependencies: ['OPENAI_API_KEY', 'SUPABASE'],
-  },
+  // NOTE: memory tools (memory_add, memory_search, memory_search_enhanced) removed - user-specific tools created via createUserMemoryTools()
 
   custom_web_search: {
     displayName: 'Custom Web Search',
