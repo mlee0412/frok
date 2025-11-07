@@ -42,7 +42,7 @@ export default function SyncButtons() {
       >
         {pending === 'snapshot' ? 'Snapshot…' : 'Take Snapshot'}
       </Button>
-      {msg && <span className="text-xs text-gray-500 break-all">{msg}</span>}
+      {msg && <span className="text-xs text-foreground/60 break-all">{msg}</span>}
     </div>
   );
 }

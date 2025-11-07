@@ -96,7 +96,7 @@ export default function ColorWheel({ size = 140, h = 0, s = 100, onChange }: Pro
         onMouseUp={() => setDrag(false)}
         onMouseLeave={() => setDrag(false)}
       />
-      <div className="absolute h-3 w-3 rounded-full ring-2 ring-cyan-300 bg-white pointer-events-none" style={dotStyle} />
+      <div className="absolute h-3 w-3 rounded-full ring-2 ring-info/300 bg-white pointer-events-none" style={dotStyle} />
     </div>
   );
 }

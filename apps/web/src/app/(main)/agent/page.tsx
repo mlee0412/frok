@@ -17,7 +17,7 @@ import type { ChatThreadRow, ChatMessageRow } from '@/types/database';
 // Lazy load heavy modal components
 const ThreadOptionsMenu = dynamic(() => import('@/components/ThreadOptionsMenu').then(mod => ({ default: mod.ThreadOptionsMenu })), {
   ssr: false,
-  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-2xl w-full mx-4 animate-pulse"><div className="h-8 bg-gray-800 rounded w-1/3 mb-4"></div><div className="h-32 bg-gray-800 rounded"></div></div></div>
+  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-background border border-border rounded-lg p-6 max-w-2xl w-full mx-4 animate-pulse"><div className="h-8 bg-surface rounded w-1/3 mb-4"></div><div className="h-32 bg-surface rounded"></div></div></div>
 });
 const TTSSettingsModal = dynamic(() => import('@/components/TTSSettings').then(mod => ({ default: mod.TTSSettingsModal })), { ssr: false });
 const AgentMemoryModal = dynamic(() => import('@/components/AgentMemoryModal').then(mod => ({ default: mod.AgentMemoryModal })), { ssr: false });
@@ -1293,10 +1293,10 @@ export default function AgentPage() {
       <div
         key={thread.id}
         onClick={() => setActiveThreadId(thread.id)}
-        className={`group relative cursor-pointer rounded-2xl border px-4 py-3 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
+        className={`group relative cursor-pointer rounded-2xl border px-4 py-3 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/400 ${
           isActive
-            ? 'border-sky-500/60 bg-sky-500/10 shadow-lg shadow-sky-900/30'
-            : 'border-white/5 bg-white/5 hover:border-sky-500/40 hover:bg-white/10'
+            ? 'border-primary/500/60 bg-primary/500/10 shadow-lg shadow-primary/900/30'
+            : 'border-white/5 bg-white/5 hover:border-primary/500/40 hover:bg-white/10'
         }`}
         role="button"
         tabIndex={0}
@@ -1312,21 +1312,21 @@ export default function AgentPage() {
             <div className="flex items-center gap-2 text-sm font-semibold text-white">
               <span className="truncate">{thread.title}</span>
               {titleGeneratingThreadId === thread.id && (
-                <span title="Generating title..." className="animate-spin text-sky-400">⚙️</span>
+                <span title="Generating title..." className="animate-spin text-primary/400">⚙️</span>
               )}
-              {thread.pinned && <span title="Pinned" className="text-yellow-300">📌</span>}
-              {thread.archived && <span title="Archived" className="text-slate-400">📦</span>}
+              {thread.pinned && <span title="Pinned" className="text-warning/300">📌</span>}
+              {thread.archived && <span title="Archived" className="text-foreground/60">📦</span>}
               {thread.branchedFrom && (
-                <span className="text-xs text-purple-300" title="Branched conversation">🌿</span>
+                <span className="text-xs text-accent/300" title="Branched conversation">🌿</span>
               )}
             </div>
-            <div className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+            <div className="text-xs text-foreground/60 line-clamp-2 leading-relaxed">
               {previewSnippet}
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-wide text-slate-500">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-wide text-foreground/60">
               <span>{formatTimestamp(lastTimestamp)}</span>
               {thread.folder && (
-                <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
+                <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-foreground/70">
                   📁 {thread.folder}
                 </span>
               )}
@@ -1341,7 +1341,7 @@ export default function AgentPage() {
                 event.stopPropagation();
                 setEditingOptionsThreadId(thread.id);
               }}
-              className="rounded-lg border border-white/10 bg-white/10 px-2 py-1 text-[11px] text-slate-200 hover:border-sky-400/40 hover:text-sky-200"
+              className="rounded-lg border border-white/10 bg-white/10 px-2 py-1 text-[11px] text-foreground hover:border-primary/400/40 hover:text-primary/200"
               title="Thread options"
             >
               🛠️
@@ -1351,7 +1351,7 @@ export default function AgentPage() {
                 event.stopPropagation();
                 togglePinThread(thread.id);
               }}
-              className="rounded-lg border border-white/10 bg-white/10 px-2 py-1 text-[11px] text-slate-200 hover:border-yellow-400/40 hover:text-yellow-200"
+              className="rounded-lg border border-white/10 bg-white/10 px-2 py-1 text-[11px] text-foreground hover:border-warning/400/40 hover:text-warning/200"
               title={thread.pinned ? 'Unpin thread' : 'Pin thread'}
             >
               📌
@@ -1361,7 +1361,7 @@ export default function AgentPage() {
                 event.stopPropagation();
                 toggleArchiveThread(thread.id);
               }}
-              className="rounded-lg border border-white/10 bg-white/10 px-2 py-1 text-[11px] text-slate-200 hover:border-blue-400/40 hover:text-blue-200"
+              className="rounded-lg border border-white/10 bg-white/10 px-2 py-1 text-[11px] text-foreground hover:border-accent/400/40 hover:text-accent/200"
               title={thread.archived ? 'Unarchive thread' : 'Archive thread'}
             >
               {thread.archived ? '📂' : '📦'}
@@ -1713,11 +1713,11 @@ export default function AgentPage() {
   return (
     <Toaster>
     <ErrorBoundary>
-    <div className="relative flex min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
+    <div className="relative flex min-h-screen bg-gradient-to-br from-background via-surface to-background text-white">
       {/* Mobile Menu Button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="fixed left-4 top-4 z-50 flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/90 px-3 py-2 text-sm font-medium text-slate-200 shadow-lg backdrop-blur transition hover:border-sky-500/40 hover:text-white lg:hidden"
+        className="fixed left-4 top-4 z-50 flex items-center gap-2 rounded-xl border border-white/10 bg-surface/90 px-3 py-2 text-sm font-medium text-foreground shadow-lg backdrop-blur transition hover:border-primary/500/40 hover:text-white lg:hidden"
         aria-label="Toggle sidebar"
       >
         <span className="text-base">{sidebarOpen ? '✕' : '☰'}</span>
@@ -1736,15 +1736,15 @@ export default function AgentPage() {
       {/* Mobile menu button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2.5 rounded-lg bg-slate-900/90 border border-white/20 hover:border-sky-400/40 hover:bg-slate-800 transition backdrop-blur-sm shadow-lg"
+        className="lg:hidden fixed top-4 left-4 z-50 p-2.5 rounded-lg bg-surface/90 border border-white/20 hover:border-primary/400/40 hover:bg-surface transition backdrop-blur-sm shadow-lg"
         aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
       >
         {sidebarOpen ? (
-          <svg className="w-5 h-5 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         ) : (
-          <svg className="w-5 h-5 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         )}
@@ -1761,7 +1761,7 @@ export default function AgentPage() {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-40 w-full sm:w-80 md:w-72 transform border-r border-white/10 bg-slate-950/90 backdrop-blur transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-full sm:w-80 md:w-72 transform border-r border-white/10 bg-background/90 backdrop-blur transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -1769,37 +1769,37 @@ export default function AgentPage() {
           <div className="border-b border-white/10 px-5 py-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] uppercase tracking-[0.3em] text-slate-400">Conversations</p>
+                <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/60">Conversations</p>
                 <h2 className="text-lg font-semibold text-white">Agent workspace</h2>
               </div>
               <button
                 onClick={createNewThread}
-                className="rounded-lg border border-sky-500/60 bg-sky-500/20 px-3 py-1.5 text-sm font-semibold text-sky-100 shadow-sm transition hover:border-sky-400 hover:bg-sky-500/30"
+                className="rounded-lg border border-primary/500/60 bg-primary/500/20 px-3 py-1.5 text-sm font-semibold text-primary/100 shadow-sm transition hover:border-primary/400 hover:bg-primary/500/30"
                 title="Cmd/Ctrl + K"
               >
                 + New
               </button>
             </div>
             <div className="relative mt-4">
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-500">🔍</span>
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-foreground/60">🔍</span>
               <input
                 type="text"
                 placeholder="Search by title, tag, or content"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/5 py-2 pl-9 pr-9 text-sm text-white placeholder:text-slate-500 focus:border-sky-500/60 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                className="w-full rounded-xl border border-white/10 bg-white/5 py-2 pl-9 pr-9 text-sm text-white placeholder:text-foreground/60 focus:border-primary/500/60 focus:outline-none focus:ring-2 focus:ring-primary/500/20"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute inset-y-0 right-3 flex items-center text-slate-400 transition hover:text-white"
+                  className="absolute inset-y-0 right-3 flex items-center text-foreground/60 transition hover:text-white"
                   aria-label="Clear search"
                 >
                   ✕
                 </button>
               )}
             </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-foreground/60">
               <span className="rounded-full bg-white/5 px-2 py-0.5">⌘K new chat</span>
               <span className="rounded-full bg-white/5 px-2 py-0.5">⌘⇧L delete chat</span>
               {showArchived && (
@@ -1811,14 +1811,14 @@ export default function AgentPage() {
             <div className="space-y-4">
               {allFolders.length > 0 && (
                 <div>
-                  <p className="mb-2 text-[11px] uppercase tracking-[0.3em] text-slate-500">Folders</p>
+                  <p className="mb-2 text-[11px] uppercase tracking-[0.3em] text-foreground/60">Folders</p>
                   <div className="space-y-2">
                     <button
                       onClick={() => setSelectedFolder(null)}
                       className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
                         selectedFolder === null
-                          ? 'border-sky-500/40 bg-sky-500/10 text-white'
-                          : 'border-white/5 bg-white/5 text-slate-300 hover:border-sky-500/30 hover:text-white'
+                          ? 'border-primary/500/40 bg-primary/500/10 text-white'
+                          : 'border-white/5 bg-white/5 text-foreground/70 hover:border-primary/500/30 hover:text-white'
                       }`}
                     >
                       All conversations
@@ -1829,8 +1829,8 @@ export default function AgentPage() {
                         onClick={() => setSelectedFolder(folder)}
                         className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
                           selectedFolder === folder
-                            ? 'border-sky-500/40 bg-sky-500/10 text-white'
-                            : 'border-white/5 bg-white/5 text-slate-300 hover:border-sky-500/30 hover:text-white'
+                            ? 'border-primary/500/40 bg-primary/500/10 text-white'
+                            : 'border-white/5 bg-white/5 text-foreground/70 hover:border-primary/500/30 hover:text-white'
                         }`}
                       >
                         {folder}
@@ -1842,7 +1842,7 @@ export default function AgentPage() {
 
               {allTags.length > 0 && (
                 <div>
-                  <p className="mb-2 text-[11px] uppercase tracking-[0.3em] text-slate-500">Tags</p>
+                  <p className="mb-2 text-[11px] uppercase tracking-[0.3em] text-foreground/60">Tags</p>
                   <div className="flex flex-wrap gap-2">
                     {allTags.map((tag) => {
                       const isSelected = selectedTags.includes(tag);
@@ -1858,8 +1858,8 @@ export default function AgentPage() {
                           }}
                           className={`rounded-full px-3 py-1 text-xs transition ${
                             isSelected
-                              ? 'bg-sky-500 text-black shadow shadow-sky-500/30'
-                              : 'bg-white/5 text-slate-300 hover:bg-sky-500/20 hover:text-white'
+                              ? 'bg-primary/500 text-black shadow shadow-primary/500/30'
+                              : 'bg-white/5 text-foreground/70 hover:bg-primary/500/20 hover:text-white'
                           }`}
                         >
                           #{tag}
@@ -1870,13 +1870,13 @@ export default function AgentPage() {
                 </div>
               )}
 
-              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300">
+              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-foreground/70">
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     checked={showArchived}
                     onChange={(event) => setShowArchived(event.target.checked)}
-                    className="h-4 w-4 rounded border-white/20 bg-slate-900 text-sky-500 focus:ring-sky-500"
+                    className="h-4 w-4 rounded border-white/20 bg-surface text-primary/500 focus:ring-primary/500"
                   />
                   <span>Show archived ({archivedCount})</span>
                 </label>
@@ -1887,7 +1887,7 @@ export default function AgentPage() {
                       setSelectedTags([]);
                       setSearchQuery('');
                     }}
-                    className="text-[11px] font-medium text-sky-300 underline-offset-4 hover:underline"
+                    className="text-[11px] font-medium text-primary/300 underline-offset-4 hover:underline"
                   >
                     Clear filters
                   </button>
@@ -1898,7 +1898,7 @@ export default function AgentPage() {
                 {loadingThreads ? (
                   <ThreadListSkeleton />
                 ) : filteredThreads.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-10 text-center text-sm text-slate-400">
+                  <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-10 text-center text-sm text-foreground/60">
                     {searchQuery || selectedTags.length > 0 || selectedFolder
                       ? 'No conversations match the current filters.'
                       : 'Create your first conversation to get started.'}
@@ -1907,9 +1907,9 @@ export default function AgentPage() {
                   <>
                     {pinnedThreads.length > 0 && (
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.3em] text-slate-500">
+                        <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.3em] text-foreground/60">
                           <span>Pinned</span>
-                          <span className="text-slate-600">{pinnedThreads.length}</span>
+                          <span className="text-foreground/60">{pinnedThreads.length}</span>
                         </div>
                         <div className="space-y-2">
                           {pinnedThreads.map((thread) => renderThreadCard(thread))}
@@ -1917,9 +1917,9 @@ export default function AgentPage() {
                       </div>
                     )}
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.3em] text-slate-500">
+                      <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.3em] text-foreground/60">
                         <span>Recent</span>
-                        <span className="text-slate-600">{regularThreads.length}</span>
+                        <span className="text-foreground/60">{regularThreads.length}</span>
                       </div>
                       <div className="space-y-2">
                         {regularThreads.map((thread) => renderThreadCard(thread))}
@@ -1932,25 +1932,25 @@ export default function AgentPage() {
 
             {/* Quick Navigation Section */}
             <div className="border-t border-white/10 px-5 py-4 mt-auto">
-              <p className="mb-3 text-[11px] uppercase tracking-[0.3em] text-slate-500">Quick Navigation</p>
+              <p className="mb-3 text-[11px] uppercase tracking-[0.3em] text-foreground/60">Quick Navigation</p>
               <div className="space-y-2">
                 <a
                   href="/dashboard"
-                  className="flex items-center gap-2 w-full rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-sm text-slate-300 transition hover:border-sky-500/30 hover:bg-sky-500/10 hover:text-white"
+                  className="flex items-center gap-2 w-full rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-sm text-foreground/70 transition hover:border-primary/500/30 hover:bg-primary/500/10 hover:text-white"
                 >
                   <span>🏠</span>
                   <span>Dashboard</span>
                 </a>
                 <a
                   href="/dashboard/smart-home"
-                  className="flex items-center gap-2 w-full rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-sm text-slate-300 transition hover:border-sky-500/30 hover:bg-sky-500/10 hover:text-white"
+                  className="flex items-center gap-2 w-full rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-sm text-foreground/70 transition hover:border-primary/500/30 hover:bg-primary/500/10 hover:text-white"
                 >
                   <span>💡</span>
                   <span>Smart Home</span>
                 </a>
                 <a
                   href="/dashboard/finances"
-                  className="flex items-center gap-2 w-full rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-sm text-slate-300 transition hover:border-sky-500/30 hover:bg-sky-500/10 hover:text-white"
+                  className="flex items-center gap-2 w-full rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-sm text-foreground/70 transition hover:border-primary/500/30 hover:bg-primary/500/10 hover:text-white"
                 >
                   <span>💰</span>
                   <span>Finances</span>
@@ -1964,13 +1964,13 @@ export default function AgentPage() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <div className="border-b border-white/10 bg-gradient-to-r from-slate-950/95 to-slate-900/95 px-6 py-4 backdrop-blur-xl shadow-lg">
+        <div className="border-b border-white/10 bg-gradient-to-r from-background/95 to-surface/95 px-6 py-4 backdrop-blur-xl shadow-lg">
           <div className="flex flex-wrap items-start justify-between gap-2 md:gap-4">
             {/* Left Section - Thread Info */}
             <div className="flex-1 min-w-0 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-sky-400/80">
-                  <span className="h-2 w-2 rounded-full bg-sky-400 animate-pulse"></span>
+                <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-primary/400/80">
+                  <span className="h-2 w-2 rounded-full bg-primary/400 animate-pulse"></span>
                   <span>AI Agent</span>
                 </div>
                 {exportSuccess && (
@@ -1988,14 +1988,14 @@ export default function AgentPage() {
               {/* Thread Metadata */}
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 {/* Model */}
-                <div className="inline-flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-sky-200">
+                <div className="inline-flex items-center gap-1.5 rounded-lg border border-primary/500/30 bg-primary/500/10 px-2.5 py-1 text-primary/200">
                   <span>🧠</span>
                   <span className="font-medium">{modelName}</span>
                 </div>
 
                 {/* Agent Style */}
                 {activeThread?.agentStyle && (
-                  <div className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-purple-200 capitalize">
+                  <div className="inline-flex items-center gap-1.5 rounded-lg border border-accent/500/30 bg-accent/500/10 px-2.5 py-1 text-accent/200 capitalize">
                     <span>🎨</span>
                     <span>{activeThread.agentStyle}</span>
                   </div>
@@ -2013,7 +2013,7 @@ export default function AgentPage() {
                 {activeThread && (
                   <button
                     onClick={() => setEditingOptionsThreadId(activeThread.id)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-slate-300 transition hover:border-sky-500/30 hover:bg-sky-500/10 hover:text-white"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-foreground/70 transition hover:border-primary/500/30 hover:bg-primary/500/10 hover:text-white"
                     title="Thread settings"
                   >
                     <span>⚙️</span>
@@ -2029,7 +2029,7 @@ export default function AgentPage() {
                 <button
                   onClick={() => setDensity('cozy')}
                   className={`px-2.5 py-1.5 text-xs transition ${
-                    !isCompact ? 'bg-sky-500/20 text-white' : 'text-slate-400 hover:text-white'
+                    !isCompact ? 'bg-primary/500/20 text-white' : 'text-foreground/60 hover:text-white'
                   }`}
                   title="Cozy view"
                 >
@@ -2038,7 +2038,7 @@ export default function AgentPage() {
                 <button
                   onClick={() => setDensity('compact')}
                   className={`px-2.5 py-1.5 text-xs transition ${
-                    isCompact ? 'bg-sky-500/20 text-white' : 'text-slate-400 hover:text-white'
+                    isCompact ? 'bg-primary/500/20 text-white' : 'text-foreground/60 hover:text-white'
                   }`}
                   title="Compact view"
                 >
@@ -2051,10 +2051,10 @@ export default function AgentPage() {
                 onClick={handleTTSToggle}
                 className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition ${
                   ttsState === 'speaking'
-                    ? 'border-green-400/50 bg-green-500/20 text-green-200'
+                    ? 'border-success/400/50 bg-success/500/20 text-success/200'
                     : ttsState === 'paused'
-                    ? 'border-yellow-400/50 bg-yellow-500/20 text-yellow-200'
-                    : 'border-white/10 bg-white/5 text-slate-200 hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white'
+                    ? 'border-warning/400/50 bg-warning/500/20 text-warning/200'
+                    : 'border-white/10 bg-white/5 text-foreground hover:border-primary/400/40 hover:bg-primary/500/10 hover:text-white'
                 }`}
                 title={ttsState === 'speaking' ? 'Pause speech' : ttsState === 'paused' ? 'Resume speech' : 'Read last message'}
                 disabled={!activeThread || activeThread.messages.filter(m => m.role === 'assistant').length === 0}
@@ -2069,10 +2069,10 @@ export default function AgentPage() {
                 onClick={handleVoiceInput}
                 className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition ${
                   recordingState === 'recording'
-                    ? 'border-red-400/50 bg-red-500/20 text-red-200 animate-pulse'
+                    ? 'border-danger/400/50 bg-danger/500/20 text-danger/200 animate-pulse'
                     : recordingState === 'processing'
-                    ? 'border-blue-400/50 bg-blue-500/20 text-blue-200'
-                    : 'border-white/10 bg-white/5 text-slate-200 hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white'
+                    ? 'border-accent/400/50 bg-accent/500/20 text-accent/200'
+                    : 'border-white/10 bg-white/5 text-foreground hover:border-primary/400/40 hover:bg-primary/500/10 hover:text-white'
                 }`}
                 title={recordingState === 'recording' ? 'Stop recording' : 'Record voice input'}
                 disabled={recordingState === 'processing'}
@@ -2087,20 +2087,20 @@ export default function AgentPage() {
               <div className="relative more-menu-container">
                 <button
                   onClick={() => setShowMoreMenu(!showMoreMenu)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/10 hover:text-white"
                   title="More options"
                 >
                   ⚙️
                   <span className="hidden sm:inline">More</span>
                 </button>
                 {showMoreMenu && (
-                  <div className="absolute right-0 top-full mt-2 min-w-[180px] overflow-hidden rounded-lg border border-white/10 bg-slate-900/98 shadow-2xl backdrop-blur-xl z-50">
+                  <div className="absolute right-0 top-full mt-2 min-w-[180px] overflow-hidden rounded-lg border border-white/10 bg-surface/98 shadow-2xl backdrop-blur-xl z-50">
                     <button
                       onClick={() => {
                         setShowMemoryModal(true);
                         setShowMoreMenu(false);
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-200 transition hover:bg-sky-500/10 hover:text-white"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/500/10 hover:text-white"
                     >
                       <span>🧠</span>
                       <span>Agent Memory</span>
@@ -2110,7 +2110,7 @@ export default function AgentPage() {
                         setShowUserMemoriesModal(true);
                         setShowMoreMenu(false);
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-200 transition hover:bg-sky-500/10 hover:text-white"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/500/10 hover:text-white"
                     >
                       <span>📚</span>
                       <span>My Notebook</span>
@@ -2120,7 +2120,7 @@ export default function AgentPage() {
                         setShowTTSSettings(true);
                         setShowMoreMenu(false);
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-200 transition hover:bg-sky-500/10 hover:text-white"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/500/10 hover:text-white"
                     >
                       <span>🎚️</span>
                       <span>Voice Settings</span>
@@ -2133,7 +2133,7 @@ export default function AgentPage() {
                 <>
                   <button
                     onClick={() => setShowShareModal(true)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/10 hover:text-white"
                     title="Share conversation"
                   >
                     🔗
@@ -2142,24 +2142,24 @@ export default function AgentPage() {
                   <div className="relative export-menu-container">
                     <button
                       onClick={() => setShowExportMenu(!showExportMenu)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/10 hover:text-white"
                       title="Export conversation"
                     >
                       📥
                       <span className="hidden sm:inline">Export</span>
                     </button>
                     {showExportMenu && (
-                      <div className="absolute right-0 top-full mt-2 min-w-[160px] overflow-hidden rounded-lg border border-white/10 bg-slate-900/98 shadow-2xl backdrop-blur-xl z-50">
+                      <div className="absolute right-0 top-full mt-2 min-w-[160px] overflow-hidden rounded-lg border border-white/10 bg-surface/98 shadow-2xl backdrop-blur-xl z-50">
                         <button
                           onClick={handleExportDownload}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-200 transition hover:bg-sky-500/10 hover:text-white"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/500/10 hover:text-white"
                         >
                           <span>💾</span>
                           <span>Download</span>
                         </button>
                         <button
                           onClick={handleExportCopy}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-200 transition hover:bg-sky-500/10 hover:text-white"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/500/10 hover:text-white"
                         >
                           <span>📋</span>
                           <span>Copy</span>
@@ -2204,7 +2204,7 @@ export default function AgentPage() {
               metadataBadges.push(
                 <span
                   key="model"
-                  className="inline-flex items-center gap-1 rounded-full border border-purple-400/30 bg-purple-500/10 px-3 py-1 text-purple-300"
+                  className="inline-flex items-center gap-1 rounded-full border border-accent/400/30 bg-accent/500/10 px-3 py-1 text-accent/300"
                 >
                   🤖 {msg.model}
                 </span>
@@ -2215,10 +2215,10 @@ export default function AgentPage() {
             if (msg.complexity) {
               const complexityIcon = msg.complexity === 'simple' ? '⚡' : msg.complexity === 'moderate' ? '⚙️' : '🧠';
               const complexityClass = msg.complexity === 'simple'
-                ? 'border-green-400/30 bg-green-500/10 text-green-300'
+                ? 'border-success/400/30 bg-success/500/10 text-success/300'
                 : msg.complexity === 'moderate'
-                ? 'border-yellow-400/30 bg-yellow-500/10 text-yellow-300'
-                : 'border-red-400/30 bg-red-500/10 text-red-300';
+                ? 'border-warning/400/30 bg-warning/500/10 text-warning/300'
+                : 'border-danger/400/30 bg-danger/500/10 text-danger/300';
 
               metadataBadges.push(
                 <span
@@ -2235,7 +2235,7 @@ export default function AgentPage() {
               metadataBadges.push(
                 <span
                   key="routing"
-                  className="inline-flex items-center gap-1 rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-blue-300"
+                  className="inline-flex items-center gap-1 rounded-full border border-accent/400/30 bg-accent/500/10 px-3 py-1 text-accent/300"
                 >
                   🎯 {msg.routing === 'orchestrator' ? 'Multi-agent' : 'Direct'}
                 </span>
@@ -2277,7 +2277,7 @@ export default function AgentPage() {
               <button
                 key="copy"
                 onClick={() => copyMessageToClipboard(msg)}
-                className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-200 transition hover:border-emerald-400/40 hover:bg-emerald-500/20 hover:text-white"
+                className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-foreground transition hover:border-emerald-400/40 hover:bg-emerald-500/20 hover:text-white"
               >
                 📋 Copy
               </button>,
@@ -2290,7 +2290,7 @@ export default function AgentPage() {
                     <button
                       key="pause"
                       onClick={pause}
-                      className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/20 hover:text-white"
+                      className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/20 hover:text-white"
                       title="Pause voice playback"
                     >
                       ⏸️ Pause
@@ -2301,7 +2301,7 @@ export default function AgentPage() {
                     <button
                       key="resume"
                       onClick={resume}
-                      className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/20 hover:text-white"
+                      className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/20 hover:text-white"
                       title="Resume voice playback"
                     >
                       ▶️ Resume
@@ -2312,7 +2312,7 @@ export default function AgentPage() {
                   <button
                     key="stop"
                     onClick={stop}
-                    className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-200 transition hover:border-rose-400/40 hover:bg-rose-500/20 hover:text-white"
+                    className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-foreground transition hover:border-rose-400/40 hover:bg-rose-500/20 hover:text-white"
                     title="Stop voice playback"
                   >
                     ⏹️ Stop
@@ -2324,7 +2324,7 @@ export default function AgentPage() {
                     key="tts"
                     onClick={() => speak(msg.content, msg.id)}
                     disabled={ttsState !== 'idle'}
-                    className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/20 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-slate-500"
+                    className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/20 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-foreground/60"
                     title="Read response aloud"
                   >
                     🔊 Listen
@@ -2336,7 +2336,7 @@ export default function AgentPage() {
                   key="regenerate"
                   onClick={() => regenerateResponse(msgIndex)}
                   disabled={loading || isStreaming}
-                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/20 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-slate-500"
+                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/20 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-foreground/60"
                   title="Regenerate response"
                 >
                   🔄 Regenerate
@@ -2350,7 +2350,7 @@ export default function AgentPage() {
                   key="branch"
                   onClick={() => createBranch(msgIndex)}
                   disabled={loading || isStreaming}
-                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-200 transition hover:border-purple-400/40 hover:bg-purple-500/20 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-slate-500"
+                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-foreground transition hover:border-accent/400/40 hover:bg-accent/500/20 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-foreground/60"
                   title="Branch conversation from here"
                 >
                   🌿 Branch
@@ -2361,7 +2361,7 @@ export default function AgentPage() {
                   key="edit"
                   onClick={() => startEditMessage(msg.id, msg.content)}
                   disabled={loading || isStreaming}
-                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/20 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-slate-500"
+                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/20 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-foreground/60"
                   title="Edit and re-run message"
                 >
                   ✏️ Edit
@@ -2379,43 +2379,43 @@ export default function AgentPage() {
                 }`}
               >
                 {isAssistant && (
-                  <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-sm font-semibold text-white shadow-lg">
+                  <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent/500 to-accent/500 text-sm font-semibold text-white shadow-lg">
                     AI
                   </div>
                 )}
 
                 <div
-                  className={`${bubbleWidthClass} ${bubblePaddingClass} relative rounded-3xl border shadow-xl shadow-slate-900/30 backdrop-blur transition ${
+                  className={`${bubbleWidthClass} ${bubblePaddingClass} relative rounded-3xl border shadow-xl shadow-black/30 backdrop-blur transition ${
                     isAssistant
-                      ? 'border-white/10 bg-white/5 text-slate-100 rounded-tl-xl'
-                      : 'border-sky-500/40 bg-gradient-to-br from-sky-500 via-indigo-500 to-blue-600 text-white rounded-tr-xl'
+                      ? 'border-white/10 bg-white/5 text-foreground rounded-tl-xl'
+                      : 'border-primary/500/40 bg-gradient-to-br from-primary via-accent to-accent text-white rounded-tr-xl'
                   }`}
                 >
                   <div className="mb-3 flex flex-wrap items-start justify-between gap-3 text-xs">
                     <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.3em]">
-                      <span className={isAssistant ? 'text-sky-200' : 'text-white/80'}>
+                      <span className={isAssistant ? 'text-primary/200' : 'text-white/80'}>
                         {isAssistant ? activeThread?.agentName ?? 'FROK Assistant' : 'You'}
                       </span>
                       {isAssistant && msg.routing && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-200">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-foreground">
                           🧠 {msg.routing === 'orchestrator' ? 'Orchestrated' : 'Direct'}
                         </span>
                       )}
                       {isAssistant && msg.model && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-200">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-foreground">
                           🧩 {msg.model}
                         </span>
                       )}
                       {isAssistant && msg.complexity && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] capitalize text-slate-200">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] capitalize text-foreground">
                           📊 {msg.complexity}
                         </span>
                       )}
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-foreground/70">
                       {typeof msg.timestamp === 'number' && <span>{formatTimestamp(msg.timestamp)}</span>}
                       {typeof msg.latencyMs === 'number' && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-200">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-foreground">
                           ⚡ {(msg.latencyMs / 1000).toFixed(1)}s
                         </span>
                       )}
@@ -2446,7 +2446,7 @@ export default function AgentPage() {
                       <textarea
                         value={editContent}
                         onChange={(event) => setEditContent(event.target.value)}
-                        className="w-full resize-none rounded-xl border border-white/10 bg-slate-950/80 px-4 py-3 text-sm text-white focus:border-sky-500/60 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                        className="w-full resize-none rounded-xl border border-white/10 bg-background/80 px-4 py-3 text-sm text-white focus:border-primary/500/60 focus:outline-none focus:ring-2 focus:ring-primary/500/30"
                         rows={4}
                         autoFocus
                         placeholder="Edit your message..."
@@ -2455,13 +2455,13 @@ export default function AgentPage() {
                         <button
                           onClick={() => saveEditedMessage(msgIndex)}
                           disabled={!editContent.trim() || loading}
-                          className="inline-flex items-center gap-2 rounded-lg border border-sky-400/40 bg-sky-500/20 px-3 py-1.5 text-sm font-medium text-sky-100 transition hover:border-sky-300 hover:bg-sky-500/30 disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-slate-500"
+                          className="inline-flex items-center gap-2 rounded-lg border border-primary/400/40 bg-primary/500/20 px-3 py-1.5 text-sm font-medium text-primary/100 transition hover:border-primary/300 hover:bg-primary/500/30 disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-foreground/60"
                         >
                           💾 Save & Re-run
                         </button>
                         <button
                           onClick={cancelEdit}
-                          className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/10 px-3 py-1.5 text-sm font-medium text-slate-200 transition hover:border-rose-400/40 hover:bg-rose-500/20 hover:text-white"
+                          className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/10 px-3 py-1.5 text-sm font-medium text-foreground transition hover:border-rose-400/40 hover:bg-rose-500/20 hover:text-white"
                         >
                           ✕ Cancel
                         </button>
@@ -2472,7 +2472,7 @@ export default function AgentPage() {
                   )}
 
                   {msg.files && msg.files.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-200">
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-foreground">
                       {msg.files.map((file, index) => (
                         <span
                           key={index}
@@ -2485,14 +2485,14 @@ export default function AgentPage() {
                   )}
 
                   {msg.role === 'assistant' && msg.isRegenerating && (
-                    <div className="mt-3 flex items-center gap-2 text-xs text-sky-200">
-                      <span className="h-2 w-2 animate-pulse rounded-full bg-sky-400"></span>
+                    <div className="mt-3 flex items-center gap-2 text-xs text-primary/200">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-primary/400"></span>
                       Regenerating...
                     </div>
                   )}
 
                   {showActionRow && (
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3 text-xs text-slate-300">
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3 text-xs text-foreground/70">
                       <div className="flex flex-wrap gap-2">{metadataBadges}</div>
                       <div className="flex flex-wrap items-center gap-2 opacity-0 transition group-hover:opacity-100">
                         {actionButtons}
@@ -2502,7 +2502,7 @@ export default function AgentPage() {
                 </div>
 
                 {!isAssistant && (
-                  <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-sm font-semibold text-white shadow-lg">
+                  <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent text-sm font-semibold text-white shadow-lg">
                     U
                   </div>
                 )}
@@ -2511,45 +2511,45 @@ export default function AgentPage() {
           })}
           {isStreaming && streamingContent && (
             <div className="group flex items-start gap-3 justify-start">
-              <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-sm font-semibold text-white shadow-lg">
+              <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent/500 to-accent/500 text-sm font-semibold text-white shadow-lg">
                 AI
               </div>
 
               <div
-                className={`${isCompact ? 'max-w-2xl px-4 py-3' : 'max-w-3xl px-5 py-4'} rounded-3xl border border-sky-500/40 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950/80 text-slate-100 shadow-xl shadow-slate-900/30 backdrop-blur`}
+                className={`${isCompact ? 'max-w-2xl px-4 py-3' : 'max-w-3xl px-5 py-4'} rounded-3xl border border-primary/500/40 bg-gradient-to-br from-surface via-surface to-background/80 text-foreground shadow-xl shadow-black/30 backdrop-blur`}
               >
                 {streamingMeta && (
-                  <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-sky-200">
+                  <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-primary/200">
                     {streamingMeta.routing && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 text-[10px]">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/500/40 bg-primary/500/15 px-2 py-0.5 text-[10px]">
                         🧠 {streamingMeta.routing === 'orchestrator' ? 'Orchestrated' : 'Direct'}
                       </span>
                     )}
                     {streamingMeta.model && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 text-[10px]">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/500/40 bg-primary/500/15 px-2 py-0.5 text-[10px]">
                         🧩 {streamingMeta.model}
                       </span>
                     )}
                     {streamingMeta.complexity && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 text-[10px] capitalize">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/500/40 bg-primary/500/15 px-2 py-0.5 text-[10px] capitalize">
                         📊 {streamingMeta.complexity}
                       </span>
                     )}
                     {streamingMeta.tools && streamingMeta.tools.length > 0 && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 text-[10px]">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/500/40 bg-primary/500/15 px-2 py-0.5 text-[10px]">
                         🔧 {streamingMeta.tools.join(', ')}
                       </span>
                     )}
                     {streamingMeta.toolSource && formatToolSource(streamingMeta.toolSource) && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 text-[10px]">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/500/40 bg-primary/500/15 px-2 py-0.5 text-[10px]">
                         ⚙️ {formatToolSource(streamingMeta.toolSource)}
                       </span>
                     )}
                   </div>
                 )}
                 <MessageContent content={streamingContent} role="assistant" />
-                <div className="mt-3 flex items-center gap-2 text-xs text-sky-300">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-sky-400"></span>
+                <div className="mt-3 flex items-center gap-2 text-xs text-primary/300">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-primary/400"></span>
                   Streaming…
                 </div>
               </div>
@@ -2557,13 +2557,13 @@ export default function AgentPage() {
           )}
           {loading && !isStreaming && (
             <div className="group flex items-start gap-3 justify-start">
-              <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-sm font-semibold text-white shadow-lg">
+              <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent/500 to-accent/500 text-sm font-semibold text-white shadow-lg">
                 AI
               </div>
 
-              <div className={`${isCompact ? 'max-w-2xl px-4 py-3' : 'max-w-3xl px-5 py-4'} rounded-3xl border border-white/10 bg-white/5 text-slate-100 shadow-xl shadow-slate-900/30 backdrop-blur`}> 
-                <div className="flex items-center gap-2 text-xs text-slate-300">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-sky-400"></span>
+              <div className={`${isCompact ? 'max-w-2xl px-4 py-3' : 'max-w-3xl px-5 py-4'} rounded-3xl border border-white/10 bg-white/5 text-foreground shadow-xl shadow-black/30 backdrop-blur`}> 
+                <div className="flex items-center gap-2 text-xs text-foreground/70">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-primary/400"></span>
                   Preparing response…
                 </div>
               </div>
@@ -2574,7 +2574,7 @@ export default function AgentPage() {
           {showScrollButton && (
             <button
               onClick={scrollToBottom}
-              className="fixed bottom-24 right-8 z-10 rounded-full border border-white/10 bg-slate-950/80 p-3 text-white shadow-xl backdrop-blur transition hover:border-sky-500/40 hover:bg-sky-500/20 hover:text-white hover:shadow-sky-900/40"
+              className="fixed bottom-24 right-8 z-10 rounded-full border border-white/10 bg-background/80 p-3 text-white shadow-xl backdrop-blur transition hover:border-primary/500/40 hover:bg-primary/500/20 hover:text-white hover:shadow-primary/900/40"
               title="Scroll to bottom"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2587,7 +2587,7 @@ export default function AgentPage() {
         </div>
 
         {/* Input Area */}
-        <div className="border-t border-white/10 bg-slate-950/80 px-6 py-5 backdrop-blur">
+        <div className="border-t border-white/10 bg-background/80 px-6 py-5 backdrop-blur">
           {/* Quick Actions */}
           <QuickActions
             onAction={handleSuggestedPrompt}
@@ -2634,14 +2634,14 @@ export default function AgentPage() {
                   {files.filter(f => !f.type.startsWith('image/')).map((file, i) => (
                     <div
                       key={i}
-                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200"
+                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-foreground"
                     >
                       <span>📎 {file.name}</span>
                       <button
                         onClick={() =>
                           setFiles((prev) => prev.filter((f) => f !== file))
                         }
-                        className="text-slate-400 transition hover:text-rose-300"
+                        className="text-foreground/60 transition hover:text-rose-300"
                       >
                         ×
                       </button>
@@ -2667,11 +2667,11 @@ export default function AgentPage() {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={loading || recordingState !== 'idle'}
-              className="group relative inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-slate-500"
+              className="group relative inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/10 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-foreground/60"
               title="Attach images (Vision enabled)"
             >
               🖼️
-              <span className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded-md border border-white/10 bg-slate-900/90 px-2 py-1 text-[10px] text-white opacity-0 shadow-lg transition group-hover:opacity-100 whitespace-nowrap">
+              <span className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded-md border border-white/10 bg-surface/90 px-2 py-1 text-[10px] text-white opacity-0 shadow-lg transition group-hover:opacity-100 whitespace-nowrap">
                 Vision enabled
               </span>
             </button>
@@ -2683,8 +2683,8 @@ export default function AgentPage() {
               className={`group relative inline-flex items-center justify-center rounded-xl border px-3 py-2 text-sm font-medium transition ${
                 recordingState === 'recording'
                   ? 'border-rose-500/60 bg-rose-500/20 text-rose-100 animate-pulse'
-                  : 'border-white/10 bg-white/5 text-slate-200 hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white'
-              } disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-slate-500`}
+                  : 'border-white/10 bg-white/5 text-foreground hover:border-primary/400/40 hover:bg-primary/500/10 hover:text-white'
+              } disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-foreground/60`}
               title={recordingState === 'recording' ? 'Stop recording' : 'Voice input'}
             >
               {recordingState === 'recording' ? (
@@ -2698,7 +2698,7 @@ export default function AgentPage() {
                 '🎤'
               )}
               {recordingState === 'idle' && (
-                <span className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded-md border border-white/10 bg-slate-900/90 px-2 py-1 text-[10px] text-white opacity-0 shadow-lg transition group-hover:opacity-100 whitespace-nowrap">
+                <span className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded-md border border-white/10 bg-surface/90 px-2 py-1 text-[10px] text-white opacity-0 shadow-lg transition group-hover:opacity-100 whitespace-nowrap">
                   Voice input
                 </span>
               )}
@@ -2714,7 +2714,7 @@ export default function AgentPage() {
                 }
               }}
               placeholder="Type a message... (Enter to send)"
-              className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white placeholder:text-slate-500 focus:border-sky-500/60 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+              className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white placeholder:text-foreground/60 focus:border-primary/500/60 focus:outline-none focus:ring-2 focus:ring-primary/500/20"
               disabled={loading}
             />
             {isStreaming ? (
@@ -2728,7 +2728,7 @@ export default function AgentPage() {
               <button
                 onClick={sendMessage}
                 disabled={loading || (!input.trim() && files.length === 0)}
-                className="rounded-xl bg-sky-500 px-6 py-2 text-sm font-semibold text-slate-900 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-white/5 disabled:text-slate-500"
+                className="rounded-xl bg-primary/500 px-6 py-2 text-sm font-semibold text-background transition hover:bg-primary/600 disabled:cursor-not-allowed disabled:bg-white/5 disabled:text-foreground/60"
               >
                 {loading ? 'Sending...' : 'Send'}
               </button>
@@ -2744,18 +2744,18 @@ export default function AgentPage() {
           onClick={() => setShowShareModal(false)}
         >
           <div
-            className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-950/90 px-6 py-6 text-slate-100 shadow-2xl"
+            className="w-full max-w-md rounded-2xl border border-white/10 bg-background/90 px-6 py-6 text-foreground shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
             <h2 className="text-lg font-semibold">Share Conversation</h2>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-sm text-foreground/60">
               Generate a secure link to share this conversation with collaborators.
             </p>
 
             {shareUrl ? (
               <div className="mt-5 space-y-4">
                 <div className="space-y-2">
-                  <label className="block text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
+                  <label className="block text-xs font-semibold uppercase tracking-[0.3em] text-foreground/60">
                     Share link
                   </label>
                   <div className="flex gap-2">
@@ -2767,12 +2767,12 @@ export default function AgentPage() {
                     />
                     <button
                       onClick={copyShareUrl}
-                      className="rounded-lg border border-sky-400/40 bg-sky-500/20 px-3 py-2 text-sm font-medium text-sky-100 transition hover:border-sky-300 hover:bg-sky-500/30"
+                      className="rounded-lg border border-primary/400/40 bg-primary/500/20 px-3 py-2 text-sm font-medium text-primary/100 transition hover:border-primary/300 hover:bg-primary/500/30"
                     >
                       📋 Copy
                     </button>
                   </div>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-foreground/60">
                     Anyone with this link can view this conversation in read-only mode.
                   </p>
                 </div>
@@ -2781,35 +2781,35 @@ export default function AgentPage() {
                     setShowShareModal(false);
                     setShareUrl(null);
                   }}
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 transition hover:border-sky-400/40 hover:bg-sky-500/10 hover:text-white"
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/10 hover:text-white"
                 >
                   Close
                 </button>
               </div>
             ) : (
               <div className="mt-5 space-y-4">
-                <p className="text-sm text-slate-300">
+                <p className="text-sm text-foreground/70">
                   Decide how long your share link should remain available.
                 </p>
                 <div className="space-y-2">
                   <button
                     onClick={() => handleShare()}
                     disabled={shareLoading}
-                    className="w-full rounded-lg border border-sky-400/40 bg-sky-500/20 px-4 py-2 text-sm font-medium text-sky-100 transition hover:border-sky-300 hover:bg-sky-500/30 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
+                    className="w-full rounded-lg border border-primary/400/40 bg-primary/500/20 px-4 py-2 text-sm font-medium text-primary/100 transition hover:border-primary/300 hover:bg-primary/500/30 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-foreground/60"
                   >
                     {shareLoading ? 'Creating…' : 'Create permanent link'}
                   </button>
                   <button
                     onClick={() => handleShare(7)}
                     disabled={shareLoading}
-                    className="w-full rounded-lg border border-sky-400/40 bg-sky-500/20 px-4 py-2 text-sm font-medium text-sky-100 transition hover:border-sky-300 hover:bg-sky-500/30 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
+                    className="w-full rounded-lg border border-primary/400/40 bg-primary/500/20 px-4 py-2 text-sm font-medium text-primary/100 transition hover:border-primary/300 hover:bg-primary/500/30 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-foreground/60"
                   >
                     {shareLoading ? 'Creating…' : 'Create link (7-day expiry)'}
                   </button>
                 </div>
                 <button
                   onClick={() => setShowShareModal(false)}
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 transition hover:border-rose-400/40 hover:bg-rose-500/20 hover:text-white"
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-foreground transition hover:border-rose-400/40 hover:bg-rose-500/20 hover:text-white"
                 >
                   Cancel
                 </button>

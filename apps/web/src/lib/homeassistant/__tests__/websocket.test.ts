@@ -107,15 +107,26 @@ describe('HAWebSocketManager', () => {
       const statusCallback = vi.fn();
       manager.onStatusChange(statusCallback);
 
+      // The initial status is 'disconnected' and triggers immediately (with only one arg on initial call)
+      expect(statusCallback).toHaveBeenCalledWith('disconnected');
+
+      // Clear the mock to start fresh for connection sequence
+      statusCallback.mockClear();
+
       await manager.connect('http://localhost:8123', 'test-token');
 
-      // Wait for connection
-      await vi.runAllTimersAsync();
+      // Wait for connection - run pending timers only once
+      await vi.runOnlyPendingTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
 
-      expect(statusCallback).toHaveBeenCalledWith('disconnected');
-      expect(statusCallback).toHaveBeenCalledWith('connecting');
-      expect(statusCallback).toHaveBeenCalledWith('authenticating');
-      expect(statusCallback).toHaveBeenCalledWith('connected');
+      // Now check the connection sequence (setStatus calls have two args)
+      expect(statusCallback).toHaveBeenCalledWith('connecting', undefined);
+      expect(statusCallback).toHaveBeenCalledWith('authenticating', undefined);
+      expect(statusCallback).toHaveBeenCalledWith('connected', undefined);
+
+      // Verify the order of calls
+      const calls = statusCallback.mock.calls.map(call => call[0]);
+      expect(calls).toEqual(['connecting', 'authenticating', 'connected']);
     });
 
     it('should handle authentication failure', async () => {
@@ -140,7 +151,8 @@ describe('HAWebSocketManager', () => {
       } as any;
 
       await manager.connect('http://localhost:8123', 'invalid-token');
-      await vi.runAllTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
 
       expect(statusCallback).toHaveBeenCalledWith('error', 'Authentication failed');
 
@@ -149,7 +161,8 @@ describe('HAWebSocketManager', () => {
 
     it('should disconnect properly', async () => {
       await manager.connect('http://localhost:8123', 'test-token');
-      await vi.runAllTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
 
       expect(manager.isConnected()).toBe(true);
 
@@ -163,7 +176,8 @@ describe('HAWebSocketManager', () => {
       manager.onStatusChange(statusCallback);
 
       await manager.connect('http://localhost:8123', 'test-token');
-      await vi.runAllTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
 
       // Simulate connection loss
       const ws = (manager as any).ws;
@@ -188,7 +202,8 @@ describe('HAWebSocketManager', () => {
       (manager as any).maxReconnectAttempts = 3;
 
       await manager.connect('http://localhost:8123', 'test-token');
-      await vi.runAllTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
 
       // Force disconnections
       for (let i = 0; i < 4; i++) {
@@ -209,7 +224,8 @@ describe('HAWebSocketManager', () => {
       manager.onStateChange(stateCallback);
 
       await manager.connect('http://localhost:8123', 'test-token');
-      await vi.runAllTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
 
       // Simulate state change event
       const ws = (manager as any).ws;
@@ -256,7 +272,8 @@ describe('HAWebSocketManager', () => {
       const unsubscribe = manager.onStateChange(stateCallback);
 
       await manager.connect('http://localhost:8123', 'test-token');
-      await vi.runAllTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
 
       unsubscribe();
 
@@ -283,7 +300,8 @@ describe('HAWebSocketManager', () => {
       const sendSpy = vi.fn();
 
       await manager.connect('http://localhost:8123', 'test-token');
-      await vi.runAllTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
 
       const ws = (manager as any).ws;
       if (ws) {
@@ -308,7 +326,8 @@ describe('HAWebSocketManager', () => {
       manager.onStateChange(stateCallback);
 
       await manager.connect('http://localhost:8123', 'test-token');
-      await vi.runAllTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
 
       manager.destroy();
 
@@ -342,7 +361,8 @@ describe('HAWebSocketManager', () => {
       manager.onStatusChange(statusCallback);
 
       await manager.connect('http://localhost:8123', 'test-token');
-      await vi.runAllTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
 
       const ws = (manager as any).ws;
       if (ws && ws.onerror) {
@@ -354,7 +374,8 @@ describe('HAWebSocketManager', () => {
 
     it('should handle malformed messages', async () => {
       await manager.connect('http://localhost:8123', 'test-token');
-      await vi.runAllTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
 
       const ws = (manager as any).ws;
 
@@ -376,7 +397,8 @@ describe('HAWebSocketManager', () => {
       manager.onStateChange(errorCallback);
 
       await manager.connect('http://localhost:8123', 'test-token');
-      await vi.runAllTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
 
       const ws = (manager as any).ws;
 

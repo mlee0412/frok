@@ -14,7 +14,7 @@ export const Basic: Story = {
     <AppShell
       sideNav={
         <SideNav
-          header={<div className="px-4 pb-4 text-cyan-400 font-bold">FROK</div>}
+          header={<div className="px-4 pb-4 text-info/400 font-bold">FROK</div>}
           items={[
             { label: 'Profile', href: '#' },
             { label: 'System', href: '#' },
@@ -29,7 +29,7 @@ export const Basic: Story = {
       <div className="py-6 space-y-4">
         <Card className="p-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-cyan-300 font-semibold">Welcome</h3>
+            <h3 className="text-info/300 font-semibold">Welcome</h3>
             <Button>Action</Button>
           </div>
           <p className="text-white/70 mt-2">This is the main content area.</p>

@@ -202,7 +202,7 @@ export function LightControlModal({
                 value={currentBrightness}
                 onChange={(e) => handleBrightnessChange(Number(e.target.value))}
                 disabled={pending}
-                className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                className="w-full h-2 bg-surface rounded-lg appearance-none cursor-pointer"
                 style={{
                   background: `linear-gradient(to right, #FFD700 0%, #FFD700 ${currentBrightness}%, rgba(255,255,255,0.1) ${currentBrightness}%, rgba(255,255,255,0.1) 100%)`,
                 }}
@@ -213,7 +213,7 @@ export function LightControlModal({
                     key={val}
                     onClick={() => handleBrightnessChange(val)}
                     disabled={pending}
-                    className="text-xs px-2 py-1 rounded bg-gray-700/50 hover:bg-gray-700 transition-colors text-white"
+                    className="text-xs px-2 py-1 rounded bg-surface/50 hover:bg-surface transition-colors text-white"
                   >
                     {val}%
                   </button>
@@ -235,7 +235,7 @@ export function LightControlModal({
                   value={currentColorTemp}
                   onChange={(e) => handleColorTempChange(Number(e.target.value))}
                   disabled={pending}
-                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  className="w-full h-2 bg-surface rounded-lg appearance-none cursor-pointer"
                 />
                 <div className="flex justify-between mt-2 text-xs text-foreground/60">
                   <span>Warm (2000K)</span>
@@ -247,7 +247,7 @@ export function LightControlModal({
                       key={val}
                       onClick={() => handleColorTempChange(val)}
                       disabled={pending}
-                      className="text-xs px-2 py-1 rounded bg-gray-700/50 hover:bg-gray-700 transition-colors text-white"
+                      className="text-xs px-2 py-1 rounded bg-surface/50 hover:bg-surface transition-colors text-white"
                     >
                       {val}K
                     </button>

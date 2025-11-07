@@ -37,7 +37,7 @@ export function TTSSettingsModal({
       onClick={onClose}
     >
       <div
-        className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md w-full mx-4"
+        className="bg-background border border-border rounded-lg p-6 max-w-md w-full mx-4"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-lg font-semibold mb-4">🔊 {t('title')}</h2>
@@ -56,7 +56,7 @@ export function TTSSettingsModal({
             onChange={(e) => setRate(parseFloat(e.target.value))}
             className="w-full"
           />
-          <div className="flex justify-between text-xs text-gray-500 mt-1">
+          <div className="flex justify-between text-xs text-foreground/60 mt-1">
             <span>{t('speed.verySlow')}</span>
             <span>{t('speed.normal')}</span>
             <span>{t('speed.veryFast')}</span>
@@ -69,7 +69,7 @@ export function TTSSettingsModal({
           <select
             value={selectedVoice || ''}
             onChange={(e) => setSelectedVoice(e.target.value || null)}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:border-sky-500 text-sm"
+            className="w-full px-3 py-2 bg-surface border border-border rounded focus:outline-none focus:border-primary/500 text-sm"
           >
             {englishVoices.length === 0 ? (
               <option>{tCommon('loading')}</option>
@@ -81,7 +81,7 @@ export function TTSSettingsModal({
               ))
             )}
           </select>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-foreground/60 mt-1">
             {englishVoices.length} English voice{englishVoices.length !== 1 ? 's' : ''} available
           </p>
         </div>

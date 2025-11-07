@@ -82,13 +82,13 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 p-6">
+      <div className="min-h-screen bg-background p-6">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-2xl font-bold text-white mb-6">Analytics</h1>
           <div className="animate-pulse">
-            <div className="h-32 bg-slate-800 rounded-lg mb-4"></div>
-            <div className="h-32 bg-slate-800 rounded-lg mb-4"></div>
-            <div className="h-64 bg-slate-800 rounded-lg"></div>
+            <div className="h-32 bg-surface rounded-lg mb-4"></div>
+            <div className="h-32 bg-surface rounded-lg mb-4"></div>
+            <div className="h-64 bg-surface rounded-lg"></div>
           </div>
         </div>
       </div>
@@ -96,13 +96,13 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6">
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-white">Cost Analytics</h1>
-            <p className="text-slate-400 text-sm mt-1">
+            <p className="text-foreground/60 text-sm mt-1">
               Track AI usage and estimated costs
             </p>
           </div>
@@ -115,8 +115,8 @@ export default function AnalyticsPage() {
                 onClick={() => setPeriod(days)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                   period === days
-                    ? 'bg-sky-500 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    ? 'bg-primary/500 text-white'
+                    : 'bg-surface text-foreground/70 hover:bg-surface/80'
                 }`}
               >
                 {days} days
@@ -128,31 +128,31 @@ export default function AnalyticsPage() {
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="p-6">
-            <div className="text-slate-400 text-sm mb-1">Total Cost</div>
+            <div className="text-foreground/60 text-sm mb-1">Total Cost</div>
             <div className="text-3xl font-bold text-white">
               {formatCost(stats.totalCost)}
             </div>
-            <div className="text-xs text-slate-500 mt-2">
+            <div className="text-xs text-foreground/60 mt-2">
               Last {period} days
             </div>
           </Card>
 
           <Card className="p-6">
-            <div className="text-slate-400 text-sm mb-1">Messages</div>
+            <div className="text-foreground/60 text-sm mb-1">Messages</div>
             <div className="text-3xl font-bold text-white">
               {stats.messageCount.toLocaleString()}
             </div>
-            <div className="text-xs text-slate-500 mt-2">
+            <div className="text-xs text-foreground/60 mt-2">
               Assistant responses
             </div>
           </Card>
 
           <Card className="p-6">
-            <div className="text-slate-400 text-sm mb-1">Avg Cost/Message</div>
+            <div className="text-foreground/60 text-sm mb-1">Avg Cost/Message</div>
             <div className="text-3xl font-bold text-white">
               {formatCost(stats.averageCostPerMessage)}
             </div>
-            <div className="text-xs text-slate-500 mt-2">
+            <div className="text-xs text-foreground/60 mt-2">
               Per response
             </div>
           </Card>
@@ -163,15 +163,15 @@ export default function AnalyticsPage() {
           <h2 className="text-lg font-semibold text-white mb-4">Cost by Model</h2>
           <div className="space-y-3">
             {Object.entries(stats.costByModel).length === 0 ? (
-              <p className="text-slate-400 text-sm">No data available</p>
+              <p className="text-foreground/60 text-sm">No data available</p>
             ) : (
               Object.entries(stats.costByModel)
                 .sort(([, a], [, b]) => b - a)
                 .map(([model, cost]) => (
                   <div key={model} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 rounded-full bg-sky-500"></div>
-                      <span className="text-slate-300 font-mono text-sm">{model}</span>
+                      <div className="w-2 h-2 rounded-full bg-primary/500"></div>
+                      <span className="text-foreground/70 font-mono text-sm">{model}</span>
                     </div>
                     <span className="text-white font-semibold">{formatCost(cost)}</span>
                   </div>
@@ -185,19 +185,19 @@ export default function AnalyticsPage() {
           <h2 className="text-lg font-semibold text-white mb-4">Daily Cost</h2>
           <div className="space-y-2">
             {stats.costByDay.length === 0 ? (
-              <p className="text-slate-400 text-sm">No data available</p>
+              <p className="text-foreground/60 text-sm">No data available</p>
             ) : (
               stats.costByDay.map(({ date, cost }) => (
                 <div key={date} className="flex items-center gap-4">
-                  <div className="text-slate-400 text-sm font-mono w-28">
+                  <div className="text-foreground/60 text-sm font-mono w-28">
                     {new Date(date).toLocaleDateString(undefined, {
                       month: 'short',
                       day: 'numeric',
                     })}
                   </div>
-                  <div className="flex-1 bg-slate-800 rounded-full h-6 overflow-hidden">
+                  <div className="flex-1 bg-surface rounded-full h-6 overflow-hidden">
                     <div
-                      className="bg-sky-500 h-full rounded-full transition-all"
+                      className="bg-primary/500 h-full rounded-full transition-all"
                       style={{
                         width: `${Math.min(
                           100,
@@ -220,12 +220,12 @@ export default function AnalyticsPage() {
           <h2 className="text-lg font-semibold text-white mb-4">Projected Monthly Cost</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-slate-400">Based on last {period} days</span>
+              <span className="text-foreground/60">Based on last {period} days</span>
               <span className="text-2xl font-bold text-white">
                 {formatCost((stats.totalCost / period) * 30)}
               </span>
             </div>
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-foreground/60">
               * This is an estimate based on current usage patterns
             </div>
           </div>
@@ -237,38 +237,38 @@ export default function AnalyticsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="text-left py-3 px-4 text-slate-400 font-medium">Metric</th>
-                  <th className="text-right py-3 px-4 text-slate-400 font-medium">Value</th>
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-4 text-foreground/60 font-medium">Metric</th>
+                  <th className="text-right py-3 px-4 text-foreground/60 font-medium">Value</th>
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-b border-slate-800">
-                  <td className="py-3 px-4 text-slate-300">Total Messages Analyzed</td>
+                <tr className="border-b border-border">
+                  <td className="py-3 px-4 text-foreground/70">Total Messages Analyzed</td>
                   <td className="py-3 px-4 text-right text-white font-mono">
                     {messages.length.toLocaleString()}
                   </td>
                 </tr>
-                <tr className="border-b border-slate-800">
-                  <td className="py-3 px-4 text-slate-300">Assistant Responses</td>
+                <tr className="border-b border-border">
+                  <td className="py-3 px-4 text-foreground/70">Assistant Responses</td>
                   <td className="py-3 px-4 text-right text-white font-mono">
                     {stats.messageCount.toLocaleString()}
                   </td>
                 </tr>
-                <tr className="border-b border-slate-800">
-                  <td className="py-3 px-4 text-slate-300">Period</td>
+                <tr className="border-b border-border">
+                  <td className="py-3 px-4 text-foreground/70">Period</td>
                   <td className="py-3 px-4 text-right text-white font-mono">
                     {period} days
                   </td>
                 </tr>
-                <tr className="border-b border-slate-800">
-                  <td className="py-3 px-4 text-slate-300">Total Cost</td>
+                <tr className="border-b border-border">
+                  <td className="py-3 px-4 text-foreground/70">Total Cost</td>
                   <td className="py-3 px-4 text-right text-white font-mono font-semibold">
                     {formatCost(stats.totalCost)}
                   </td>
                 </tr>
                 <tr>
-                  <td className="py-3 px-4 text-slate-300">Estimated Monthly</td>
+                  <td className="py-3 px-4 text-foreground/70">Estimated Monthly</td>
                   <td className="py-3 px-4 text-right text-white font-mono font-semibold">
                     {formatCost((stats.totalCost / period) * 30)}
                   </td>

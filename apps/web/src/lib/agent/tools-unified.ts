@@ -29,8 +29,10 @@ import { pdfGeneratorTool } from './tools/pdfGenerator';
 import { pptxGeneratorTool } from './tools/pptxGenerator';
 import { docxGeneratorTool } from './tools/docxGenerator';
 
-// Import enhanced memory search (Phase 2.1)
-import { memorySearchEnhanced } from './tools/memorySearchEnhanced';
+// Import enhanced memory search factory (Phase 2.1)
+// NOTE: memorySearchEnhanced must be created per-user using createUserMemorySearchEnhanced(userId)
+// from './tools/memorySearchEnhanced' for proper data isolation
+// import { createUserMemorySearchEnhanced } from './tools/memorySearchEnhanced';
 
 // Import weather tool (Phase 3.1)
 import { weatherTool } from './tools/weather';
@@ -116,10 +118,10 @@ const builtInToolConfigs = {
 const customTools = {
   ha_search: haSearch,
   ha_call: haCall,
-  // NOTE: memory_add and memory_search are user-specific and must be created
+  // NOTE: memory_add, memory_search, and memory_search_enhanced are user-specific and must be created
   // dynamically using createUserMemoryTools(userId) from './tools-user-specific'
+  // or createUserMemorySearchEnhanced(userId) from './tools/memorySearchEnhanced'
   // They are NOT included in this static registry to prevent security issues
-  memory_search_enhanced: memorySearchEnhanced, // Phase 2.1: Hybrid search
   custom_web_search: customWebSearch,
   pdf_generator: pdfGeneratorTool,
   pptx_generator: pptxGeneratorTool,

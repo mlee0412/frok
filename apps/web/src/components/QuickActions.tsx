@@ -54,7 +54,7 @@ export function QuickActions({ onAction, hasMessages, disabled }: QuickActionsPr
   if (visibleActions.length === 0) return null;
 
   return (
-    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-700">
+    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-border">
       {visibleActions.map((action, i) => (
         <Button
           key={i}

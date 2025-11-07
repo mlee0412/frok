@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 
 /**
- * Enhanced Memory Search Tool
+ * Enhanced Memory Search Tool - User-Specific Factory
  *
  * Phase 2.1: Hybrid Search Implementation
  * - Vector similarity search (semantic meaning)
@@ -19,6 +19,8 @@ import OpenAI from 'openai';
  * - Filter by tags: ["work", "project-x"]
  * - Filter by date: created after January 1, 2025
  * - Combine all filters for precise search
+ *
+ * CRITICAL: This tool must be created with a specific userId to ensure data isolation
  */
 
 // Types
@@ -159,11 +161,15 @@ function calculateFinalScore(
 }
 
 /**
- * Enhanced Memory Search Tool
+ * Create user-specific enhanced memory search tool
+ *
+ * @param userId - Authenticated user's ID from Supabase
+ * @returns Enhanced memory search tool bound to this user
  */
-export const memorySearchEnhanced = tool({
-  name: 'memory_search_enhanced',
-  description: `Search memories using hybrid vector + keyword search with advanced filtering.
+export function createUserMemorySearchEnhanced(userId: string) {
+  return tool({
+    name: 'memory_search_enhanced',
+    description: `Search memories using hybrid vector + keyword search with advanced filtering.
 
 Use this for:
 - Semantic search: Find memories by meaning (e.g., "coffee preferences")
@@ -174,30 +180,30 @@ Use this for:
 
 The search combines vector similarity (semantic meaning) with keyword matching for the best results.`,
 
-  parameters: z.object({
-    query: z.string().min(1).describe('Search query - can be a question, keyword, or phrase'),
-    top_k: z.number().min(1).max(50).default(10).describe('Maximum number of results to return'),
-    tags: z.array(z.string()).optional().describe('Optional: Filter by specific tags (e.g., ["work", "project-x"])'),
-    created_after: z.string().optional().describe('Optional: ISO date string - only return memories created after this date'),
-    created_before: z.string().optional().describe('Optional: ISO date string - only return memories created before this date'),
-    min_score: z.number().min(0).max(1).default(0.5).describe('Minimum relevance score (0-1). Higher = stricter matches'),
-  }),
+    parameters: z.object({
+      query: z.string().min(1).describe('Search query - can be a question, keyword, or phrase'),
+      top_k: z.number().min(1).max(50).default(10).describe('Maximum number of results to return'),
+      tags: z.array(z.string()).optional().describe('Optional: Filter by specific tags (e.g., ["work", "project-x"])'),
+      created_after: z.string().optional().describe('Optional: ISO date string - only return memories created after this date'),
+      created_before: z.string().optional().describe('Optional: ISO date string - only return memories created before this date'),
+      min_score: z.number().min(0).max(1).default(0.5).describe('Minimum relevance score (0-1). Higher = stricter matches'),
+    }),
 
-  async execute({ query, top_k, tags, created_after, created_before, min_score }) {
-    try {
-      const supabase = getSupabase();
-      if (!supabase) {
-        throw new Error('Supabase configuration missing');
-      }
+    async execute({ query, top_k, tags, created_after, created_before, min_score }) {
+      try {
+        const supabase = getSupabase();
+        if (!supabase) {
+          throw new Error('Supabase configuration missing');
+        }
 
-      const openai = getOpenAI();
-      if (!openai) {
-        throw new Error('OpenAI configuration missing');
-      }
+        const openai = getOpenAI();
+        if (!openai) {
+          throw new Error('OpenAI configuration missing');
+        }
 
-      const limit = top_k ?? 10;
-      const threshold = min_score ?? 0.5;
-      const user_id = 'system'; // TODO: Replace with actual authenticated user ID
+        const limit = top_k ?? 10;
+        const threshold = min_score ?? 0.5;
+        const user_id = userId; // ✅ User-specific - no longer hardcoded!
 
       console.log('[memory_search_enhanced]', {
         query,
@@ -388,18 +394,19 @@ The search combines vector similarity (semantic meaning) with keyword matching f
         },
       });
 
-    } catch (error: unknown) {
-      console.error('[memory_search_enhanced] Error:', error);
+      } catch (error: unknown) {
+        console.error('[memory_search_enhanced] Error:', error);
 
-      return JSON.stringify({
-        ok: false,
-        error: error instanceof Error ? error.message : 'Memory search failed',
-        results: [],
-        count: 0,
-      });
-    }
-  },
-});
+        return JSON.stringify({
+          ok: false,
+          error: error instanceof Error ? error.message : 'Memory search failed',
+          results: [],
+          count: 0,
+        });
+      }
+    },
+  });
+}
 
 /**
  * Tool metadata for unified tool system

@@ -36,7 +36,7 @@ export const MessageContent = React.memo(function MessageContent({ content, role
               const inline = !className?.startsWith('language-');
               return !inline ? (
                 <div className="relative">
-                  <pre className="bg-gray-900 p-3 rounded-lg overflow-x-auto">
+                  <pre className="bg-background p-3 rounded-lg overflow-x-auto">
                     <code className={className} {...props}>
                       {children}
                     </code>
@@ -44,7 +44,7 @@ export const MessageContent = React.memo(function MessageContent({ content, role
                 </div>
               ) : (
                 <code
-                  className="bg-gray-700 px-1.5 py-0.5 rounded text-sm"
+                  className="bg-surface px-1.5 py-0.5 rounded text-sm"
                   {...props}
                 >
                   {children}
@@ -57,7 +57,7 @@ export const MessageContent = React.memo(function MessageContent({ content, role
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sky-400 hover:text-sky-300 underline"
+                  className="text-primary/400 hover:text-primary/300 underline"
                 >
                   {children}
                 </a>

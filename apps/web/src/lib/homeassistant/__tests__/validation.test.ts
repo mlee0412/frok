@@ -67,7 +67,7 @@ describe('Home Assistant Validation', () => {
       expect(validateRGB(255, 128, 0)).toEqual([255, 128, 0]);
       expect(validateRGB(0, 0, 0)).toEqual([0, 0, 0]);
       expect(validateRGB(300, 128, -10)).toEqual([255, 128, 0]);
-      expect(validateRGB(128.7, 64.3, 255.9)).toEqual([129, 64, 256]); // Rounds then clamps
+      expect(validateRGB(128.7, 64.3, 255.9)).toEqual([129, 64, 255]); // Rounds (256) then clamps to 255
     });
 
     it('should throw on invalid input', () => {

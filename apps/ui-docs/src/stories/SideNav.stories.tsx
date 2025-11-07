@@ -17,7 +17,7 @@ export const Basic: Story = {
       { label: 'Smart Home', href: '#' },
       { label: 'Finances', href: '#' },
     ],
-    header: <div className="px-4 pb-4 text-cyan-400 font-bold">FROK</div>,
+    header: <div className="px-4 pb-4 text-info/400 font-bold">FROK</div>,
     footer: <div className="mt-auto px-4 pt-4 text-xs opacity-60">© FROK</div>,
   },
 };

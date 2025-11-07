@@ -105,11 +105,11 @@ export function SuggestedPrompts({ onSelect, disabled }: SuggestedPromptsProps) 
 
   return (
     <div className="space-y-4">
-      <div className="text-center text-gray-400">
+      <div className="text-center text-foreground/60">
         <h3 className="text-lg font-medium mb-2">
           👋 {t('title')}
           {loading && (
-            <span className="ml-2 text-xs text-sky-400">({t('refreshing')})</span>
+            <span className="ml-2 text-xs text-primary/400">({t('refreshing')})</span>
           )}
         </h3>
         <p className="text-sm">{t('subtitle')}</p>
@@ -122,14 +122,14 @@ export function SuggestedPrompts({ onSelect, disabled }: SuggestedPromptsProps) 
             onClick={() => onSelect(prompt.text)}
             disabled={disabled || loading}
             variant="ghost"
-            className="group flex items-start gap-3 p-4 bg-gray-800 hover:bg-gray-750 rounded-xl h-auto text-left"
+            className="group flex items-start gap-3 p-4 bg-surface hover:bg-surface/80 rounded-xl h-auto text-left"
           >
             <span className="text-2xl">{prompt.icon}</span>
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-white group-hover:text-sky-400 transition">
+              <p className="text-sm text-white group-hover:text-primary/400 transition">
                 {prompt.text}
               </p>
-              <p className="text-xs text-gray-500 mt-1">{prompt.category}</p>
+              <p className="text-xs text-foreground/60 mt-1">{prompt.category}</p>
             </div>
           </Button>
         ))}

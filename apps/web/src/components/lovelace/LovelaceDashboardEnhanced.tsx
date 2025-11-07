@@ -537,10 +537,10 @@ export default function LovelaceDashboardEnhanced({
               border: '1px solid rgba(255,140,0,0.3)',
             }}
           >
-            <h3 className="text-lg font-semibold text-orange-400">
+            <h3 className="text-lg font-semibold text-warning/400">
               🔌 Other Switches ({regularSwitches.length})
             </h3>
-            <span className="text-orange-400">{switchesExpanded ? '▲' : '▼'}</span>
+            <span className="text-warning/400">{switchesExpanded ? '▲' : '▼'}</span>
           </button>
           {switchesExpanded && (
             <GridLayout columns={2} gap="12px">

@@ -34,6 +34,12 @@ export type AuthResult =
  */
 export async function withAuth(req: NextRequest): Promise<AuthResult> {
   try {
+    // CRITICAL SAFETY CHECK: Prevent auth bypass in production
+    if (process.env["DEV_BYPASS_AUTH"] === 'true' && process.env["NODE_ENV"] === 'production') {
+      console.error('[withAuth] ❌ CRITICAL: DEV_BYPASS_AUTH is set in production! This is a security vulnerability.');
+      throw new Error('DEV_BYPASS_AUTH cannot be enabled in production');
+    }
+
     // DEVELOPMENT ONLY: Bypass auth if environment variable is set
     if (process.env["DEV_BYPASS_AUTH"] === 'true' && process.env["NODE_ENV"] === 'development') {
       console.warn('[withAuth] ⚠️  DEV_BYPASS_AUTH is enabled - skipping authentication!');

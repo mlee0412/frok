@@ -11,7 +11,7 @@ const ChatKitNoSSR = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full w-full items-center justify-center text-sm text-gray-400">
+      <div className="flex h-full w-full items-center justify-center text-sm text-foreground/60">
         Preparing ChatKit…
       </div>
     ),
@@ -134,11 +134,11 @@ export function ChatKitLauncher() {
       case 'ready':
         return <span className={`${base} bg-emerald-500/10 text-emerald-300`}>Online</span>;
       case 'loading':
-        return <span className={`${base} bg-sky-500/10 text-sky-300`}>Connecting…</span>;
+        return <span className={`${base} bg-primary/500/10 text-primary/300`}>Connecting…</span>;
       case 'error':
         return <span className={`${base} bg-rose-500/10 text-rose-300`}>Check connection</span>;
       default:
-        return <span className={`${base} bg-slate-500/10 text-slate-300`}>Standby</span>;
+        return <span className={`${base} bg-surface/10 text-foreground/70`}>Standby</span>;
     }
   }, [status]);
 
@@ -165,7 +165,7 @@ export function ChatKitLauncher() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="inline-flex items-center gap-2 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-sm font-medium text-sky-200 transition hover:border-sky-400 hover:bg-sky-500/20"
+        className="inline-flex items-center gap-2 rounded-lg border border-primary/500/40 bg-primary/500/10 px-3 py-1.5 text-sm font-medium text-primary/200 transition hover:border-primary/400 hover:bg-primary/500/20"
         title="Open ChatKit experimental console"
       >
         ✨ ChatKit
@@ -173,31 +173,31 @@ export function ChatKitLauncher() {
       {isOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
           <div
-            className="relative w-full max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-slate-950/95 shadow-2xl"
+            className="relative w-full max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-background/95 shadow-2xl"
             role="dialog"
             aria-modal="true"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">OpenAI Labs</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-foreground/60">OpenAI Labs</p>
                 <h2 className="text-xl font-semibold text-white">ChatKit session</h2>
               </div>
               <div className="flex items-center gap-3">
                 {statusIndicator}
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="rounded-full border border-white/10 bg-white/5 p-2 text-slate-200 transition hover:border-white/30 hover:bg-white/10"
+                  className="rounded-full border border-white/10 bg-white/5 p-2 text-foreground transition hover:border-white/30 hover:bg-white/10"
                   aria-label="Close ChatKit"
                 >
                   ✕
                 </button>
               </div>
             </div>
-            <div className="h-[520px] bg-slate-950">
+            <div className="h-[520px] bg-background">
               <ChatKitNoSSR control={control} style={{ height: '100%', width: '100%' }} />
             </div>
-            <div className="border-t border-white/10 px-6 py-4 text-sm text-slate-300">
+            <div className="border-t border-white/10 px-6 py-4 text-sm text-foreground/70">
               {status === 'error' && error ? (
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="text-rose-300">{error}</p>
@@ -210,7 +210,7 @@ export function ChatKitLauncher() {
                 </div>
               ) : (
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-foreground/60">
                     ChatKit offers the official OpenAI conversation experience, including multi-modal uploads
                     and thread management.
                   </p>
@@ -233,7 +233,7 @@ export function ChatKitLauncher() {
                         }
                       })();
                     }}
-                    className="rounded-lg border border-sky-400/40 bg-sky-500/10 px-3 py-1 text-sm font-medium text-sky-200 transition hover:border-sky-300 hover:bg-sky-500/20"
+                    className="rounded-lg border border-primary/400/40 bg-primary/500/10 px-3 py-1 text-sm font-medium text-primary/200 transition hover:border-primary/300 hover:bg-primary/500/20"
                   >
                     Refresh session
                   </button>

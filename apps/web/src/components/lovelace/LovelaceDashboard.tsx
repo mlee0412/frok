@@ -284,7 +284,7 @@ export default function LovelaceDashboard({ initialDevices, haOk, haDetail }: Lo
       {/* Lights Grid */}
       {lights.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold mb-3 text-cyan-400">💡 Lights</h3>
+          <h3 className="text-lg font-semibold mb-3 text-info/400">💡 Lights</h3>
           <GridLayout columns={2} gap="12px">
             {lights.slice(0, 8).map((device) => (
               <LightCard
@@ -300,7 +300,7 @@ export default function LovelaceDashboard({ initialDevices, haOk, haDetail }: Lo
       {/* Switches Grid */}
       {switches.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold mb-3 text-orange-400">🔌 Switches</h3>
+          <h3 className="text-lg font-semibold mb-3 text-warning/400">🔌 Switches</h3>
           <GridLayout columns={2} gap="12px">
             {switches.map((device) => (
               <SwitchCard
@@ -317,7 +317,7 @@ export default function LovelaceDashboard({ initialDevices, haOk, haDetail }: Lo
       {/* Covers */}
       {covers.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold mb-3 text-green-400">🪟 Covers</h3>
+          <h3 className="text-lg font-semibold mb-3 text-success/400">🪟 Covers</h3>
           <GridLayout columns={2} gap="12px">
             {covers.map((device) => (
               <CoverCard
@@ -336,7 +336,7 @@ export default function LovelaceDashboard({ initialDevices, haOk, haDetail }: Lo
       {/* Media Players */}
       {mediaPlayers.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold mb-3 text-pink-400">🎵 Media</h3>
+          <h3 className="text-lg font-semibold mb-3 text-accent/400">🎵 Media</h3>
           {mediaPlayers.slice(0, 2).map((device) => (
             <div key={device.id} className="mb-4">
               <MediaPlayerCard
@@ -354,7 +354,7 @@ export default function LovelaceDashboard({ initialDevices, haOk, haDetail }: Lo
 
       {/* Apple TV Remote */}
       <div>
-        <h3 className="text-lg font-semibold mb-3 text-cyan-400">📱 Remote Control</h3>
+        <h3 className="text-lg font-semibold mb-3 text-info/400">📱 Remote Control</h3>
         <RemoteControl
           remoteId="remote.living_room"
           mediaPlayerId="media_player.living_room"
@@ -368,7 +368,7 @@ export default function LovelaceDashboard({ initialDevices, haOk, haDetail }: Lo
 
       {/* Quick Actions */}
       <div>
-        <h3 className="text-lg font-semibold mb-3 text-purple-400">⚡ Quick Actions</h3>
+        <h3 className="text-lg font-semibold mb-3 text-accent/400">⚡ Quick Actions</h3>
         <HorizontalStack gap="8px">
           {sceneEntities.slice(3).map((scene) => (
             <SceneCard

@@ -49,7 +49,7 @@ export function LanguageSwitcher({ variant = 'dropdown', className = '' }: Langu
     return (
       <button
         onClick={() => handleLanguageChange(otherLocale)}
-        className={`flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-300 hover:text-white transition rounded-lg hover:bg-gray-800 ${className}`}
+        className={`flex items-center gap-2 px-3 py-2 text-sm font-medium text-foreground/70 hover:text-white transition rounded-lg hover:bg-surface ${className}`}
         aria-label={`Switch to ${languageNames[otherLocale]}`}
       >
         <span className="text-lg">{languageFlags[otherLocale]}</span>
@@ -63,7 +63,7 @@ export function LanguageSwitcher({ variant = 'dropdown', className = '' }: Langu
     <div ref={dropdownRef} className={`relative ${className}`}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-300 hover:text-white transition rounded-lg hover:bg-gray-800"
+        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-foreground/70 hover:text-white transition rounded-lg hover:bg-surface"
         aria-label="Change language"
         aria-expanded={isOpen}
         aria-haspopup="true"
@@ -81,15 +81,15 @@ export function LanguageSwitcher({ variant = 'dropdown', className = '' }: Langu
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg border border-gray-700 py-1 z-50">
+        <div className="absolute right-0 mt-2 w-48 bg-surface rounded-lg shadow-lg border border-border py-1 z-50">
           {locales.map((locale) => (
             <button
               key={locale}
               onClick={() => handleLanguageChange(locale)}
               className={`w-full flex items-center gap-3 px-4 py-2 text-sm text-left transition ${
                 currentLocale === locale
-                  ? 'bg-sky-500 text-white'
-                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  ? 'bg-primary/500 text-white'
+                  : 'text-foreground/70 hover:bg-surface hover:text-white'
               }`}
               aria-current={currentLocale === locale ? 'true' : undefined}
             >

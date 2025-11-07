@@ -12,7 +12,7 @@ type Story = StoryObj<typeof Card>;
 export const Basic: Story = {
   render: () => (
     <Card className="p-6">
-      <h3 className="text-cyan-300 font-semibold mb-2">Card</h3>
+      <h3 className="text-info/300 font-semibold mb-2">Card</h3>
       <p className="text-white/70">Content area inside card.</p>
       <div className="mt-4">
         <Button>Action</Button>

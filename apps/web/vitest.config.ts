@@ -3,6 +3,9 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [],
+  define: {
+    'process.env.NODE_ENV': JSON.stringify('development'),
+  },
   test: {
     include: ['src/**/*.{test,spec}.{ts,tsx}', 'tests/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', 'e2e', '.next', 'dist', '**/*.spec.ts'],
