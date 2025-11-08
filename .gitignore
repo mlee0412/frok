@@ -30,6 +30,14 @@ Thumbs.db
 .claude/settings.json
 .claude/settings.local.json
 
+# Temporary development files
+test-*.ps1
+*.bak
+PATH.txt
+PROJECT_INDEX.*
+settings.txt
+nul
+
 # Turbo cache
 .turbo/
 
