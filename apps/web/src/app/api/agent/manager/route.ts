@@ -21,6 +21,7 @@ import {
   createManagerPattern,
   getDefaultManagerConfig,
 } from '@/lib/agent/managerPattern';
+import { Runner, AgentInputItem } from '@openai/agents';
 import { z } from 'zod';
 
 // Validation schema for manager pattern request
@@ -79,33 +80,25 @@ export async function POST(req: NextRequest) {
       input = `Previous conversation:\n${historyText}\n\nCurrent query: ${input}`;
     }
 
-    // 7. Execute manager agent
+    // 7. Execute manager agent using Runner
     const startTime = Date.now();
-    const result = await manager.run(input);
+    const runner = new Runner();
+    const conversationHistory: AgentInputItem[] = [
+      {
+        role: 'user',
+        content: [{ type: 'input_text', text: input }],
+      },
+    ];
+    const result = await runner.run(manager, conversationHistory);
     const duration = Date.now() - startTime;
 
-    // 8. Extract which specialists were called from result
-    const specialistsUsed: string[] = [];
-    if (result.messages) {
-      for (const message of result.messages) {
-        if (message.role === 'tool' && message.name) {
-          // Extract specialist name from tool name (e.g., "call_home_specialist" -> "home")
-          const match = message.name.match(/call_(\w+)_specialist/);
-          if (match && match[1]) {
-            specialistsUsed.push(match[1]);
-          }
-        }
-      }
-    }
-
-    // 9. Return manager response with metadata
+    // 8. Return manager response with metadata
     return NextResponse.json({
       ok: true,
       data: {
         response: result.finalOutput,
         pattern: 'manager',
         specialistsAvailable: specialistTools.map((t) => t.specialist),
-        specialistsUsed: [...new Set(specialistsUsed)], // Deduplicate
         duration,
         timestamp: new Date().toISOString(),
       },

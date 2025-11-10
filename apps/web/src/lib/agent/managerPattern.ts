@@ -19,7 +19,7 @@
  * @see apps/web/src/lib/agent/orchestrator-enhanced.ts
  */
 
-import { Agent, tool } from '@openai/agents';
+import { Agent, tool, Runner, AgentInputItem } from '@openai/agents';
 import type { Tool } from '@openai/agents';
 import { z } from 'zod';
 import { createEnhancedAgentSuite } from './orchestrator-enhanced';
@@ -98,8 +98,15 @@ function createAgentTool(
         // Build input with context if provided
         const input = context ? `Context: ${context}\n\nQuery: ${query}` : query;
 
-        // Run the specialist agent as a sub-process
-        const result = await agent.run(input);
+        // Run the specialist agent as a sub-process using Runner
+        const runner = new Runner();
+        const conversationHistory: AgentInputItem[] = [
+          {
+            role: 'user',
+            content: [{ type: 'input_text', text: input }],
+          },
+        ];
+        const result = await runner.run(agent, conversationHistory);
 
         // Return the specialist's output for the manager to synthesize
         return {

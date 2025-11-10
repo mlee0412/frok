@@ -22,7 +22,6 @@ import {
   terminateRealtimeSession,
   getUserSessions,
   getRealtimeSession,
-  getDefaultRealtimeConfig,
   validateRealtimeConfig,
 } from '@/lib/agent/realtimeAgent';
 import { z } from 'zod';
