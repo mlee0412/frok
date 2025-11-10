@@ -206,6 +206,9 @@ export async function createEnhancedAgentSuite(
     model: homeModel,
     modelSettings: buildModelSettings(homeModel, { temperature: 0.2, store: false }),
     tools: [...homeTools.custom, ...homeTools.builtIn] as Tool<unknown>[],
+    // TODO: Enable when SDK supports these options
+    // tool_choice: 'auto' as const, // Flexible tool use for home control
+    // parallel_tool_calls: false, // Sequential execution for device control safety
     inputGuardrails: homeGuardrails.input,
     outputGuardrails: homeGuardrails.output,
     ...(hooks && { hooks }), // Add lifecycle hooks
@@ -230,6 +233,9 @@ export async function createEnhancedAgentSuite(
     model: memoryModel,
     modelSettings: buildModelSettings(memoryModel, { temperature: 0.2, store: false }),
     tools: [...memoryTools.custom, ...memoryTools.builtIn] as Tool<unknown>[],
+    // TODO: Enable when SDK supports these options
+    // tool_choice: 'auto' as const, // Flexible tool use for memory operations
+    // parallel_tool_calls: false, // Sequential execution for data consistency
     inputGuardrails: memoryGuardrails.input,
     outputGuardrails: memoryGuardrails.output,
     ...(hooks && { hooks }), // Add lifecycle hooks
@@ -255,6 +261,9 @@ export async function createEnhancedAgentSuite(
     model: researchModel,
     modelSettings: buildModelSettings(researchModel, { temperature: 0.3, store: false }),
     tools: [...researchTools.custom, ...researchTools.builtIn] as Tool<unknown>[],
+    // TODO: Enable when SDK supports these options
+    // tool_choice: 'auto' as const, // Flexible tool use for research
+    // parallel_tool_calls: true, // Enable parallel search for faster research
     inputGuardrails: researchGuardrails.input,
     outputGuardrails: researchGuardrails.output,
     ...(hooks && { hooks }), // Add lifecycle hooks
@@ -280,6 +289,9 @@ export async function createEnhancedAgentSuite(
     model: codeModel,
     modelSettings: buildModelSettings(codeModel, { temperature: 0.2, store: false }),
     tools: [...codeTools.custom, ...codeTools.builtIn] as Tool<unknown>[],
+    // TODO: Enable when SDK supports these options
+    // tool_choice: 'required' as const, // Force tool use for code execution
+    // parallel_tool_calls: false, // Sequential execution for code interpreter safety
     inputGuardrails: generalGuardrails.input,
     outputGuardrails: generalGuardrails.output,
     ...(hooks && { hooks }), // Add lifecycle hooks
@@ -309,6 +321,9 @@ export async function createEnhancedAgentSuite(
       reasoningEffort: options.preferFastGeneral ? 'low' : undefined,
     }),
     tools: [...generalTools.custom, ...generalTools.builtIn] as Tool<unknown>[],
+    // TODO: Enable when SDK supports these options
+    // tool_choice: 'auto' as const, // Flexible tool use for multi-domain tasks
+    // parallel_tool_calls: true, // Enable parallel execution for efficiency
     inputGuardrails: generalGuardrails.input,
     outputGuardrails: generalGuardrails.output,
     ...(hooks && { hooks }), // Add lifecycle hooks
