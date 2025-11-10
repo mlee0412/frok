@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
     // 4. Create WebSocket connection
     // Note: This uses platform-specific WebSocket upgrade
     // For Vercel/Next.js, we use the native WebSocket API
-    const webSocketServer = (global as any).WebSocketServer;
+    const webSocketServer = (global as unknown as { WebSocketServer?: unknown }).WebSocketServer;
 
     if (!webSocketServer) {
       console.error('[VoiceAPI] WebSocket server not available');
@@ -84,10 +84,10 @@ export async function GET(req: NextRequest) {
     }
 
     // Platform-specific WebSocket upgrade (Vercel/Deno)
-    // @ts-ignore - Deno global is only available in Deno runtime
+    // @ts-expect-error - Deno global is only available in Deno runtime
     if (typeof Deno !== 'undefined' && 'upgradeWebSocket' in Deno) {
-      // @ts-ignore
-      const { socket: clientSocket, response } = Deno.upgradeWebSocket(req as any);
+      // @ts-expect-error - Deno.upgradeWebSocket only exists in Deno runtime
+      const { socket: clientSocket, response } = Deno.upgradeWebSocket(req);
       await setupVoiceSession(clientSocket, userId);
       return response;
     }
