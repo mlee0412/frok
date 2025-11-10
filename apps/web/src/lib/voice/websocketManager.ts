@@ -46,10 +46,8 @@ export class WebSocketManager {
     this.isConnecting = true;
 
     try {
-      // Build WebSocket URL (ws:// or wss://)
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host;
-      const wsUrl = `${protocol}//${host}${this.config.url}`;
+      // Use configured URL or build from window.location
+      const wsUrl = this.buildWebSocketUrl();
 
       this.ws = new WebSocket(wsUrl);
 
@@ -171,5 +169,26 @@ export class WebSocketManager {
     this.reconnectTimer = setTimeout(() => {
       this.connect();
     }, delay);
+  }
+
+  /**
+   * Build WebSocket URL - supports both Railway deployment and local development
+   */
+  private buildWebSocketUrl(): string {
+    // Check for configured WebSocket URL (Railway deployment)
+    const configuredUrl = process.env.NEXT_PUBLIC_VOICE_WS_URL;
+
+    if (configuredUrl) {
+      // Use configured URL (e.g., wss://voice-server.railway.app/voice/stream)
+      console.log('[WebSocketManager] Using configured WebSocket URL');
+      return configuredUrl;
+    }
+
+    // Fallback: Build from window.location (local development)
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}${this.config.url}`;
+    console.log('[WebSocketManager] Using local WebSocket URL:', wsUrl);
+    return wsUrl;
   }
 }
