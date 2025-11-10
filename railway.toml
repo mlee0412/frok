@@ -1,0 +1,22 @@
+# Railway Configuration
+# This file tells Railway which services to deploy from the monorepo
+
+# Ignore all services except voice-server
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+ignorePaths = [
+  "apps/web/**",
+  "apps/api/**",
+  "apps/cli/**",
+  "apps/workers/**",
+  "apps/ui-docs/**",
+  "services/agents/**",
+  "packages/**"
+]
+
+# Only build voice-server
+[[services]]
+name = "voice-server"
+source = "apps/voice-server"
