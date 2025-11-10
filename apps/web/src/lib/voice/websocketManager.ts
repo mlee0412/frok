@@ -176,7 +176,7 @@ export class WebSocketManager {
    */
   private buildWebSocketUrl(): string {
     // Check for configured WebSocket URL (Railway deployment)
-    const configuredUrl = process.env.NEXT_PUBLIC_VOICE_WS_URL;
+    const configuredUrl = process.env['NEXT_PUBLIC_VOICE_WS_URL'];
 
     if (configuredUrl) {
       // Use configured URL (e.g., wss://voice-server.railway.app/voice/stream)
