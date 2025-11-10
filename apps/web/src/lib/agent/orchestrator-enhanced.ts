@@ -21,6 +21,7 @@ import {
 import {
   ResponseFormats,
 } from './responseSchemas';
+import { createFROKAgentHooks } from './agentHooks';
 
 // ============================================================================
 // Types
@@ -58,6 +59,8 @@ export interface EnhancedAgentSuiteOptions {
   enabledTools?: ToolType[];
   useStructuredOutputs?: boolean;
   includeExperimentalTools?: boolean;
+  userId?: string; // For AgentHooks observability
+  enableHooks?: boolean; // Enable lifecycle hooks (default: true)
 }
 
 // ============================================================================
@@ -140,6 +143,12 @@ export async function createEnhancedAgentSuite(
 ): Promise<EnhancedAgentSuite> {
   const primer = buildConversationPrimer();
 
+  // Lifecycle hooks for observability (if enabled and userId provided)
+  const hooks =
+    options.enableHooks !== false && options.userId
+      ? createFROKAgentHooks(options.userId)
+      : undefined;
+
   // Model configuration
   const routerModel =
     options.models?.router ?? process.env['OPENAI_ROUTER_MODEL'] ?? FAST_MODEL_FALLBACK;
@@ -199,6 +208,7 @@ export async function createEnhancedAgentSuite(
     tools: [...homeTools.custom, ...homeTools.builtIn] as Tool<unknown>[],
     inputGuardrails: homeGuardrails.input,
     outputGuardrails: homeGuardrails.output,
+    ...(hooks && { hooks }), // Add lifecycle hooks
     ...(options.useStructuredOutputs && {
       response_format: ResponseFormats.smartHome,
     }),
@@ -222,6 +232,7 @@ export async function createEnhancedAgentSuite(
     tools: [...memoryTools.custom, ...memoryTools.builtIn] as Tool<unknown>[],
     inputGuardrails: memoryGuardrails.input,
     outputGuardrails: memoryGuardrails.output,
+    ...(hooks && { hooks }), // Add lifecycle hooks
     ...(options.useStructuredOutputs && {
       response_format: ResponseFormats.memory,
     }),
@@ -246,6 +257,7 @@ export async function createEnhancedAgentSuite(
     tools: [...researchTools.custom, ...researchTools.builtIn] as Tool<unknown>[],
     inputGuardrails: researchGuardrails.input,
     outputGuardrails: researchGuardrails.output,
+    ...(hooks && { hooks }), // Add lifecycle hooks
     ...(options.useStructuredOutputs && {
       response_format: ResponseFormats.research,
     }),
@@ -270,6 +282,7 @@ export async function createEnhancedAgentSuite(
     tools: [...codeTools.custom, ...codeTools.builtIn] as Tool<unknown>[],
     inputGuardrails: generalGuardrails.input,
     outputGuardrails: generalGuardrails.output,
+    ...(hooks && { hooks }), // Add lifecycle hooks
     ...(options.useStructuredOutputs && {
       response_format: ResponseFormats.code,
     }),
@@ -298,6 +311,7 @@ export async function createEnhancedAgentSuite(
     tools: [...generalTools.custom, ...generalTools.builtIn] as Tool<unknown>[],
     inputGuardrails: generalGuardrails.input,
     outputGuardrails: generalGuardrails.output,
+    ...(hooks && { hooks }), // Add lifecycle hooks
     ...(options.useStructuredOutputs && {
       response_format: ResponseFormats.orchestration,
     }),
@@ -325,6 +339,7 @@ export async function createEnhancedAgentSuite(
     handoffs: [homeAgent, memoryAgent, researchAgent, codeAgent, generalAgent],
     inputGuardrails: orchestratorGuardrails.input,
     outputGuardrails: orchestratorGuardrails.output,
+    ...(hooks && { hooks }), // Add lifecycle hooks
     ...(options.useStructuredOutputs && {
       response_format: ResponseFormats.orchestration,
     }),

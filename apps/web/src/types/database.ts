@@ -78,6 +78,30 @@ export type HAService = {
   fields?: Record<string, unknown>;
 };
 
+export type ToolUsageLogRow = {
+  id: string;
+  user_id: string;
+  agent_name: string;
+  tool_name: string;
+  duration_ms: number;
+  estimated_cost: number;
+  success: boolean;
+  error: string | null;
+  created_at: string;
+};
+
+export type AgentExecutionLogRow = {
+  id: string;
+  user_id: string;
+  agent_name: string;
+  duration_ms: number;
+  tokens_used: number | null;
+  estimated_cost: number;
+  success: boolean;
+  error: string | null;
+  created_at: string;
+};
+
 // API Response types
 export type APIResponse<T = unknown> = {
   data?: T;

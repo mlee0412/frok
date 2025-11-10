@@ -70,7 +70,15 @@ export function AgentMemoryModal({ agentName, onClose }: AgentMemoryModalProps) 
         {/* Error State */}
         {error && (
           <div className="mb-4 p-4 bg-danger/10 border border-danger/30 rounded-lg text-danger text-sm">
-            ⚠️ {t('agentMemory.loadError')}
+            <div className="font-medium mb-1">⚠️ {t('agentMemory.loadError')}</div>
+            <div className="text-xs text-danger/80">
+              {error instanceof Error ? error.message : 'Unknown error occurred'}
+            </div>
+            {error instanceof Error && error.message.includes('auth') && (
+              <div className="mt-2 text-xs text-danger/60">
+                💡 Hint: Try signing out and signing back in
+              </div>
+            )}
           </div>
         )}
 

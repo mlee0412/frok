@@ -351,6 +351,8 @@ export async function POST(req: NextRequest) {
                 enabledTools: selectedTools as ToolType[],
                 useStructuredOutputs,
                 includeExperimentalTools: false,
+                userId: user_id,
+                enableHooks: true,
               })
             : null;
 
