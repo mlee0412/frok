@@ -24,6 +24,7 @@
     "test:watch": "vitest watch"
   },
   "dependencies": {
+    "@deepgram/sdk": "^4.11.2",
     "@frok/clients": "workspace:*",
     "@frok/ui": "workspace:*",
     "@hookform/resolvers": "^5.2.2",
@@ -54,6 +55,7 @@
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
     "web-vitals": "^5.1.0",
+    "ws": "^8.18.3",
     "zod": "^3.25.76",
     "zod-to-json-schema": "^3.24.6",
     "zustand": "^5.0.8"
@@ -71,6 +73,7 @@
     "@types/node": "^24",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@types/ws": "^8.18.1",
     "@vercel/edge-config": "^1.4.3",
     "@vitejs/plugin-react": "^5.1.0",
     "autoprefixer": "^10.4.21",
