@@ -1,6 +1,17 @@
 /**
  * Voice Assistant WebSocket API Route
  *
+ * ⚠️ DEPLOYMENT LIMITATION: This feature requires WebSocket support.
+ * Vercel's serverless functions DO NOT support WebSocket upgrades.
+ *
+ * To use this feature, deploy the voice endpoint to:
+ * - Railway (recommended for Node.js apps)
+ * - Render
+ * - Fly.io
+ * - Self-hosted server with WebSocket support
+ *
+ * Alternative: Implement HTTP polling or SSE-based streaming instead.
+ *
  * Real-time voice conversation endpoint using WebSocket for bidirectional audio streaming.
  * Handles the three-stream pipeline: STT → LLM → TTS
  *
@@ -96,9 +107,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         error: 'WebSocket upgrade not supported',
-        hint: 'This endpoint requires WebSocket support (Vercel Edge Runtime or Deno)',
+        hint: 'Vercel serverless functions do not support WebSocket connections. To use voice features, deploy this endpoint to Railway, Render, Fly.io, or a self-hosted server with WebSocket support.',
+        documentation: 'https://vercel.com/docs/functions/runtimes#websockets',
       },
-      { status: 500 }
+      { status: 501 } // 501 Not Implemented
     );
   } catch (error) {
     errorHandler.logError({
