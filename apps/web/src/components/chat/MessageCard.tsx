@@ -4,6 +4,8 @@ import { useState, useMemo, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { useTranslations } from '@/lib/i18n/I18nProvider';
+import { useGestures } from '@/hooks/useGestures';
+import { useHaptic } from '@/hooks/useHaptic';
 import type { Message, ToolCall } from '@/store/unifiedChatStore';
 
 // ============================================================================
@@ -53,6 +55,10 @@ export const MessageCard = memo(function MessageCard({
   const [editContent, setEditContent] = useState(message.content);
   const [showToolCalls, setShowToolCalls] = useState(false);
   const [showThinking, setShowThinking] = useState(false);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [showSwipeActions, setShowSwipeActions] = useState(false);
+
+  const { vibrate } = useHaptic();
 
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
@@ -88,6 +94,67 @@ export const MessageCard = memo(function MessageCard({
     }
   };
 
+  // Gesture handlers
+  const gestureRef = useGestures(
+    {
+      onSwipeLeft: () => {
+        if (isUser && onDelete) {
+          vibrate('light');
+          setShowSwipeActions(true);
+        }
+      },
+      onSwipeRight: () => {
+        if (onCopy) {
+          vibrate('light');
+          setShowSwipeActions(true);
+        }
+      },
+      onLongPress: () => {
+        vibrate('medium');
+        setShowSwipeActions(true);
+      },
+      onDragMove: (deltaX) => {
+        // Only allow swipe on mobile
+        if (window.innerWidth < 768) {
+          const maxSwipe = 100;
+          const clampedOffset = Math.max(-maxSwipe, Math.min(maxSwipe, deltaX));
+          setSwipeOffset(clampedOffset);
+
+          // Show actions when swiped enough
+          if (Math.abs(clampedOffset) > 40 && !showSwipeActions) {
+            vibrate('light');
+            setShowSwipeActions(true);
+          }
+        }
+      },
+      onDragEnd: (deltaX) => {
+        const threshold = 60;
+
+        if (Math.abs(deltaX) > threshold) {
+          // Execute action
+          if (deltaX < 0 && isUser && onDelete) {
+            // Swipe left to delete
+            vibrate('medium');
+            onDelete();
+          } else if (deltaX > 0 && onCopy) {
+            // Swipe right to copy
+            vibrate('success');
+            onCopy();
+          }
+        }
+
+        // Reset swipe offset
+        setSwipeOffset(0);
+        setTimeout(() => setShowSwipeActions(false), 2000);
+      },
+    },
+    {
+      swipeThreshold: 60,
+      longPressDelay: 500,
+      dragThreshold: 10,
+    }
+  );
+
   return (
     <motion.div
       layout
@@ -95,9 +162,32 @@ export const MessageCard = memo(function MessageCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+      className={`flex ${isUser ? 'justify-end' : 'justify-start'} relative`}
     >
-      <div className={`${bubbleWidthClass} ${bubblePaddingClass} rounded-2xl border ${roleStyles[message.role]} backdrop-blur-sm`}>
+      {/* Swipe Action Hints (Mobile only) */}
+      {showSwipeActions && (
+        <div className="absolute inset-0 flex items-center justify-between px-4 md:hidden">
+          {onCopy && (
+            <div className="flex items-center gap-2 text-success">
+              <span>📋</span>
+              <span className="text-xs">Copy</span>
+            </div>
+          )}
+          {isUser && onDelete && (
+            <div className="ml-auto flex items-center gap-2 text-danger">
+              <span className="text-xs">Delete</span>
+              <span>🗑️</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      <motion.div
+        ref={gestureRef as React.RefObject<HTMLDivElement>}
+        animate={{ x: swipeOffset }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        className={`${bubbleWidthClass} ${bubblePaddingClass} rounded-2xl border ${roleStyles[message.role]} backdrop-blur-sm cursor-grab active:cursor-grabbing`}
+      >
         {/* Message Header */}
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -263,7 +353,7 @@ export const MessageCard = memo(function MessageCard({
             )}
           </div>
         )}
-      </div>
+      </motion.div>
     </motion.div>
   );
 });

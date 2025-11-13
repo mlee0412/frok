@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@frok/ui';
 import { useUnifiedChatStore, type Thread } from '@/store/unifiedChatStore';
 import { useTranslations } from '@/lib/i18n/I18nProvider';
+import { useGestures } from '@/hooks/useGestures';
+import { useHaptic } from '@/hooks/useHaptic';
 import { formatDistanceToNow } from 'date-fns';
 
 // ============================================================================
@@ -176,12 +178,70 @@ function ThreadItem({
 }: ThreadItemProps) {
   const t = useTranslations('chat.sidebar');
   const [showActions, setShowActions] = useState(false);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [showSwipeActions, setShowSwipeActions] = useState(false);
+
+  const { vibrate } = useHaptic();
 
   // Format last activity time
   const lastActivity = thread.lastMessageAt || thread.updatedAt;
   const timeAgo = useMemo(
     () => formatDistanceToNow(lastActivity, { addSuffix: true }),
     [lastActivity]
+  );
+
+  // Gesture handlers
+  const gestureRef = useGestures(
+    {
+      onSwipeLeft: () => {
+        vibrate('light');
+        setShowSwipeActions(true);
+      },
+      onSwipeRight: () => {
+        vibrate('light');
+        setShowSwipeActions(true);
+      },
+      onLongPress: () => {
+        vibrate('medium');
+        setShowSwipeActions(true);
+      },
+      onDragMove: (deltaX) => {
+        // Only on mobile
+        if (window.innerWidth < 768) {
+          const maxSwipe = 80;
+          const clampedOffset = Math.max(-maxSwipe, Math.min(maxSwipe, deltaX));
+          setSwipeOffset(clampedOffset);
+
+          if (Math.abs(clampedOffset) > 30 && !showSwipeActions) {
+            vibrate('light');
+            setShowSwipeActions(true);
+          }
+        }
+      },
+      onDragEnd: (deltaX) => {
+        const threshold = 50;
+
+        if (Math.abs(deltaX) > threshold) {
+          if (deltaX < 0) {
+            // Swipe left to delete
+            vibrate('medium');
+            onDelete(thread.id);
+          } else if (deltaX > 0) {
+            // Swipe right to archive
+            vibrate('success');
+            onArchive();
+          }
+        }
+
+        setSwipeOffset(0);
+        setTimeout(() => setShowSwipeActions(false), 2000);
+      },
+    },
+    {
+      swipeThreshold: 50,
+      longPressDelay: 500,
+      dragThreshold: 10,
+    }
   );
 
   return (
@@ -199,6 +259,26 @@ function ThreadItem({
       onMouseLeave={() => setShowActions(false)}
       className="relative"
     >
+      {/* Swipe Action Hints (Mobile only) */}
+      {showSwipeActions && (
+        <div className="absolute inset-0 flex items-center justify-between px-3 md:hidden">
+          <div className="flex items-center gap-1 text-warning text-xs">
+            <span>📁</span>
+            <span>Archive</span>
+          </div>
+          <div className="ml-auto flex items-center gap-1 text-danger text-xs">
+            <span>Delete</span>
+            <span>🗑️</span>
+          </div>
+        </div>
+      )}
+
+      <motion.div
+        ref={gestureRef as React.RefObject<HTMLDivElement>}
+        animate={{ x: swipeOffset }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        className="relative"
+      >
       <button
         type="button"
         onClick={() => onSelect(thread.id)}
@@ -303,6 +383,7 @@ function ThreadItem({
           )}
         </AnimatePresence>
       </button>
+      </motion.div>
     </motion.div>
   );
 }
