@@ -8,32 +8,35 @@
  * - Search functionality for quick access
  * - Mobile-optimized slide-in drawer
  * - Desktop sidebar mode (optional)
+ * - Authentication integration (sign-in/sign-out)
+ * - Language selector integration
  * - Recent routes tracking
  * - Keyboard shortcuts (CMD+K to open)
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { X, Search, ChevronRight } from 'lucide-react';
+import { X, Search, ChevronRight, LogIn, LogOut, User } from 'lucide-react';
 import {
   APP_ROUTES,
   searchRoutes,
   type AppRoute,
 } from '@/lib/navigation/routes';
+import { useAuth } from '@/lib/useAuth';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 export interface AppNavigationDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  mode?: 'mobile' | 'desktop';
 }
 
 export function AppNavigationDrawer({
   isOpen,
   onClose,
-  mode = 'mobile',
 }: AppNavigationDrawerProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { email, user, signOut } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(['primary', 'dashboard'])
@@ -78,6 +81,19 @@ export function AppNavigationDrawer({
     [router, onClose]
   );
 
+  // Handle sign out
+  const handleSignOut = useCallback(async () => {
+    await signOut();
+    onClose();
+    router.push('/');
+  }, [signOut, onClose, router]);
+
+  // Handle sign in
+  const handleSignIn = useCallback(() => {
+    onClose();
+    router.push('/auth/sign-in');
+  }, [onClose, router]);
+
   // Close on escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -107,22 +123,17 @@ export function AppNavigationDrawer({
   return (
     <>
       {/* Backdrop */}
-      {mode === 'mobile' && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm md:hidden"
-          onClick={handleBackdropClick}
-        />
-      )}
+      <div
+        className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+        onClick={handleBackdropClick}
+      />
 
       {/* Drawer */}
       <div
         className={`
-          fixed z-50
-          ${mode === 'mobile'
-            ? 'inset-y-0 left-0 w-[85%] max-w-sm md:hidden'
-            : 'top-0 bottom-0 left-0 w-64 border-r border-border'
-          }
-          bg-surface shadow-xl
+          fixed inset-y-0 left-0 z-50
+          w-[85%] max-w-sm md:max-w-md
+          bg-surface shadow-xl border-r border-border
           transform transition-transform duration-300 ease-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
@@ -165,7 +176,7 @@ export function AppNavigationDrawer({
         </div>
 
         {/* Routes List */}
-        <div className="overflow-y-auto h-[calc(100%-140px)] pb-4">
+        <div className="overflow-y-auto h-[calc(100%-240px)] pb-4">
           {routesByCategory.map(({ id, label, routes }) => {
             if (routes.length === 0) return null;
 
@@ -247,9 +258,62 @@ export function AppNavigationDrawer({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="absolute bottom-0 left-0 right-0 border-t border-border bg-surface/95 backdrop-blur-sm p-4">
-          <div className="text-xs text-foreground/40 text-center">
+        {/* Footer - Authentication & Language Selector */}
+        <div className="absolute bottom-0 left-0 right-0 border-t border-border bg-surface/95 backdrop-blur-sm">
+          {/* Language Selector */}
+          <div className="px-4 pt-4 pb-2">
+            <LanguageSwitcher variant="dropdown" />
+          </div>
+
+          {/* User Authentication */}
+          <div className="px-4 pb-4">
+            {user ? (
+              <div className="space-y-2">
+                {/* User Email Display */}
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface/50 border border-border">
+                  <User size={16} className="text-foreground/50" />
+                  <span className="text-sm text-foreground/70 truncate flex-1">
+                    {email}
+                  </span>
+                </div>
+
+                {/* Sign Out Button */}
+                <button
+                  onClick={handleSignOut}
+                  className="
+                    w-full flex items-center justify-center gap-2
+                    px-3 py-2 rounded-lg
+                    bg-danger/10 hover:bg-danger/20
+                    text-danger border border-danger/30
+                    transition-colors
+                    text-sm font-medium
+                  "
+                >
+                  <LogOut size={16} />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            ) : (
+              /* Sign In Button */
+              <button
+                onClick={handleSignIn}
+                className="
+                  w-full flex items-center justify-center gap-2
+                  px-3 py-2 rounded-lg
+                  bg-primary/10 hover:bg-primary/20
+                  text-primary border border-primary/30
+                  transition-colors
+                  text-sm font-medium
+                "
+              >
+                <LogIn size={16} />
+                <span>Sign In</span>
+              </button>
+            )}
+          </div>
+
+          {/* Keyboard Shortcut Hint */}
+          <div className="px-4 pb-3 text-xs text-foreground/40 text-center">
             <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border">Esc</kbd> to
             close
           </div>

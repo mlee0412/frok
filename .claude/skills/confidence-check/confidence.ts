@@ -1,4 +1,4 @@
-/** 
+/**
  * Confidence Check - Pre-implementation confidence assessment
  *
  * Prevents wrong-direction execution by assessing confidence BEFORE starting.
@@ -71,50 +71,50 @@ export class ConfidenceChecker {
     // Check 1: No duplicate implementations (25%)
     if (this.noDuplicates(context)) {
       score += 0.25;
-      checks.push("✅ No duplicate implementations found");
+      checks.push('✅ No duplicate implementations found');
     } else {
-      checks.push("❌ Check for existing implementations first");
+      checks.push('❌ Check for existing implementations first');
     }
 
     // Check 2: Architecture compliance (25%)
     if (this.architectureCompliant(context)) {
       score += 0.25;
-      checks.push("✅ Uses existing tech stack (e.g., Supabase)");
+      checks.push('✅ Uses existing tech stack (e.g., Supabase)');
     } else {
-      checks.push("❌ Verify architecture compliance (avoid reinventing)");
+      checks.push('❌ Verify architecture compliance (avoid reinventing)');
     }
 
     // Check 3: Official documentation verified (20%)
     if (this.hasOfficialDocs(context)) {
       score += 0.2;
-      checks.push("✅ Official documentation verified");
+      checks.push('✅ Official documentation verified');
     } else {
-      checks.push("❌ Read official docs first");
+      checks.push('❌ Read official docs first');
     }
 
     // Check 4: Working OSS implementations referenced (15%)
     if (this.hasOssReference(context)) {
       score += 0.15;
-      checks.push("✅ Working OSS implementation found");
+      checks.push('✅ Working OSS implementation found');
     } else {
-      checks.push("❌ Search for OSS implementations");
+      checks.push('❌ Search for OSS implementations');
     }
 
     // Check 5: Root cause identified (15%)
     if (this.rootCauseIdentified(context)) {
       score += 0.15;
-      checks.push("✅ Root cause identified");
+      checks.push('✅ Root cause identified');
     } else {
-      checks.push("❌ Continue investigation to identify root cause");
+      checks.push('❌ Continue investigation to identify root cause');
     }
 
     // Store check results for reporting
     context.confidence_checks = checks;
 
     // Display checks
-    console.log("📋 Confidence Checks:");
-    checks.forEach(check => console.log(`   ${check}`));
-    console.log("");
+    console.log('📋 Confidence Checks:');
+    checks.forEach((check) => console.log(`   ${check}`));
+    console.log('');
 
     return score;
   }
@@ -230,9 +230,7 @@ export class ConfidenceChecker {
     if (existsSync(testDir)) {
       try {
         const files = readdirSync(testDir);
-        const testFiles = files.filter(f =>
-          f.startsWith('test_') && f.endsWith('.py')
-        );
+        const testFiles = files.filter((f) => f.startsWith('test_') && f.endsWith('.py'));
         return testFiles.length > 1;
       } catch {
         return false;
@@ -258,11 +256,15 @@ export class ConfidenceChecker {
 
     const markers = context.markers ?? [];
     const knownMarkers = new Set([
-      'unit', 'integration', 'hallucination',
-      'performance', 'confidence_check', 'self_check'
+      'unit',
+      'integration',
+      'hallucination',
+      'performance',
+      'confidence_check',
+      'self_check',
     ]);
 
-    const hasMarkers = markers.some(m => knownMarkers.has(m));
+    const hasMarkers = markers.some((m) => knownMarkers.has(m));
 
     return hasMarkers || testName.length > 10;
   }
@@ -275,11 +277,11 @@ export class ConfidenceChecker {
    */
   getRecommendation(confidence: number): string {
     if (confidence >= 0.9) {
-      return "✅ High confidence (≥90%) - Proceed with implementation";
+      return '✅ High confidence (≥90%) - Proceed with implementation';
     } else if (confidence >= 0.7) {
-      return "⚠️ Medium confidence (70-89%) - Continue investigation, DO NOT implement yet";
+      return '⚠️ Medium confidence (70-89%) - Continue investigation, DO NOT implement yet';
     } else {
-      return "❌ Low confidence (<70%) - STOP and continue investigation loop";
+      return '❌ Low confidence (<70%) - STOP and continue investigation loop';
     }
   }
 }

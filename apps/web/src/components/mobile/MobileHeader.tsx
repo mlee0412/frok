@@ -22,6 +22,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Menu } from 'lucide-react';
 import { DigitalClock } from '@frok/ui';
 import { WeatherBadge } from './WeatherBadge';
 import { useToast } from '@frok/ui';
@@ -53,6 +54,11 @@ export interface MobileHeaderProps {
   temperatureUnits?: 'metric' | 'imperial';
 
   /**
+   * Callback to open navigation drawer
+   */
+  onOpenNav?: () => void;
+
+  /**
    * Additional CSS classes
    */
   className?: string;
@@ -63,6 +69,7 @@ export function MobileHeader({
   locale = 'en-US',
   weatherLocation = 'Seoul',
   temperatureUnits = 'imperial',
+  onOpenNav,
   className,
 }: MobileHeaderProps) {
   const router = useRouter();
@@ -316,8 +323,23 @@ export function MobileHeader({
       <header
         className={`md:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-2 bg-surface/80 backdrop-blur-sm border-b border-border ${className || ''}`}
       >
-        {/* Left: Clock + Weather */}
+        {/* Left: Hamburger Menu + Clock + Weather */}
         <div className="flex items-center gap-3">
+          {/* Hamburger Menu Button */}
+          {onOpenNav && (
+            <>
+              <button
+                onClick={onOpenNav}
+                className="p-2 rounded-md hover:bg-surface/70 transition-colors active:scale-95"
+                aria-label="Open navigation menu"
+                title="Navigation"
+              >
+                <Menu size={20} className="text-foreground/80" />
+              </button>
+              <div className="w-px h-4 bg-border" /> {/* Separator */}
+            </>
+          )}
+
           <DigitalClock
             format={timeFormat}
             locale={locale}

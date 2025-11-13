@@ -198,11 +198,11 @@ export function WeatherCard({
   };
 
   return (
-    <Card className="p-6">
+    <Card className="p-6 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-foreground">Weather</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Location detection */}
           <button
             onClick={detectLocation}

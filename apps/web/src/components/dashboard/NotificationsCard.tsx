@@ -69,12 +69,12 @@ export function NotificationsCard() {
   }, [fetchNotifications]);
 
   return (
-    <Card className="p-4">
+    <Card className="p-4 overflow-hidden">
       <div className="flex items-center justify-between mb-3">
         <div className="font-medium text-foreground">🔔 Recent Activity</div>
         <button
           onClick={fetchNotifications}
-          className="text-xs text-foreground/60 hover:text-foreground transition-colors"
+          className="text-xs text-foreground/60 hover:text-foreground transition-colors flex-shrink-0"
           aria-label="Refresh notifications"
         >
           Refresh
@@ -106,23 +106,23 @@ export function NotificationsCard() {
       )}
 
       {!loading && !error && notifications.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-2 max-h-80 overflow-y-auto overflow-x-hidden pr-1">
           {notifications.map((notif) => (
             <Link
               key={notif.id}
               href={notif.link}
-              className="block p-2 hover:bg-surface-lighter rounded transition-colors"
+              className="block p-2 hover:bg-surface-lighter rounded transition-colors min-w-0"
             >
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start gap-2 min-w-0">
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-foreground truncate">
+                  <div className="text-sm font-medium text-foreground break-words line-clamp-2">
                     {notif.title}
                   </div>
-                  <div className="text-xs text-foreground/70 truncate mt-0.5">
+                  <div className="text-xs text-foreground/70 break-words line-clamp-2 mt-0.5">
                     {notif.description}
                   </div>
                 </div>
-                <div className="text-xs text-foreground/50 whitespace-nowrap">
+                <div className="text-xs text-foreground/50 whitespace-nowrap flex-shrink-0">
                   {formatRelativeTime(new Date(notif.timestamp))}
                 </div>
               </div>
