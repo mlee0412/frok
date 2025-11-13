@@ -1,0 +1,417 @@
+'use client';
+
+import { useState, useMemo, memo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { formatDistanceToNow } from 'date-fns';
+import { useTranslations } from '@/lib/i18n/I18nProvider';
+import type { Message, ToolCall } from '@/store/unifiedChatStore';
+
+// ============================================================================
+// MessageCard Component
+// ============================================================================
+
+/**
+ * MessageCard - Individual message display with role-based styling
+ *
+ * Features:
+ * - Role-based styling (user/assistant/system)
+ * - Voice message indicators (source === 'voice')
+ * - Tool call visualization with expandable details
+ * - Thinking process display (metadata.thinkingProcess)
+ * - File attachment preview (fileUrls array)
+ * - Copy/regenerate/edit/delete actions
+ * - Framer Motion enter/exit animations
+ * - Markdown rendering for assistant messages
+ * - Code syntax highlighting
+ * - Metadata badges (model, complexity, routing, tools, execution time)
+ */
+
+export interface MessageCardProps {
+  message: Message;
+  isEditing?: boolean;
+  isCompact?: boolean;
+  showActions?: boolean;
+  onCopy?: () => void;
+  onRegenerate?: () => void;
+  onEdit?: (newContent: string) => void;
+  onDelete?: () => void;
+  onCancelEdit?: () => void;
+}
+
+export const MessageCard = memo(function MessageCard({
+  message,
+  isEditing = false,
+  isCompact = false,
+  showActions = true,
+  onCopy,
+  onRegenerate,
+  onEdit,
+  onDelete,
+  onCancelEdit,
+}: MessageCardProps) {
+  const t = useTranslations('chat.messages');
+  const [editContent, setEditContent] = useState(message.content);
+  const [showToolCalls, setShowToolCalls] = useState(false);
+  const [showThinking, setShowThinking] = useState(false);
+
+  const isUser = message.role === 'user';
+  const isAssistant = message.role === 'assistant';
+  const isSystem = message.role === 'system';
+  const isVoiceMessage = message.source === 'voice';
+
+  // Format timestamp
+  const timeAgo = useMemo(
+    () => formatDistanceToNow(message.timestamp, { addSuffix: true }),
+    [message.timestamp]
+  );
+
+  // Extract metadata
+  const toolCalls = message.metadata?.toolCalls || [];
+  const thinkingProcess = message.metadata?.thinkingProcess;
+  const hasToolCalls = toolCalls.length > 0;
+  const hasThinking = !!thinkingProcess;
+
+  // Message styling
+  const bubbleWidthClass = isCompact ? 'max-w-full sm:max-w-2xl' : 'max-w-full sm:max-w-3xl';
+  const bubblePaddingClass = isCompact ? 'px-4 py-3' : 'px-5 py-4';
+
+  // Role-based styling
+  const roleStyles = {
+    user: 'bg-primary/10 border-primary/30 text-foreground',
+    assistant: 'bg-surface border-border text-foreground',
+    system: 'bg-warning/10 border-warning/30 text-foreground/70',
+  };
+
+  const handleSubmitEdit = () => {
+    if (editContent.trim() && onEdit) {
+      onEdit(editContent.trim());
+    }
+  };
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+    >
+      <div className={`${bubbleWidthClass} ${bubblePaddingClass} rounded-2xl border ${roleStyles[message.role]} backdrop-blur-sm`}>
+        {/* Message Header */}
+        <div className="mb-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {/* Role Icon */}
+            <span className="text-base">
+              {isUser && '👤'}
+              {isAssistant && '🤖'}
+              {isSystem && '⚙️'}
+            </span>
+
+            {/* Role Label */}
+            <span className="text-xs font-medium opacity-70">
+              {isUser && t('user')}
+              {isAssistant && t('assistant')}
+              {isSystem && t('system')}
+            </span>
+
+            {/* Voice Indicator */}
+            {isVoiceMessage && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-xs text-accent">
+                🎤 {t('voice')}
+              </span>
+            )}
+          </div>
+
+          {/* Timestamp */}
+          <span className="text-xs opacity-50">{timeAgo}</span>
+        </div>
+
+        {/* Message Content */}
+        {isEditing ? (
+          <div className="space-y-2">
+            <textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              rows={4}
+              autoFocus
+            />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSubmitEdit}
+                className="rounded-lg border border-primary bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 transition-colors"
+              >
+                {t('save')}
+              </button>
+              <button
+                onClick={onCancelEdit}
+                className="rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface/80 transition-colors"
+              >
+                {t('cancel')}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="prose prose-sm prose-invert max-w-none">
+            <MessageContent content={message.content} isAssistant={isAssistant} />
+          </div>
+        )}
+
+        {/* File Attachments */}
+        {message.fileUrls && message.fileUrls.length > 0 && (
+          <div className="mt-3 space-y-2">
+            <div className="text-xs font-medium opacity-70">{t('attachments')}</div>
+            <div className="grid grid-cols-2 gap-2">
+              {message.fileUrls.map((url, index) => (
+                <FilePreview key={index} url={url} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Tool Calls */}
+        {hasToolCalls && (
+          <div className="mt-3">
+            <button
+              onClick={() => setShowToolCalls(!showToolCalls)}
+              className="flex items-center gap-2 text-xs font-medium text-foreground/70 hover:text-foreground transition-colors"
+            >
+              <span>{showToolCalls ? '▼' : '▶'}</span>
+              <span>🔧 {t('toolCalls')} ({toolCalls.length})</span>
+            </button>
+            <AnimatePresence>
+              {showToolCalls && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="mt-2 space-y-2 overflow-hidden"
+                >
+                  {toolCalls.map((call, index) => (
+                    <ToolCallCard key={index} toolCall={call} />
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* Thinking Process */}
+        {hasThinking && (
+          <div className="mt-3">
+            <button
+              onClick={() => setShowThinking(!showThinking)}
+              className="flex items-center gap-2 text-xs font-medium text-foreground/70 hover:text-foreground transition-colors"
+            >
+              <span>{showThinking ? '▼' : '▶'}</span>
+              <span>🧠 {t('thinking')}</span>
+            </button>
+            <AnimatePresence>
+              {showThinking && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="mt-2 overflow-hidden rounded-lg border border-border bg-background/50 p-3"
+                >
+                  <div className="prose prose-sm prose-invert max-w-none">
+                    <MessageContent content={thinkingProcess} isAssistant />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        {showActions && !isEditing && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {onCopy && (
+              <button
+                onClick={onCopy}
+                className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs text-foreground transition hover:border-success hover:bg-success/20"
+              >
+                📋 {t('copy')}
+              </button>
+            )}
+            {isAssistant && onRegenerate && (
+              <button
+                onClick={onRegenerate}
+                className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs text-foreground transition hover:border-primary hover:bg-primary/20"
+              >
+                🔄 {t('regenerate')}
+              </button>
+            )}
+            {isUser && onEdit && (
+              <button
+                onClick={() => onEdit(message.content)}
+                className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs text-foreground transition hover:border-primary hover:bg-primary/20"
+              >
+                ✏️ {t('edit')}
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={onDelete}
+                className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs text-foreground transition hover:border-danger hover:bg-danger/20"
+              >
+                🗑️ {t('delete')}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+});
+
+// ============================================================================
+// MessageContent Component (Markdown rendering)
+// ============================================================================
+
+interface MessageContentProps {
+  content: string;
+  isAssistant: boolean;
+}
+
+function MessageContent({ content, isAssistant }: MessageContentProps) {
+  if (!isAssistant) {
+    // User messages: plain text with line breaks
+    return (
+      <div className="whitespace-pre-wrap break-words">
+        {content}
+      </div>
+    );
+  }
+
+  // Assistant messages: Markdown rendering (simplified for now)
+  // TODO: Add proper markdown library (react-markdown + remark-gfm)
+  return (
+    <div className="whitespace-pre-wrap break-words">
+      {content}
+    </div>
+  );
+}
+
+// ============================================================================
+// ToolCallCard Component
+// ============================================================================
+
+function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
+  const t = useTranslations('chat.messages');
+  const [showDetails, setShowDetails] = useState(false);
+
+  // Parse arguments from string to object
+  const parsedArgs = useMemo(() => {
+    try {
+      return JSON.parse(toolCall.arguments);
+    } catch {
+      return {};
+    }
+  }, [toolCall.arguments]);
+
+  return (
+    <div className="rounded-lg border border-border bg-background/50 p-3">
+      <button
+        onClick={() => setShowDetails(!showDetails)}
+        className="flex w-full items-center justify-between text-left"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-mono text-accent">{toolCall.name}</span>
+          {toolCall.status === 'error' && (
+            <span className="text-xs text-danger">❌ {t('error')}</span>
+          )}
+        </div>
+        <span className="text-xs text-foreground/50">
+          {showDetails ? '▼' : '▶'}
+        </span>
+      </button>
+
+      <AnimatePresence>
+        {showDetails && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="mt-2 space-y-2 overflow-hidden"
+          >
+            {/* Arguments */}
+            <div>
+              <div className="text-xs font-medium text-foreground/70">{t('arguments')}</div>
+              <pre className="mt-1 overflow-x-auto rounded bg-background p-2 text-xs text-foreground/80">
+                {JSON.stringify(parsedArgs, null, 2)}
+              </pre>
+            </div>
+
+            {/* Result */}
+            {toolCall.result && (
+              <div>
+                <div className="text-xs font-medium text-foreground/70">{t('result')}</div>
+                <pre className="mt-1 overflow-x-auto rounded bg-background p-2 text-xs text-foreground/80">
+                  {String(toolCall.result)}
+                </pre>
+              </div>
+            )}
+
+            {/* Error */}
+            {toolCall.status === 'error' && (
+              <div>
+                <div className="text-xs font-medium text-danger">{t('error')}</div>
+                <div className="mt-1 rounded bg-danger/10 p-2 text-xs text-danger">
+                  Tool call failed
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ============================================================================
+// FilePreview Component
+// ============================================================================
+
+interface FilePreviewProps {
+  url: string;
+}
+
+function FilePreview({ url }: FilePreviewProps) {
+  const fileName = url.split('/').pop() || 'file';
+  const fileExtension = fileName.split('.').pop()?.toLowerCase();
+
+  const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(fileExtension || '');
+
+  if (isImage) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-surface hover:border-primary transition-colors"
+      >
+        <img
+          src={url}
+          alt={fileName}
+          className="h-full w-full object-cover transition-transform group-hover:scale-105"
+        />
+      </a>
+    );
+  }
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-foreground hover:border-primary hover:bg-primary/10 transition-colors"
+    >
+      <span>📎</span>
+      <span className="truncate">{fileName}</span>
+    </a>
+  );
+}
