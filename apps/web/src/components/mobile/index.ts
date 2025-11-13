@@ -13,3 +13,6 @@ export type { FloatingActionButtonProps } from './FloatingActionButton';
 
 export { PageTransition } from './PageTransition';
 export type { PageTransitionProps } from './PageTransition';
+
+export { PullToRefresh } from './PullToRefresh';
+export type { PullToRefreshProps } from './PullToRefresh';
