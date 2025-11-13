@@ -1,2876 +1,411 @@
 'use client';
 
-import * as React from 'react';
+import { useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { MessageContent } from '@/components/MessageContent';
-import { SuggestedPrompts } from '@/components/SuggestedPrompts';
-import { QuickActions } from '@/components/QuickActions';
-import { OptimizedImage } from '@/components/OptimizedImage';
-import { downloadMarkdown, copyToClipboard } from '@/lib/exportConversation';
-import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import {
+  ChatLayout,
+  ChatHeader,
+  ChatContent,
+  ChatFooter,
+  MessageList,
+  ChatInput,
+} from '@/components/chat';
+import { useUnifiedChatStore, useActiveThread, useThreadMessages } from '@/store/unifiedChatStore';
+import { useToast } from '@frok/ui';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { ThreadListSkeleton, MessageSkeleton } from '@/components/LoadingSkeleton';
-import { useToast, Toaster } from '@frok/ui';
-import type { ChatThreadRow, ChatMessageRow } from '@/types/database';
 
-// Lazy load heavy modal components
-const ThreadOptionsMenu = dynamic(() => import('@/components/ThreadOptionsMenu').then(mod => ({ default: mod.ThreadOptionsMenu })), {
-  ssr: false,
-  loading: () => <div className="fixed inset-0 bg-surface/50 flex items-center justify-center z-50"><div className="bg-background border border-border rounded-lg p-6 max-w-2xl w-full mx-4 animate-pulse"><div className="h-8 bg-surface rounded w-1/3 mb-4"></div><div className="h-32 bg-surface rounded"></div></div></div>
-});
-const TTSSettingsModal = dynamic(() => import('@/components/TTSSettings').then(mod => ({ default: mod.TTSSettingsModal })), { ssr: false });
-const AgentMemoryModal = dynamic(() => import('@/components/AgentMemoryModal').then(mod => ({ default: mod.AgentMemoryModal })), { ssr: false });
-const UserMemoriesModal = dynamic(() => import('@/components/UserMemoriesModal').then(mod => ({ default: mod.UserMemoriesModal })), { ssr: false });
+// ============================================================================
+// Dynamic Imports (Agent-Specific Modals)
+// ============================================================================
 
-type Message = {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: number;
-  files?: { name: string; url: string; type?: string }[];
-  images?: { url: string; name: string }[];
-  toolsUsed?: string[];
-  executionTime?: number;
-  isRegenerating?: boolean;
-  model?: string;
-  complexity?: 'simple' | 'moderate' | 'complex';
-  routing?: 'direct' | 'orchestrator';
-  latencyMs?: number;
-  toolSource?: string;
-  availableModels?: Record<string, string>;
-};
+const TTSSettingsModal = dynamic(
+  () => import('@/components/TTSSettings').then((m) => ({ default: m.TTSSettingsModal })),
+  { ssr: false }
+);
 
-type Thread = {
-  id: string;
-  title: string;
-  messages: Message[];
-  createdAt: number;
-  branchedFrom?: string; // Thread ID this was branched from
-  tags?: string[];
-  folder?: string;
-  pinned?: boolean;
-  archived?: boolean;
-  enabledTools?: string[];
-  model?: string; // GPT model selection
-  agentStyle?: string; // Agent style/tone
-  projectContext?: string; // Project/conversation context
-  agentName?: string; // Agent name for memory isolation
-};
+const AgentMemoryModal = dynamic(
+  () => import('@/components/AgentMemoryModal').then((m) => ({ default: m.AgentMemoryModal })),
+  { ssr: false }
+);
 
+const UserMemoriesModal = dynamic(
+  () => import('@/components/UserMemoriesModal').then((m) => ({ default: m.UserMemoriesModal })),
+  { ssr: false }
+);
+
+// ============================================================================
+// Agent Page Component
+// ============================================================================
+
+/**
+ * Agent Page - AI Assistant Chat Interface
+ *
+ * Features:
+ * - Smart agent orchestration with tool selection
+ * - TTS (Text-to-Speech) settings
+ * - Agent memory management
+ * - User memories management
+ * - Auto-title generation
+ * - Export conversation
+ * - Streaming responses with tool call display
+ */
 export default function AgentPage() {
-  const [threads, setThreads] = React.useState<Thread[]>([]);
-  const [activeThreadId, setActiveThreadId] = React.useState<string | null>(null);
-  const [input, setInput] = React.useState('');
-  const [loading, setLoading] = React.useState(false);
-  const [files, setFiles] = React.useState<File[]>([]);
-  const [modelName, setModelName] = React.useState('auto');
-  const [loadingThreads, setLoadingThreads] = React.useState(true);
-  const [loadingMessages, setLoadingMessages] = React.useState(false);
-  
-  // Performance: Message cache to avoid reloading on thread switch
-  const [messageCache, setMessageCache] = React.useState<Record<string, Message[]>>({});
-
-  // Performance: Abort controllers for request deduplication
-  const loadingRef = React.useRef<Record<string, AbortController>>({});
-  const [streamingContent, setStreamingContent] = React.useState('');
-  const [isStreaming, setIsStreaming] = React.useState(false);
-  const [streamingMeta, setStreamingMeta] = React.useState<{
-    model?: string;
-    complexity?: 'simple' | 'moderate' | 'complex';
-    routing?: 'direct' | 'orchestrator';
-    tools?: string[];
-    toolSource?: string;
-    historyLength?: number;
-    models?: Record<string, string>;
-  } | null>(null);
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [showExportMenu, setShowExportMenu] = React.useState(false);
-  const [exportSuccess, setExportSuccess] = React.useState(false);
-  const [editingMessageId, setEditingMessageId] = React.useState<string | null>(null);
-  const [editContent, setEditContent] = React.useState('');
-  const [editingOptionsThreadId, setEditingOptionsThreadId] = React.useState<string | null>(null);
-  const [selectedFolder, setSelectedFolder] = React.useState<string | null>(null);
-  const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
-  const [showArchived, setShowArchived] = React.useState(false);
-  const [showShareModal, setShowShareModal] = React.useState(false);
-  const [shareUrl, setShareUrl] = React.useState<string | null>(null);
-  const [shareLoading, setShareLoading] = React.useState(false);
-  const [sidebarOpen, setSidebarOpen] = React.useState(true);
-  const [density, setDensity] = React.useState<'cozy' | 'compact'>('cozy');
-  const [showTTSSettings, setShowTTSSettings] = React.useState(false);
-  const [showMemoryModal, setShowMemoryModal] = React.useState(false);
-  const [showUserMemoriesModal, setShowUserMemoriesModal] = React.useState(false);
-  const [showMoreMenu, setShowMoreMenu] = React.useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const messagesEndRef = React.useRef<HTMLDivElement>(null);
-  const messagesContainerRef = React.useRef<HTMLDivElement>(null);
-  const abortControllerRef = React.useRef<AbortController | null>(null);
-  const [showScrollButton, setShowScrollButton] = React.useState(false);
-
-  // Auto title generation state
-  const [titleGeneratingThreadId, setTitleGeneratingThreadId] = React.useState<string | null>(null);
-  const [autoTitledThreads, setAutoTitledThreads] = React.useState<Set<string>>(new Set());
-
-  const { recordingState, audioLevel, startRecording, stopRecording, transcribeAudio } = useVoiceRecorder();
-  const { ttsState, currentMessageId, settings: ttsSettings, voices: ttsVoices, speak, pause, resume, stop, updateSettings: updateTTSSettings } = useTextToSpeech();
   const toast = useToast();
 
-  const activeThread = threads.find((t) => t.id === activeThreadId);
+  // ===== Store State =====
+  const activeThread = useActiveThread();
+  const messages = useThreadMessages(activeThread?.id ?? null);
+  const createThread = useUnifiedChatStore((state) => state.createThread);
+  const setActiveThread = useUnifiedChatStore((state) => state.setActiveThread);
+  const updateThread = useUnifiedChatStore((state) => state.updateThread);
+  const addMessage = useUnifiedChatStore((state) => state.addMessage);
+  const setStreamingMessageId = useUnifiedChatStore((state) => state.setStreamingMessageId);
+  const appendStreamingContent = useUnifiedChatStore((state) => state.appendStreamingContent);
+  const toggleVoiceSheet = useUnifiedChatStore((state) => state.toggleVoiceSheet);
+  const isVoiceSheetOpen = useUnifiedChatStore((state) => state.isVoiceSheetOpen);
 
-  const formatToolSource = React.useCallback((source?: string) => {
-    if (!source) return '';
-    if (source === 'improved') return 'Enhanced tools';
-    if (source === 'basic') return 'Base tools';
-    return source;
-  }, []);
+  // ===== TTS Hooks =====
+  const { settings: ttsSettings, voices, updateSettings: updateTTS } = useTextToSpeech();
 
-  const formatTimestamp = React.useCallback((timestamp: number) => {
-    return new Date(timestamp).toLocaleString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  }, []);
+  // ===== Local State =====
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [showTTSSettings, setShowTTSSettings] = useState(false);
+  const [showMemoryModal, setShowMemoryModal] = useState(false);
+  const [showUserMemories, setShowUserMemories] = useState(false);
 
-  // Extract all unique tags and folders
-  const allTags = React.useMemo(() => {
-    const tags = new Set<string>();
-    threads.forEach((t) => t.tags?.forEach((tag) => tags.add(tag)));
-    return Array.from(tags).sort();
-  }, [threads]);
+  // ===== Message Sending =====
 
-  const allFolders = React.useMemo(() => {
-    const folders = new Set<string>();
-    threads.forEach((t) => {
-      if (t.folder) folders.add(t.folder);
-    });
-    return Array.from(folders).sort();
-  }, [threads]);
+  const handleSendMessage = useCallback(
+    async (content: string, fileUrls?: string[]) => {
+      if (!content.trim() && !fileUrls?.length) return;
 
-  // Filter threads based on search, folder, tags, archived
-  const filteredThreads = React.useMemo(() => {
-    let filtered = threads;
+      let threadId = activeThread?.id;
 
-    // Filter by archived status
-    if (!showArchived) {
-      filtered = filtered.filter((t) => !t.archived);
-    }
-
-    // Filter by folder
-    if (selectedFolder) {
-      filtered = filtered.filter((t) => t.folder === selectedFolder);
-    }
-
-    // Filter by tags
-    if (selectedTags.length > 0) {
-      filtered = filtered.filter((t) =>
-        selectedTags.every((tag) => t.tags?.includes(tag))
-      );
-    }
-
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((thread) => {
-        if (thread.title.toLowerCase().includes(query)) return true;
-        if (thread.tags?.some((tag) => tag.toLowerCase().includes(query))) return true;
-        return thread.messages.some((msg) =>
-          msg.content.toLowerCase().includes(query)
-        );
-      });
-    }
-
-    // Sort: pinned first, then by date
-    return filtered.sort((a, b) => {
-      if (a.pinned && !b.pinned) return -1;
-      if (!a.pinned && b.pinned) return 1;
-      return b.createdAt - a.createdAt;
-    });
-  }, [threads, searchQuery, selectedFolder, selectedTags, showArchived]);
-
-  const pinnedThreads = React.useMemo(
-    () => filteredThreads.filter((thread) => thread.pinned),
-    [filteredThreads]
-  );
-
-  const regularThreads = React.useMemo(
-    () => filteredThreads.filter((thread) => !thread.pinned),
-    [filteredThreads]
-  );
-
-  const archivedCount = React.useMemo(
-    () => threads.filter((thread) => thread.archived).length,
-    [threads]
-  );
-
-  const isCompact = density === 'compact';
-
-  // Fetch model config and threads on mount
-  React.useEffect(() => {
-    fetch('/api/agent/config')
-      .then((res) => res.json())
-      .then((data) => setModelName(data.model))
-      .catch(() => setModelName('gpt-5-mini'));
-
-    loadThreads();
-  }, []);
-
-  // Handle share target API - pre-fill input with shared content
-  React.useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const params = new URLSearchParams(window.location.search);
-    const title = params.get('title');
-    const text = params.get('text');
-    const url = params.get('url');
-
-    // Build shared content message
-    const sharedParts = [];
-    if (title) sharedParts.push(`Title: ${title}`);
-    if (text) sharedParts.push(text);
-    if (url) sharedParts.push(`URL: ${url}`);
-
-    if (sharedParts.length > 0) {
-      const sharedContent = sharedParts.join('\n\n');
-      setInput(sharedContent);
-
-      // Clear URL parameters to avoid re-triggering on navigation
-      window.history.replaceState({}, '', window.location.pathname);
-
-      // Show toast notification
-      toast.success('Shared content has been added to your message');
-    }
-  }, [toast]);
-
-  // Load threads from backend
-  const loadThreads = async () => {
-    try {
-      setLoadingThreads(true);
-      const res = await fetch('/api/chat/threads');
-      const json = await res.json();
-      if (json.ok && json.threads) {
-        setThreads(json.threads.map((t: ChatThreadRow) => ({
-          id: t.id,
-          title: t.title ?? 'Untitled',
-          messages: [],
-          createdAt: new Date(t.created_at).getTime(),
-          tags: t.tags || [],
-          folder: t.folder ?? undefined,
-          pinned: t.pinned || false,
-          archived: t.archived || false,
-          enabledTools: t.enabled_tools || ['home_assistant', 'memory', 'web_search', 'tavily_search', 'image_generation'],
-          model: t.model || 'gpt-5-mini',
-          agentStyle: t.agent_style || 'balanced',
-        })));
+      // Create thread if none active
+      if (!threadId) {
+        threadId = createThread('New Chat', 'agent');
+        setActiveThread(threadId);
       }
-    } catch (e) {
-      console.error('Failed to load threads:', e);
-    } finally {
-      setLoadingThreads(false);
-    }
-  };
-
-  // Load messages when thread changes (with caching and deduplication)
-  React.useEffect(() => {
-    if (!activeThreadId) return;
-    
-    const loadMessages = async () => {
-      // Performance: Check cache first
-      if (messageCache[activeThreadId]) {
-        const cachedMessages = messageCache[activeThreadId];
-        setThreads((prev) =>
-          prev.map((t) =>
-            t.id === activeThreadId ? { ...t, messages: cachedMessages } : t
-          )
-        );
-        return; // Cache hit - no API call needed!
-      }
-
-      // Performance: Cancel any previous request for this thread
-      if (loadingRef.current[activeThreadId]) {
-        loadingRef.current[activeThreadId].abort();
-      }
-
-      // Create new abort controller for request deduplication
-      const controller = new AbortController();
-      loadingRef.current[activeThreadId] = controller;
 
       try {
-        setLoadingMessages(true);
-        const res = await fetch(`/api/chat/messages?thread_id=${activeThreadId}`, {
-          signal: controller.signal,
+        // Add user message
+        addMessage({
+          threadId,
+          role: 'user',
+          content,
+          source: 'text',
+          fileUrls,
         });
-        const json = await res.json();
 
-        if (json.ok && json.messages) {
-          const messages = json.messages.map((m: ChatMessageRow) => ({
-            id: m.id,
-            role: m.role,
-            content: m.content,
-            timestamp: new Date(m.created_at).getTime(),
-          }));
+        // Start streaming response
+        await sendMessageWithStreaming(threadId, content, fileUrls || []);
 
-          // Performance: Update cache
-          setMessageCache((prev) => ({ ...prev, [activeThreadId]: messages }));
-
-          // Update thread state
-          setThreads((prev) =>
-            prev.map((t) =>
-              t.id === activeThreadId ? { ...t, messages } : t
-            )
-          );
+        // Auto-title generation after 3 messages
+        const messageCount = messages.length + 2; // +2 for user + assistant messages just added
+        if (messageCount === 3) {
+          generateThreadTitle(threadId, content);
         }
+
+        toast.success('Message sent');
       } catch (error: unknown) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          // Request was cancelled - this is expected, ignore
-          return;
-        }
-        console.error('Failed to load messages:', error);
-      } finally {
-        setLoadingMessages(false);
-        delete loadingRef.current[activeThreadId];
+        console.error('[AgentPage] Failed to send message:', error);
+        toast.error('Failed to send message');
+        throw error;
       }
-    };
-
-    loadMessages();
-  }, [activeThreadId, messageCache]);
-
-  // Auto-scroll to bottom on new messages or streaming content
-  React.useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeThread?.messages, streamingContent, isStreaming]);
-
-  // Detect scroll position to show/hide scroll-to-bottom button
-  const handleScroll = React.useCallback(() => {
-    const container = messagesContainerRef.current;
-    if (!container) return;
-    
-    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 200;
-    setShowScrollButton(!isNearBottom);
-  }, []);
-
-  const scrollToBottom = React.useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
-
-  // Performance: Helper to update both threads and cache simultaneously
-  const updateThreadMessages = React.useCallback(
-    (threadId: string, updater: (prevMessages: Message[]) => Message[]) => {
-      let nextMessages: Message[] | null = null;
-
-      setThreads((prevThreads) => {
-        let threadFound = false;
-
-        const updatedThreads = prevThreads.map((thread) => {
-          if (thread.id !== threadId) return thread;
-
-          threadFound = true;
-          const updatedMessages = updater(thread.messages ?? []);
-          nextMessages = updatedMessages;
-
-          return {
-            ...thread,
-            messages: updatedMessages,
-          };
-        });
-
-        if (!threadFound) {
-          // If the thread isn't present yet, leave the thread list untouched.
-          return prevThreads;
-        }
-
-        return updatedThreads;
-      });
-
-      setMessageCache((prevCache) => {
-        const baseMessages = nextMessages ?? updater(prevCache[threadId] ?? []);
-        return { ...prevCache, [threadId]: baseMessages };
-      });
     },
-    []
+    [activeThread, createThread, setActiveThread, addMessage, messages.length, toast]
   );
 
-  const startThreadCreation = React.useCallback(() => {
-    const tempId = `temp_${Date.now()}`;
-    const optimisticThread: Thread = {
-      id: tempId,
-      title: 'New Chat',
-      messages: [],
-      createdAt: Date.now(),
-    };
+  // ===== Streaming Logic =====
 
-    setThreads((prev) => [optimisticThread, ...prev]);
-    setActiveThreadId(tempId);
-
-    const threadIdPromise = (async () => {
-      try {
-        const res = await fetch('/api/chat/threads', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: 'New Chat' }),
-        });
-        const json = await res.json();
-
-        if (json.ok && json.thread) {
-          const newThread: Thread = {
-            id: json.thread.id,
-            title: json.thread.title,
-            messages: [],
-            createdAt: new Date(json.thread.created_at).getTime(),
-            tags: [],
-            pinned: false,
-            archived: false,
-          };
-
-          setThreads((prev) => prev.map((t) => (t.id === tempId ? newThread : t)));
-          setActiveThreadId(newThread.id);
-          return newThread.id as string;
-        }
-
-        setThreads((prev) => prev.filter((t) => t.id !== tempId));
-        setActiveThreadId(null);
-        toast.error('Failed to create new chat');
-        throw new Error('Failed to create new chat');
-      } catch (e) {
-        console.error('Failed to create thread:', e);
-        setThreads((prev) => prev.filter((t) => t.id !== tempId));
-        setActiveThreadId(null);
-        toast.error('Failed to create new chat');
-        throw e;
-      }
-    })();
-
-    return { optimisticId: tempId, threadIdPromise };
-  }, [toast]);
-
-  const createNewThread = React.useCallback(async () => {
-    const { threadIdPromise } = startThreadCreation();
-    return threadIdPromise;
-  }, [startThreadCreation]);
-
-  const handleSuggestedPrompt = (prompt: string) => {
-    setInput(prompt);
-    // Auto-send after a small delay to allow user to see the input
-    setTimeout(() => {
-      sendMessage();
-    }, 100);
-  };
-
-  const sendMessage = async () => {
-    if (!input.trim() && files.length === 0) return;
-    
-    let currentThreadId = activeThreadId;
-    let optimisticThreadId = activeThreadId;
-    let threadIdPromise: Promise<string> | null = null;
-
-    if (!currentThreadId) {
-      const creation = startThreadCreation();
-      optimisticThreadId = creation.optimisticId;
-      threadIdPromise = creation.threadIdPromise;
-    }
-
-    const targetThreadId = currentThreadId ?? optimisticThreadId;
-    if (!targetThreadId) return;
-
-    const resolvedThreadId = threadIdPromise ? await threadIdPromise : targetThreadId;
-    if (!resolvedThreadId) return;
-    currentThreadId = resolvedThreadId;
-
-    const userContent = input;
-    const userFiles = files;
-    setInput('');
-    setFiles([]);
-    setLoading(true);
-
-    // Process images to base64
-    const imageFiles = userFiles.filter(f => f.type.startsWith('image/'));
-    const images: { url: string; name: string }[] = [];
-    
-    for (const file of imageFiles) {
-      const reader = new FileReader();
-      const base64 = await new Promise<string>((resolve) => {
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
-      images.push({ url: base64, name: file.name });
-    }
+  const sendMessageWithStreaming = async (
+    threadId: string,
+    content: string,
+    fileUrls: string[]
+  ) => {
+    setIsStreaming(true);
 
     try {
-      // Save user message to backend
-      const userRes = await fetch('/api/chat/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          thread_id: currentThreadId,
-          role: 'user',
-          content: userContent,
-        }),
+      // Create assistant message placeholder
+      const assistantMessageId = addMessage({
+        threadId,
+        role: 'assistant',
+        content: '',
+        source: 'text',
       });
-      const userJson = await userRes.json();
 
-      if (userJson.ok && userJson.message) {
-        const userMessage: Message = {
-          id: userJson.message.id,
-          role: 'user',
-          content: userJson.message.content,
-          timestamp: new Date(userJson.message.created_at).getTime(),
-          images: images.length > 0 ? images : undefined,
-        };
+      setStreamingMessageId(assistantMessageId);
 
-        // Performance: Update both threads and cache
-        let previousMessageCount = 0;
-        updateThreadMessages(currentThreadId, (prevMessages) => {
-          previousMessageCount = prevMessages.length;
-          return [...prevMessages, userMessage];
-        });
-
-        // Update title if first message
-        if (previousMessageCount === 0) {
-          setThreads((prev) =>
-            prev.map((t) =>
-              t.id === currentThreadId
-                ? { ...t, title: userContent.slice(0, 40) }
-                : t
-            )
-          );
-        }
-
-        // Auto-generate smart title if first message
-        if (previousMessageCount === 0) {
-          // Suggest title in background (non-blocking)
-          fetch(`/api/chat/threads/${currentThreadId}/suggest-title`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ firstMessage: userContent }),
-          })
-            .then(res => res.json())
-            .then(json => {
-              if (json.ok && json.title) {
-                // Update thread title
-                fetch(`/api/chat/threads/${currentThreadId}`, {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ title: json.title }),
-                });
-                
-                // Update local state
-                setThreads((prev) =>
-                  prev.map((t) =>
-                    t.id === currentThreadId ? { ...t, title: json.title } : t
-                  )
-                );
-              }
-            })
-            .catch(err => console.error('Title suggestion failed:', err));
-        }
-      }
-
-      // Stream agent response with smart routing and conversation history
-      setIsStreaming(true);
-      setStreamingContent('');
-      setStreamingMeta(null);
-      
-      abortControllerRef.current = new AbortController();
-      
+      // Call agent API with streaming
       const response = await fetch('/api/agent/smart-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          input_as_text: userContent,
-          images: images.length > 0 ? images.map(img => img.url) : undefined,
-          model: activeThread?.model === 'auto' ? undefined : activeThread?.model,
-          enabled_tools: activeThread?.enabledTools,
-          thread_id: currentThreadId, // Pass thread ID for conversation history
+          threadId,
+          message: content,
+          fileUrls,
         }),
-        signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) {
-        throw new Error('Stream request failed');
+        throw new Error('Failed to send message');
       }
 
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let assistantContent = '';
-      let routingMetadata: {
-        model?: string;
-        complexity?: 'simple' | 'moderate' | 'complex';
-        routing?: 'direct' | 'orchestrator';
-        tools?: string[];
-        toolSource?: string;
-        historyLength?: number;
-        models?: Record<string, string>;
-      } | null = null;
-      let runMetrics: { durationMs?: number; model?: string; route?: string } | null = null;
-      let streamedTools: string[] | undefined;
+      // Check if response is streaming
+      const contentType = response.headers.get('content-type');
+      if (contentType?.includes('text/event-stream')) {
+        // Handle SSE streaming
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
 
-      if (reader) {
+        if (!reader) throw new Error('No response body');
+
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          const chunk = decoder.decode(value);
+          const chunk = decoder.decode(value, { stream: true });
           const lines = chunk.split('\n');
 
           for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.error) {
-                throw new Error(data.error);
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') {
+                break;
               }
-
-              if (data.metadata) {
-                routingMetadata = data.metadata;
-                setStreamingMeta({
-                  model: data.metadata.model,
-                  complexity: data.metadata.complexity,
-                  routing: data.metadata.routing,
-                  tools: data.metadata.tools,
-                  toolSource: data.metadata.toolSource,
-                  historyLength: data.metadata.historyLength,
-                  models: data.metadata.models,
-                });
-                continue;
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed.content) {
+                  appendStreamingContent(threadId, assistantMessageId, parsed.content);
+                }
+                // Handle tool calls, metadata, etc.
+                if (parsed.toolCalls) {
+                  // Update message with tool call metadata
+                  // (MessageCard already handles display)
+                }
+              } catch {
+                // Skip invalid JSON
               }
-
-              if (typeof data.delta === 'string') {
-                assistantContent += data.delta;
-                setStreamingContent(assistantContent);
-                continue;
-              }
-
-              if (data.metrics) {
-                runMetrics = data.metrics;
-              }
-
-              if (Array.isArray(data.tools)) {
-                streamedTools = data.tools;
-              }
-
-              if (typeof data.content === 'string') {
-                assistantContent = data.content;
-                setStreamingContent(data.content);
-              }
-
-              if (data.done) {
-                setStreamingMeta(null);
-              }
-            } catch (e) {
-              console.error('Parse error:', e);
             }
           }
         }
-      }
-
-      setIsStreaming(false);
-      setStreamingMeta(null);
-      setStreamingContent('');
-
-      // Save final assistant message to backend
-      const assistantRes = await fetch('/api/chat/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          thread_id: currentThreadId,
-          role: 'assistant',
-          content: assistantContent,
-        }),
-      });
-      const assistantJson = await assistantRes.json();
-
-      if (assistantJson.ok && assistantJson.message) {
-        const toolList = streamedTools && streamedTools.length > 0 ? streamedTools : routingMetadata?.tools;
-
-        const assistantMessage: Message = {
-          id: assistantJson.message.id,
-          role: 'assistant',
-          content: assistantJson.message.content,
-          timestamp: new Date(assistantJson.message.created_at).getTime(),
-          toolsUsed: toolList,
-          executionTime: runMetrics?.durationMs,
-          latencyMs: runMetrics?.durationMs,
-          model: routingMetadata?.model,
-          complexity: routingMetadata?.complexity,
-          routing: routingMetadata?.routing,
-          toolSource: routingMetadata?.toolSource,
-          availableModels: routingMetadata?.models,
-        };
-
-        // Performance: Update both threads and cache
-        let updatedMessages: Message[] = [];
-        updateThreadMessages(currentThreadId, (prevMessages) => {
-          updatedMessages = [...prevMessages, assistantMessage];
-          return updatedMessages;
-        });
-
-        // Auto-generate title after 3-5 messages
-        if (updatedMessages.length >= 3) {
-          autoGenerateTitle(currentThreadId, updatedMessages);
+      } else {
+        // Handle non-streaming response
+        const json = await response.json();
+        if (json.ok && json.message) {
+          appendStreamingContent(threadId, assistantMessageId, json.message.content);
         }
       }
-    } catch (error: unknown) {
-      console.error('Send message error:', error);
 
-      // Don't show error if it was aborted by user
-      if (!(error instanceof Error && error.name === 'AbortError')) {
-        const errorMessage: Message = {
-          id: `msg_${Date.now()}`,
-          role: 'assistant',
-          content: `Error: ${error instanceof Error ? error.message : 'Request failed'}`,
-          timestamp: Date.now(),
-        };
-
-        setThreads((prev) =>
-          prev.map((t) =>
-            t.id === currentThreadId
-              ? { ...t, messages: [...t.messages, errorMessage] }
-              : t
-          )
-        );
-      }
+      setStreamingMessageId(null);
     } finally {
-      setLoading(false);
       setIsStreaming(false);
-      setStreamingContent('');
-      setStreamingMeta(null);
-      abortControllerRef.current = null;
     }
   };
 
-  const stopStreaming = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      setIsStreaming(false);
-      setStreamingContent('');
-      setStreamingMeta(null);
-      setLoading(false);
-    }
-  };
+  // ===== Auto-Title Generation =====
 
-  // Auto-generate thread title after 3-5 messages
-  const autoGenerateTitle = React.useCallback(async (threadId: string, messages: Message[]) => {
-    // Configuration: trigger title generation after this many messages
-    const TITLE_GENERATION_THRESHOLD = 4; // After 4 messages (2 user + 2 assistant)
-
-    // Check if we should generate title
-    const shouldGenerate =
-      messages.length >= TITLE_GENERATION_THRESHOLD &&
-      messages.length <= TITLE_GENERATION_THRESHOLD + 2 && // Only try once (within a window)
-      !autoTitledThreads.has(threadId) && // Not already auto-titled
-      titleGeneratingThreadId !== threadId; // Not currently generating
-
-    if (!shouldGenerate) return;
-
+  const generateThreadTitle = async (threadId: string, firstMessage: string) => {
     try {
-      setTitleGeneratingThreadId(threadId);
-      setAutoTitledThreads((prev) => new Set(prev).add(threadId));
-
-      // Prepare conversation history (first 5 messages)
-      const conversationHistory = messages.slice(0, 5).map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
-
-      // Call API to generate title
-      const res = await fetch(`/api/chat/threads/${threadId}/suggest-title`, {
+      const response = await fetch('/api/agent/generate-title', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationHistory }),
+        body: JSON.stringify({ message: firstMessage }),
       });
 
-      const json = await res.json();
-
-      if (json.ok && json.title) {
-        // Update thread title in database
-        await fetch(`/api/chat/threads/${threadId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: json.title }),
-        });
-
-        // Update local state
-        setThreads((prev) =>
-          prev.map((t) =>
-            t.id === threadId ? { ...t, title: json.title } : t
-          )
-        );
-
-        toast.success(`Thread title updated: "${json.title}"`);
+      if (response.ok) {
+        const { title } = await response.json();
+        if (title) {
+          updateThread(threadId, { title });
+        }
       }
     } catch (error) {
-      console.error('Auto title generation failed:', error);
-      // Silently fail - not critical
-    } finally {
-      setTitleGeneratingThreadId(null);
-    }
-  }, [autoTitledThreads, titleGeneratingThreadId, toast]);
-
-  const regenerateResponse = async (messageIndex: number) => {
-    if (!activeThreadId || !activeThread) return;
-
-    const messages = activeThread.messages;
-    if (messageIndex < 1) return; // Need at least one user message
-
-    // Get the user message before this assistant message
-    const userMessage = messages[messageIndex - 1];
-    if (!userMessage || userMessage.role !== 'user') return;
-
-    // Mark the message as regenerating
-    setThreads((prev) =>
-      prev.map((t) =>
-        t.id === activeThreadId
-          ? {
-              ...t,
-              messages: t.messages.map((m, i) =>
-                i === messageIndex ? { ...m, isRegenerating: true } : m
-              ),
-            }
-          : t
-      )
-    );
-
-    setLoading(true);
-    const startTime = Date.now();
-
-    try {
-      // Use streaming for regeneration with smart routing and conversation history
-      setIsStreaming(true);
-      setStreamingContent('');
-      
-      abortControllerRef.current = new AbortController();
-      
-      const response = await fetch('/api/agent/smart-stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          input_as_text: userMessage.content,
-          images: userMessage.images?.map(img => img.url),
-          model: activeThread?.model === 'auto' ? undefined : activeThread?.model,
-          enabled_tools: activeThread?.enabledTools,
-          thread_id: activeThreadId, // Pass thread ID for conversation history
-        }),
-        signal: abortControllerRef.current.signal,
-      });
-
-      if (!response.ok) throw new Error('Regeneration failed');
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let newContent = '';
-      let routingMetadata: {
-        model?: string;
-        complexity?: 'simple' | 'moderate' | 'complex';
-        routing?: 'direct' | 'orchestrator';
-        tools?: string[];
-        toolSource?: string;
-        historyLength?: number;
-        models?: Record<string, string>;
-      } | null = null;
-      let runMetrics: { durationMs?: number; model?: string; route?: string } | null = null;
-      let streamedTools: string[] | undefined;
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
-
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.error) throw new Error(data.error);
-
-              if (data.metadata) {
-                routingMetadata = data.metadata;
-                setStreamingMeta({
-                  model: data.metadata.model,
-                  complexity: data.metadata.complexity,
-                  routing: data.metadata.routing,
-                  tools: data.metadata.tools,
-                  toolSource: data.metadata.toolSource,
-                  historyLength: data.metadata.historyLength,
-                  models: data.metadata.models,
-                });
-                continue;
-              }
-
-              if (typeof data.delta === 'string') {
-                newContent += data.delta;
-                setStreamingContent(newContent);
-
-                setThreads((prev) =>
-                  prev.map((t) =>
-                    t.id === activeThreadId
-                      ? {
-                          ...t,
-                          messages: t.messages.map((m, i) =>
-                            i === messageIndex
-                              ? { ...m, content: newContent, isRegenerating: true }
-                              : m
-                          ),
-                        }
-                      : t
-                  )
-                );
-                continue;
-              }
-
-              if (data.metrics) {
-                runMetrics = data.metrics;
-              }
-
-              if (Array.isArray(data.tools)) {
-                streamedTools = data.tools;
-              }
-
-              if (typeof data.content === 'string') {
-                newContent = data.content;
-                setStreamingContent(data.content);
-
-                setThreads((prev) =>
-                  prev.map((t) =>
-                    t.id === activeThreadId
-                      ? {
-                          ...t,
-                          messages: t.messages.map((m, i) =>
-                            i === messageIndex
-                              ? { ...m, content: data.content, isRegenerating: true }
-                              : m
-                          ),
-                        }
-                      : t
-                  )
-                );
-              }
-
-              if (data.done) {
-                setStreamingMeta(null);
-              }
-            } catch (e) {
-              console.error('Parse error:', e);
-            }
-          }
-        }
-      }
-
-      setIsStreaming(false);
-      setStreamingMeta(null);
-      setStreamingContent('');
-
-      const metricsDuration = runMetrics?.durationMs ?? Date.now() - startTime;
-
-      // Update final message in backend
-      await fetch('/api/chat/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          thread_id: activeThreadId,
-          role: 'assistant',
-          content: newContent,
-        }),
-      });
-
-      // Update in state with execution time
-      const resolvedTools = streamedTools && streamedTools.length > 0 ? streamedTools : routingMetadata?.tools;
-
-      setThreads((prev) =>
-        prev.map((t) =>
-          t.id === activeThreadId
-            ? {
-                ...t,
-                messages: t.messages.map((m, i) =>
-                  i === messageIndex
-                    ? {
-                        ...m,
-                        content: newContent,
-                        isRegenerating: false,
-                        executionTime: metricsDuration,
-                        latencyMs: metricsDuration,
-                        toolsUsed: resolvedTools || m.toolsUsed,
-                        model: routingMetadata?.model || m.model,
-                        complexity: routingMetadata?.complexity || m.complexity,
-                        routing: routingMetadata?.routing || m.routing,
-                        toolSource: routingMetadata?.toolSource || m.toolSource,
-                        availableModels: routingMetadata?.models || m.availableModels,
-                      }
-                    : m
-                ),
-              }
-            : t
-        )
-      );
-    } catch (error: unknown) {
-      console.error('Regenerate error:', error);
-
-      // Restore original message on error
-      setThreads((prev) =>
-        prev.map((t) =>
-          t.id === activeThreadId
-            ? {
-                ...t,
-                messages: t.messages.map((m, i) =>
-                  i === messageIndex ? { ...m, isRegenerating: false } : m
-                ),
-              }
-            : t
-        )
-      );
-    } finally {
-      setLoading(false);
-      setIsStreaming(false);
-      setStreamingContent('');
-      setStreamingMeta(null);
-      abortControllerRef.current = null;
+      console.error('[AgentPage] Failed to generate title:', error);
+      // Non-critical, don't show error to user
     }
   };
 
-  const deleteThread = async (id: string) => {
-    try {
-      await fetch(`/api/chat/threads/${id}`, { method: 'DELETE' });
-      setThreads((prev) => prev.filter((t) => t.id !== id));
-      if (activeThreadId === id) {
-        setActiveThreadId(threads[0]?.id || null);
-      }
-    } catch (e) {
-      console.error('Failed to delete thread:', e);
-    }
-  };
+  // ===== Voice Toggle =====
 
-  const handleExportDownload = () => {
-    if (!activeThread) return;
-    downloadMarkdown(activeThread);
-    setShowExportMenu(false);
-    setExportSuccess(true);
-    setTimeout(() => setExportSuccess(false), 2000);
-  };
+  const handleVoiceToggle = useCallback(() => {
+    toggleVoiceSheet();
+  }, [toggleVoiceSheet]);
 
-  const handleExportCopy = async () => {
-    if (!activeThread) return;
-    try {
-      await copyToClipboard(activeThread);
-      setShowExportMenu(false);
-      setExportSuccess(true);
-      setTimeout(() => setExportSuccess(false), 2000);
-    } catch (e) {
-      console.error('Failed to copy:', e);
-    }
-  };
+  // ===== Render =====
 
-  const togglePinThread = async (threadId: string) => {
-    const thread = threads.find((t) => t.id === threadId);
-    if (!thread) return;
-
-    const newPinned = !thread.pinned;
-    
-    try {
-      await fetch(`/api/chat/threads/${threadId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pinned: newPinned }),
-      });
-
-      setThreads((prev) =>
-        prev.map((t) => (t.id === threadId ? { ...t, pinned: newPinned } : t))
-      );
-    } catch (e) {
-      console.error('Failed to pin/unpin thread:', e);
-    }
-  };
-
-  const toggleArchiveThread = async (threadId: string) => {
-    const thread = threads.find((t) => t.id === threadId);
-    if (!thread) return;
-
-    const newArchived = !thread.archived;
-    
-    try {
-      await fetch(`/api/chat/threads/${threadId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ archived: newArchived }),
-      });
-
-      setThreads((prev) =>
-        prev.map((t) => (t.id === threadId ? { ...t, archived: newArchived } : t))
-      );
-    } catch (e) {
-      console.error('Failed to archive/unarchive thread:', e);
-    }
-  };
-
-  const updateThreadTitle = async (threadId: string, title: string) => {
-    try {
-      await fetch(`/api/chat/threads/${threadId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title }),
-      });
-
-      setThreads((prev) =>
-        prev.map((t) => (t.id === threadId ? { ...t, title } : t))
-      );
-
-      toast.success(`Thread title updated: "${title}"`);
-    } catch (e) {
-      console.error('Failed to update title:', e);
-      toast.error('Failed to update thread title');
-    }
-  };
-
-  const updateThreadTags = async (threadId: string, tags: string[]) => {
-    try {
-      await fetch(`/api/chat/threads/${threadId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tags }),
-      });
-
-      setThreads((prev) =>
-        prev.map((t) => (t.id === threadId ? { ...t, tags } : t))
-      );
-    } catch (e) {
-      console.error('Failed to update tags:', e);
-    }
-  };
-
-  const updateThreadFolder = async (threadId: string, folder: string | null) => {
-    try {
-      await fetch(`/api/chat/threads/${threadId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folder }),
-      });
-
-      setThreads((prev) =>
-        prev.map((t) => (t.id === threadId ? { ...t, folder: folder || undefined } : t))
-      );
-    } catch (e) {
-      console.error('Failed to update folder:', e);
-    }
-  };
-
-  const updateThreadTools = async (threadId: string, tools: string[]) => {
-    try {
-      await fetch(`/api/chat/threads/${threadId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled_tools: tools }),
-      });
-
-      setThreads((prev) =>
-        prev.map((t) => (t.id === threadId ? { ...t, enabledTools: tools } : t))
-      );
-      toast.success('Tools updated successfully');
-    } catch (e) {
-      console.error('Failed to update tools:', e);
-      toast.error('Failed to update tools');
-    }
-  };
-
-  const updateThreadModel = async (threadId: string, model: string) => {
-    try {
-      await fetch(`/api/chat/threads/${threadId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model }),
-      });
-
-      setThreads((prev) =>
-        prev.map((t) => (t.id === threadId ? { ...t, model } : t))
-      );
-      toast.success(`Model changed to ${model}`);
-    } catch (e) {
-      console.error('Failed to update model:', e);
-      toast.error('Failed to update model');
-    }
-  };
-
-  const updateThreadStyle = async (threadId: string, style: string) => {
-    try {
-      await fetch(`/api/chat/threads/${threadId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agent_style: style }),
-      });
-
-      setThreads((prev) =>
-        prev.map((t) => (t.id === threadId ? { ...t, agentStyle: style } : t))
-      );
-      toast.success(`Agent style changed to ${style}`);
-    } catch (e) {
-      console.error('Failed to update style:', e);
-      toast.error('Failed to update style');
-    }
-  };
-
-  const handleShare = async (expiresInDays?: number) => {
-    if (!activeThreadId) return;
-
-    setShareLoading(true);
-    try {
-      const res = await fetch(`/api/chat/threads/${activeThreadId}/share`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ expiresInDays }),
-      });
-      const json = await res.json();
-
-      if (json.ok) {
-        setShareUrl(json.shareUrl);
-        toast.success('Share link created successfully!');
-      } else {
-        toast.error('Failed to create share link: ' + json.error);
-      }
-    } catch (error: unknown) {
-      console.error('Share link error:', error);
-      toast.error('Failed to create share link');
-    } finally {
-      setShareLoading(false);
-    }
-  };
-
-  const copyShareUrl = () => {
-    if (shareUrl) {
-      navigator.clipboard.writeText(shareUrl);
-      toast.success('Share link copied to clipboard!');
-    }
-  };
-
-  const copyMessageToClipboard = React.useCallback(
-    async (message: Message) => {
-      try {
-        if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(message.content);
-        } else if (typeof document !== 'undefined') {
-          const textarea = document.createElement('textarea');
-          textarea.value = message.content;
-          textarea.setAttribute('readonly', '');
-          textarea.style.position = 'absolute';
-          textarea.style.left = '-9999px';
-          document.body.appendChild(textarea);
-          textarea.select();
-          document.execCommand('copy');
-          document.body.removeChild(textarea);
-        } else {
-          throw new Error('Clipboard unavailable');
-        }
-        toast.success('Message copied to clipboard');
-      } catch (err) {
-        console.error('Failed to copy message:', err);
-        toast.error('Failed to copy message');
-      }
-    },
-    [toast]
-  );
-
-  const renderThreadCard = (thread: Thread) => {
-    const isActive = activeThreadId === thread.id;
-    const cachedMessages = messageCache[thread.id];
-    const directLastMessage =
-      thread.messages.length > 0
-        ? thread.messages[thread.messages.length - 1]
-        : undefined;
-    const cachedLastMessage =
-      cachedMessages && cachedMessages.length > 0
-        ? cachedMessages[cachedMessages.length - 1]
-        : undefined;
-    const resolvedLastMessage = directLastMessage ?? cachedLastMessage;
-    const lastTimestamp = resolvedLastMessage?.timestamp ?? thread.createdAt;
-    const previewSource = resolvedLastMessage?.content?.trim();
-    const preview = previewSource && previewSource.length > 0 ? previewSource : 'New conversation';
-    const previewSnippet =
-      preview.length > 120 ? `${preview.slice(0, 117)}…` : preview;
-
-    return (
-      <div
-        key={thread.id}
-        onClick={() => setActiveThreadId(thread.id)}
-        className={`group relative cursor-pointer rounded-lg border px-4 py-3 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-          isActive
-            ? 'border-primary bg-primary/10 shadow-lg shadow-primary/30'
-            : 'border-border bg-surface hover:border-primary/70 hover:bg-surface/80'
-        }`}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            setActiveThreadId(thread.id);
-          }
-        }}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <span className="truncate">{thread.title}</span>
-              {titleGeneratingThreadId === thread.id && (
-                <span title="Generating title..." className="animate-spin text-primary">⚙️</span>
-              )}
-              {thread.pinned && <span title="Pinned" className="text-warning">📌</span>}
-              {thread.archived && <span title="Archived" className="text-foreground/60">📦</span>}
-              {thread.branchedFrom && (
-                <span className="text-xs text-accent" title="Branched conversation">🌿</span>
-              )}
-            </div>
-            <div className="text-xs text-foreground/60 line-clamp-2 leading-relaxed">
-              {previewSnippet}
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-wide text-foreground/60">
-              <span>{formatTimestamp(lastTimestamp)}</span>
-              {thread.folder && (
-                <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] text-foreground/70">
-                  📁 {thread.folder}
-                </span>
-              )}
-              {thread.tags && thread.tags.length > 0 && (
-                <span className="line-clamp-1">🏷️ {thread.tags.slice(0, 3).join(', ')}{thread.tags.length > 3 ? '…' : ''}</span>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-1 opacity-0 transition group-hover:opacity-100">
-            <button
-              onClick={(event) => {
-                event.stopPropagation();
-                setEditingOptionsThreadId(thread.id);
-              }}
-              className="rounded-md border border-border bg-surface px-2 py-1 text-[11px] text-foreground hover:border-primary hover:text-primary"
-              title="Thread options"
-            >
-              🛠️
-            </button>
-            <button
-              onClick={(event) => {
-                event.stopPropagation();
-                togglePinThread(thread.id);
-              }}
-              className="rounded-md border border-border bg-surface px-2 py-1 text-[11px] text-foreground hover:border-warning hover:text-warning"
-              title={thread.pinned ? 'Unpin thread' : 'Pin thread'}
-            >
-              📌
-            </button>
-            <button
-              onClick={(event) => {
-                event.stopPropagation();
-                toggleArchiveThread(thread.id);
-              }}
-              className="rounded-md border border-border bg-surface px-2 py-1 text-[11px] text-foreground hover:border-accent hover:text-accent"
-              title={thread.archived ? 'Unarchive thread' : 'Archive thread'}
-            >
-              {thread.archived ? '📂' : '📦'}
-            </button>
-            <button
-              onClick={(event) => {
-                event.stopPropagation();
-                deleteThread(thread.id);
-              }}
-              className="rounded-md border border-border bg-surface px-2 py-1 text-[11px] text-danger hover:border-danger hover:text-danger/70"
-              title="Delete thread"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const handleVoiceInput = async () => {
-    if (recordingState === 'recording') {
-      // Stop recording and transcribe
-      const audioBlob = await stopRecording();
-      if (audioBlob) {
-        try {
-          const transcription = await transcribeAudio(audioBlob);
-          setInput(transcription);
-          toast.success('Audio transcribed successfully!');
-        } catch (error: unknown) {
-          console.error('Transcription error:', error);
-          toast.error('Failed to transcribe audio: ' + (error instanceof Error ? error.message : 'Unknown error'));
-        }
-      }
-    } else {
-      // Start recording
-      const success = await startRecording();
-      if (!success) {
-        toast.error('Failed to access microphone. Please check permissions.');
-      }
-    }
-  };
-
-  const handleTTSToggle = () => {
-    if (ttsState === 'idle') {
-      // Find the last assistant message and read it
-      const assistantMessages = activeThread?.messages.filter(m => m.role === 'assistant') || [];
-      if (assistantMessages.length > 0) {
-        const lastMessage = assistantMessages[assistantMessages.length - 1];
-        if (lastMessage) {
-          speak(lastMessage.content, lastMessage.id);
-        }
-      } else {
-        toast.error('No messages to read');
-      }
-    } else if (ttsState === 'speaking') {
-      pause();
-    } else if (ttsState === 'paused') {
-      resume();
-    }
-  };
-
-  const startEditMessage = (messageId: string, content: string) => {
-    setEditingMessageId(messageId);
-    setEditContent(content);
-  };
-
-  const cancelEdit = () => {
-    setEditingMessageId(null);
-    setEditContent('');
-  };
-
-  const createBranch = async (messageIndex: number) => {
-    if (!activeThreadId || !activeThread) return;
-
-    try {
-      // Create new thread
-      const res = await fetch('/api/chat/threads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          title: `${activeThread.title} (Branch)`,
-        }),
-      });
-      const json = await res.json();
-      
-      if (json.ok && json.thread) {
-        const newBranch: Thread = {
-          id: json.thread.id,
-          title: json.thread.title,
-          messages: activeThread.messages.slice(0, messageIndex + 1),
-          createdAt: new Date(json.thread.created_at).getTime(),
-          branchedFrom: activeThreadId,
-        };
-
-        // Save all messages to the new branch
-        for (const msg of newBranch.messages) {
-          await fetch('/api/chat/messages', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              thread_id: newBranch.id,
-              role: msg.role,
-              content: msg.content,
-            }),
-          });
-        }
-
-        setThreads([newBranch, ...threads]);
-        setActiveThreadId(newBranch.id);
-      }
-    } catch (e) {
-      console.error('Failed to create branch:', e);
-    }
-  };
-
-  const saveEditedMessage = async (messageIndex: number) => {
-    if (!activeThreadId || !activeThread || !editContent.trim()) return;
-
-    const newContent = editContent.trim();
-    setEditingMessageId(null);
-    setEditContent('');
-    setLoading(true);
-
-    try {
-      // Update the user message in state
-      setThreads((prev) =>
-        prev.map((t) =>
-          t.id === activeThreadId
-            ? {
-                ...t,
-                messages: t.messages.map((m, i) =>
-                  i === messageIndex ? { ...m, content: newContent } : m
-                ),
-              }
-            : t
-        )
-      );
-
-      // Remove all messages after this one
-      const messagesUpToEdit = activeThread.messages.slice(0, messageIndex + 1);
-      
-      setThreads((prev) =>
-        prev.map((t) =>
-          t.id === activeThreadId
-            ? { ...t, messages: messagesUpToEdit.map((m, i) => i === messageIndex ? { ...m, content: newContent } : m) }
-            : t
-        )
-      );
-
-      // Re-run agent with edited message using smart routing and conversation history
-      setIsStreaming(true);
-      setStreamingContent('');
-      
-      abortControllerRef.current = new AbortController();
-      
-      const response = await fetch('/api/agent/smart-stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          input_as_text: newContent,
-          model: activeThread?.model === 'auto' ? undefined : activeThread?.model,
-          enabled_tools: activeThread?.enabledTools,
-          thread_id: activeThreadId, // Pass thread ID for conversation history
-        }),
-        signal: abortControllerRef.current.signal,
-      });
-
-      if (!response.ok) throw new Error('Stream request failed');
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let assistantContent = '';
-      let routingMetadata: {
-        model?: string;
-        complexity?: 'simple' | 'moderate' | 'complex';
-        routing?: 'direct' | 'orchestrator';
-        tools?: string[];
-        toolSource?: string;
-        historyLength?: number;
-        models?: Record<string, string>;
-      } | null = null;
-      let runMetrics: { durationMs?: number; model?: string; route?: string } | null = null;
-      let streamedTools: string[] | undefined;
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
-
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.error) throw new Error(data.error);
-
-              if (data.metadata) {
-                routingMetadata = data.metadata;
-                setStreamingMeta({
-                  model: data.metadata.model,
-                  complexity: data.metadata.complexity,
-                  routing: data.metadata.routing,
-                  tools: data.metadata.tools,
-                  toolSource: data.metadata.toolSource,
-                  historyLength: data.metadata.historyLength,
-                  models: data.metadata.models,
-                });
-                continue;
-              }
-
-              if (typeof data.delta === 'string') {
-                assistantContent += data.delta;
-                setStreamingContent(assistantContent);
-                continue;
-              }
-
-              if (data.metrics) {
-                runMetrics = data.metrics;
-              }
-
-              if (Array.isArray(data.tools)) {
-                streamedTools = data.tools;
-              }
-
-              if (typeof data.content === 'string') {
-                assistantContent = data.content;
-                setStreamingContent(data.content);
-              }
-
-              if (data.done) {
-                setStreamingMeta(null);
-              }
-            } catch (e) {
-              console.error('Parse error:', e);
-            }
-          }
-        }
-      }
-
-      setIsStreaming(false);
-      setStreamingMeta(null);
-      setStreamingContent('');
-
-      // Save new assistant response
-      const assistantRes = await fetch('/api/chat/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          thread_id: activeThreadId,
-          role: 'assistant',
-          content: assistantContent,
-        }),
-      });
-      const assistantJson = await assistantRes.json();
-
-      if (assistantJson.ok && assistantJson.message) {
-        const toolList = streamedTools && streamedTools.length > 0 ? streamedTools : routingMetadata?.tools;
-
-        const assistantMessage: Message = {
-          id: assistantJson.message.id,
-          role: 'assistant',
-          content: assistantJson.message.content,
-          timestamp: new Date(assistantJson.message.created_at).getTime(),
-          toolsUsed: toolList,
-          executionTime: runMetrics?.durationMs,
-          latencyMs: runMetrics?.durationMs,
-          model: routingMetadata?.model,
-          complexity: routingMetadata?.complexity,
-          routing: routingMetadata?.routing,
-          toolSource: routingMetadata?.toolSource,
-          availableModels: routingMetadata?.models,
-        };
-
-        setThreads((prev) =>
-          prev.map((t) =>
-            t.id === activeThreadId
-              ? { ...t, messages: [...messagesUpToEdit.map((m, i) => i === messageIndex ? { ...m, content: newContent } : m), assistantMessage] }
-              : t
-          )
-        );
-      }
-    } catch (error: unknown) {
-      console.error('Edit message error:', error);
-    } finally {
-      setLoading(false);
-      setIsStreaming(false);
-      setStreamingContent('');
-      abortControllerRef.current = null;
-    }
-  };
-
-  React.useEffect(() => {
-    if (!loadingThreads && threads.length === 0) {
-      createNewThread();
-    }
-  }, [loadingThreads, threads.length]);
-
-  // Keyboard shortcuts
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + K: New chat
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        createNewThread();
-      }
-      // Cmd/Ctrl + Shift + L: Clear current thread
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'L') {
-        e.preventDefault();
-        if (activeThreadId) {
-          deleteThread(activeThreadId);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeThreadId, threads]);
-
-  // Close export menu when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (showExportMenu && !target.closest('.export-menu-container')) {
-        setShowExportMenu(false);
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [showExportMenu]);
-
-  // Close more menu when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (showMoreMenu && !target.closest('.more-menu-container')) {
-        setShowMoreMenu(false);
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [showMoreMenu]);
+  const threadTitle = activeThread?.title || 'Agent Chat';
+  const threadSubtitle = activeThread
+    ? `${activeThread.messageCount || 0} messages`
+    : 'AI assistant with tool access';
 
   return (
-    <Toaster>
-    <ErrorBoundary>
-    <div className="relative flex min-h-screen bg-background text-foreground">
-      {/* Mobile Menu Button */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="fixed left-4 top-4 z-50 flex items-center gap-2 rounded-lg border border-border bg-surface/90 px-3 py-2 text-sm font-medium text-foreground shadow-lg backdrop-blur transition hover:border-primary hover:text-foreground lg:hidden"
-        aria-label="Toggle sidebar"
-      >
-        <span className="text-base">{sidebarOpen ? '✕' : '☰'}</span>
-        <span className="text-xs uppercase tracking-widest">Menu</span>
-      </button>
-
-      {/* Mobile Overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-surface/60 backdrop-blur-sm lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Mobile menu button */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2.5 rounded-lg bg-surface/90 border border-border hover:border-primary hover:bg-surface transition backdrop-blur-sm shadow-lg"
-        aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
-      >
-        {sidebarOpen ? (
-          <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        ) : (
-          <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        )}
-      </button>
-
-      {/* Sidebar overlay on mobile */}
-      {sidebarOpen && (
-        <div
-          className="lg:hidden fixed inset-0 z-30 bg-surface/50 backdrop-blur-sm"
-          onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Sidebar */}
-      <div
-        className={`fixed inset-y-0 left-0 z-40 w-full sm:w-80 md:w-72 transform border-r border-border bg-background/90 backdrop-blur transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <div className="flex h-full flex-col">
-          <div className="border-b border-border px-5 py-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/60">Conversations</p>
-                <h2 className="text-lg font-semibold text-foreground">Agent workspace</h2>
-              </div>
-              <button
-                onClick={createNewThread}
-                className="rounded-md border border-primary bg-primary/10 px-3 py-1.5 text-sm font-semibold text-primary shadow-sm transition hover:border-primary/70 hover:bg-primary/20"
-                title="Cmd/Ctrl + K"
-              >
-                + New
-              </button>
-            </div>
-            <div className="relative mt-4">
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-foreground/60">🔍</span>
-              <input
-                type="text"
-                placeholder="Search by title, tag, or content"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-9 text-sm text-foreground placeholder:text-foreground/60 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute inset-y-0 right-3 flex items-center text-foreground/60 transition hover:text-foreground"
-                  aria-label="Clear search"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-foreground/60">
-              <span className="rounded-full bg-surface px-2 py-0.5">⌘K new chat</span>
-              <span className="rounded-full bg-surface px-2 py-0.5">⌘⇧L delete chat</span>
-              {showArchived && (
-                <span className="rounded-full bg-success/10 px-2 py-0.5 text-success">Showing archived</span>
-              )}
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto px-5 py-4">
-            <div className="space-y-4">
-              {allFolders.length > 0 && (
-                <div>
-                  <p className="mb-2 text-[11px] uppercase tracking-[0.3em] text-foreground/60">Folders</p>
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => setSelectedFolder(null)}
-                      className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
-                        selectedFolder === null
-                          ? 'border-primary bg-primary/10 text-foreground'
-                          : 'border-border bg-surface text-foreground/70 hover:border-primary hover:text-foreground'
-                      }`}
-                    >
-                      All conversations
-                    </button>
-                    {allFolders.map((folder) => (
-                      <button
-                        key={folder}
-                        onClick={() => setSelectedFolder(folder)}
-                        className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
-                          selectedFolder === folder
-                            ? 'border-primary bg-primary/10 text-foreground'
-                            : 'border-border bg-surface text-foreground/70 hover:border-primary hover:text-foreground'
-                        }`}
-                      >
-                        {folder}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {allTags.length > 0 && (
-                <div>
-                  <p className="mb-2 text-[11px] uppercase tracking-[0.3em] text-foreground/60">Tags</p>
-                  <div className="flex flex-wrap gap-2">
-                    {allTags.map((tag) => {
-                      const isSelected = selectedTags.includes(tag);
-                      return (
-                        <button
-                          key={tag}
-                          onClick={() => {
-                            setSelectedTags((prev) =>
-                              prev.includes(tag)
-                                ? prev.filter((value) => value !== tag)
-                                : [...prev, tag]
-                            );
-                          }}
-                          className={`rounded-full px-3 py-1 text-xs transition ${
-                            isSelected
-                              ? 'bg-primary text-background shadow shadow-primary/30'
-                              : 'bg-surface text-foreground/70 hover:bg-primary/20 hover:text-foreground'
-                          }`}
-                        >
-                          #{tag}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-xs text-foreground/70">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={showArchived}
-                    onChange={(event) => setShowArchived(event.target.checked)}
-                    className="h-4 w-4 rounded border-border bg-surface text-primary focus:ring-primary/20"
-                  />
-                  <span>Show archived ({archivedCount})</span>
-                </label>
-                {(selectedFolder || selectedTags.length > 0 || searchQuery) && (
-                  <button
-                    onClick={() => {
-                      setSelectedFolder(null);
-                      setSelectedTags([]);
-                      setSearchQuery('');
-                    }}
-                    className="text-[11px] font-medium text-primary underline-offset-4 hover:underline"
-                  >
-                    Clear filters
-                  </button>
-                )}
-              </div>
-
-              <div className="space-y-6">
-                {loadingThreads ? (
-                  <ThreadListSkeleton />
-                ) : filteredThreads.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-border bg-surface px-4 py-10 text-center text-sm text-foreground/60">
-                    {searchQuery || selectedTags.length > 0 || selectedFolder
-                      ? 'No conversations match the current filters.'
-                      : 'Create your first conversation to get started.'}
-                  </div>
-                ) : (
-                  <>
-                    {pinnedThreads.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.3em] text-foreground/60">
-                          <span>Pinned</span>
-                          <span className="text-foreground/60">{pinnedThreads.length}</span>
-                        </div>
-                        <div className="space-y-2">
-                          {pinnedThreads.map((thread) => renderThreadCard(thread))}
-                        </div>
-                      </div>
-                    )}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.3em] text-foreground/60">
-                        <span>Recent</span>
-                        <span className="text-foreground/60">{regularThreads.length}</span>
-                      </div>
-                      <div className="space-y-2">
-                        {regularThreads.map((thread) => renderThreadCard(thread))}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Quick Navigation Section */}
-            <div className="border-t border-border px-5 py-4 mt-auto">
-              <p className="mb-3 text-[11px] uppercase tracking-[0.3em] text-foreground/60">Quick Navigation</p>
-              <div className="space-y-2">
-                <a
-                  href="/dashboard"
-                  className="flex items-center gap-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground/70 transition hover:border-primary hover:bg-primary/10 hover:text-foreground"
-                >
-                  <span>🏠</span>
-                  <span>Dashboard</span>
-                </a>
-                <a
-                  href="/dashboard/smart-home"
-                  className="flex items-center gap-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground/70 transition hover:border-primary hover:bg-primary/10 hover:text-foreground"
-                >
-                  <span>💡</span>
-                  <span>Smart Home</span>
-                </a>
-                <a
-                  href="/dashboard/finances"
-                  className="flex items-center gap-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground/70 transition hover:border-primary hover:bg-primary/10 hover:text-foreground"
-                >
-                  <span>💰</span>
-                  <span>Finances</span>
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+    <>
+      <ChatLayout>
         {/* Header */}
-        <div className="border-b border-border bg-surface px-6 py-4 backdrop-blur-xl shadow-lg">
-          <div className="flex flex-wrap items-start justify-between gap-2 md:gap-4">
-            {/* Left Section - Thread Info */}
-            <div className="flex-1 min-w-0 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-primary">
-                  <span className="h-2 w-2 rounded-full bg-primary animate-pulse"></span>
-                  <span>AI Agent</span>
-                </div>
-                {exportSuccess && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
-                    ✓ Exported
-                  </span>
-                )}
-              </div>
-
-              {/* Thread Title */}
-              <h1 className="text-xl font-bold text-foreground truncate max-w-full sm:max-w-2xl">
-                {activeThread?.title || 'New Conversation'}
-              </h1>
-
-              {/* Thread Metadata */}
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                {/* Model */}
-                <div className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-primary">
-                  <span>🧠</span>
-                  <span className="font-medium">{modelName}</span>
-                </div>
-
-                {/* Agent Style */}
-                {activeThread?.agentStyle && (
-                  <div className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-2.5 py-1 text-accent capitalize">
-                    <span>🎨</span>
-                    <span>{activeThread.agentStyle}</span>
-                  </div>
-                )}
-
-                {/* Tools Count */}
-                {activeThread?.enabledTools && activeThread.enabledTools.length > 0 && (
-                  <div className="inline-flex items-center gap-1.5 rounded-lg border border-success/40 bg-success/10 px-2.5 py-1 text-success">
-                    <span>🧰</span>
-                    <span>{activeThread.enabledTools.length} tools</span>
-                  </div>
-                )}
-
-                {/* Thread Settings Button */}
-                {activeThread && (
-                  <button
-                    onClick={() => setEditingOptionsThreadId(activeThread.id)}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 text-foreground/70 transition hover:border-primary hover:bg-primary/10 hover:text-foreground"
-                    title="Thread settings"
-                  >
-                    <span>⚙️</span>
-                    <span>Settings</span>
-                  </button>
-                )}
-              </div>
-            </div>
-            {/* Right Section - Actions */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Density Toggle */}
-              <div className="flex items-center overflow-hidden rounded-lg border border-border bg-surface">
-                <button
-                  onClick={() => setDensity('cozy')}
-                  className={`px-2.5 py-1.5 text-xs transition ${
-                    !isCompact ? 'bg-primary/20 text-foreground' : 'text-foreground/60 hover:text-foreground'
-                  }`}
-                  title="Cozy view"
-                >
-                  ☁️
-                </button>
-                <button
-                  onClick={() => setDensity('compact')}
-                  className={`px-2.5 py-1.5 text-xs transition ${
-                    isCompact ? 'bg-primary/20 text-foreground' : 'text-foreground/60 hover:text-foreground'
-                  }`}
-                  title="Compact view"
-                >
-                  📋
-                </button>
-              </div>
-
-              {/* Voice Controls */}
+        <ChatHeader
+          title={threadTitle}
+          subtitle={threadSubtitle}
+          showBack={false}
+          actions={
+            <div className="flex items-center gap-2">
               <button
-                onClick={handleTTSToggle}
-                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition ${
-                  ttsState === 'speaking'
-                    ? 'border-success bg-success/20 text-success'
-                    : ttsState === 'paused'
-                    ? 'border-warning bg-warning/20 text-warning'
-                    : 'border-border bg-surface text-foreground hover:border-primary hover:bg-primary/10 hover:text-foreground'
-                }`}
-                title={ttsState === 'speaking' ? 'Pause speech' : ttsState === 'paused' ? 'Resume speech' : 'Read last message'}
-                disabled={!activeThread || activeThread.messages.filter(m => m.role === 'assistant').length === 0}
+                onClick={() => setShowTTSSettings(true)}
+                className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface/80 transition"
+                title="TTS Settings"
               >
-                {ttsState === 'speaking' ? '⏸️' : ttsState === 'paused' ? '▶️' : '🔊'}
-                <span className="hidden sm:inline">
-                  {ttsState === 'speaking' ? 'Pause' : ttsState === 'paused' ? 'Resume' : 'TTS'}
-                </span>
+                🔊 TTS
               </button>
-
               <button
-                onClick={handleVoiceInput}
-                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition ${
-                  recordingState === 'recording'
-                    ? 'border-danger bg-danger/20 text-danger animate-pulse'
-                    : recordingState === 'processing'
-                    ? 'border-accent bg-accent/20 text-accent'
-                    : 'border-border bg-surface text-foreground hover:border-primary hover:bg-primary/10 hover:text-foreground'
-                }`}
-                title={recordingState === 'recording' ? 'Stop recording' : 'Record voice input'}
-                disabled={recordingState === 'processing'}
+                onClick={() => setShowMemoryModal(true)}
+                className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface/80 transition"
+                title="Agent Memory"
               >
-                🎤
-                <span className="hidden sm:inline">
-                  {recordingState === 'recording' ? 'Stop' : recordingState === 'processing' ? 'Processing...' : 'Voice'}
-                </span>
+                🧠 Memory
               </button>
-
-              {/* More Menu */}
-              <div className="relative more-menu-container">
-                <button
-                  onClick={() => setShowMoreMenu(!showMoreMenu)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs text-foreground transition hover:border-primary hover:bg-primary/10 hover:text-foreground"
-                  title="More options"
-                >
-                  ⚙️
-                  <span className="hidden sm:inline">More</span>
-                </button>
-                {showMoreMenu && (
-                  <div className="absolute right-0 top-full mt-2 min-w-[180px] overflow-hidden rounded-lg border border-border bg-surface/98 shadow-2xl backdrop-blur-xl z-50">
-                    <button
-                      onClick={() => {
-                        setShowMemoryModal(true);
-                        setShowMoreMenu(false);
-                      }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/10 hover:text-foreground"
-                    >
-                      <span>🧠</span>
-                      <span>Agent Memory</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowUserMemoriesModal(true);
-                        setShowMoreMenu(false);
-                      }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/10 hover:text-foreground"
-                    >
-                      <span>📚</span>
-                      <span>My Notebook</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowTTSSettings(true);
-                        setShowMoreMenu(false);
-                      }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/10 hover:text-foreground"
-                    >
-                      <span>🎚️</span>
-                      <span>Voice Settings</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {activeThread && activeThread.messages.length > 0 && (
-                <>
-                  <button
-                    onClick={() => setShowShareModal(true)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs text-foreground transition hover:border-primary hover:bg-primary/10 hover:text-foreground"
-                    title="Share conversation"
-                  >
-                    🔗
-                    <span className="hidden sm:inline">Share</span>
-                  </button>
-                  <div className="relative export-menu-container">
-                    <button
-                      onClick={() => setShowExportMenu(!showExportMenu)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs text-foreground transition hover:border-primary hover:bg-primary/10 hover:text-foreground"
-                      title="Export conversation"
-                    >
-                      📥
-                      <span className="hidden sm:inline">Export</span>
-                    </button>
-                    {showExportMenu && (
-                      <div className="absolute right-0 top-full mt-2 min-w-[160px] overflow-hidden rounded-lg border border-border bg-surface/98 shadow-2xl backdrop-blur-xl z-50">
-                        <button
-                          onClick={handleExportDownload}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/10 hover:text-foreground"
-                        >
-                          <span>💾</span>
-                          <span>Download</span>
-                        </button>
-                        <button
-                          onClick={handleExportCopy}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/10 hover:text-foreground"
-                        >
-                          <span>📋</span>
-                          <span>Copy</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
+              <button
+                onClick={() => setShowUserMemories(true)}
+                className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface/80 transition"
+                title="User Memories"
+              >
+                👤 Memories
+              </button>
             </div>
-          </div>
-        </div>
+          }
+        />
 
         {/* Messages */}
-        <div 
-          ref={messagesContainerRef}
-          onScroll={handleScroll}
-          className="flex-1 overflow-y-auto p-6 space-y-6 relative"
-        >
-          {loadingMessages ? (
-            <MessageSkeleton />
-          ) : null}
-          
-          {/* Show suggested prompts when no messages */}
-          {!loadingMessages && activeThread && activeThread.messages.length === 0 && !loading && (
-            <div className="py-12">
-              <SuggestedPrompts onSelect={handleSuggestedPrompt} disabled={loading} />
-            </div>
-          )}
-
-          {activeThread?.messages.map((msg, msgIndex) => {
-            const toolSourceLabel = formatToolSource(msg.toolSource);
-            const isAssistant = msg.role === 'assistant';
-            const isEditing = msg.role === 'user' && editingMessageId === msg.id;
-            const bubbleWidthClass = isCompact ? 'max-w-full sm:max-w-2xl' : 'max-w-full sm:max-w-3xl';
-            const bubblePaddingClass = isCompact ? 'px-4 py-3' : 'px-5 py-4';
-
-            const metadataBadges: React.ReactNode[] = [];
-
-            // Model indicator
-            if (msg.model) {
-              metadataBadges.push(
-                <span
-                  key="model"
-                  className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-accent"
-                >
-                  🤖 {msg.model}
-                </span>
-              );
-            }
-
-            // Complexity indicator
-            if (msg.complexity) {
-              const complexityIcon = msg.complexity === 'simple' ? '⚡' : msg.complexity === 'moderate' ? '⚙️' : '🧠';
-              const complexityClass = msg.complexity === 'simple'
-                ? 'border-success/40 bg-success/10 text-success'
-                : msg.complexity === 'moderate'
-                ? 'border-warning/40 bg-warning/10 text-warning'
-                : 'border-danger/40 bg-danger/10 text-danger';
-
-              metadataBadges.push(
-                <span
-                  key="complexity"
-                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 ${complexityClass}`}
-                >
-                  {complexityIcon} {msg.complexity}
-                </span>
-              );
-            }
-
-            // Routing indicator
-            if (msg.routing) {
-              metadataBadges.push(
-                <span
-                  key="routing"
-                  className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-accent"
-                >
-                  🎯 {msg.routing === 'orchestrator' ? 'Multi-agent' : 'Direct'}
-                </span>
-              );
-            }
-
-            if (toolSourceLabel) {
-              metadataBadges.push(
-                <span
-                  key="tool-source"
-                  className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1"
-                >
-                  ⚙️ {toolSourceLabel}
-                </span>
-              );
-            }
-            if (msg.toolsUsed && msg.toolsUsed.length > 0) {
-              metadataBadges.push(
-                <span
-                  key="tools"
-                  className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1"
-                >
-                  🔧 {msg.toolsUsed.join(', ')}
-                </span>
-              );
-            }
-            if (typeof msg.executionTime === 'number') {
-              metadataBadges.push(
-                <span
-                  key="execution"
-                  className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1"
-                >
-                  ⏱️ {(msg.executionTime / 1000).toFixed(2)}s
-                </span>
-              );
-            }
-
-            const actionButtons: React.ReactNode[] = [
-              <button
-                key="copy"
-                onClick={() => copyMessageToClipboard(msg)}
-                className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] text-foreground transition hover:border-success hover:bg-success/20 hover:text-foreground"
-              >
-                📋 Copy
-              </button>,
-            ];
-
-            if (isAssistant && !msg.isRegenerating) {
-              if (currentMessageId === msg.id && ttsState !== 'idle') {
-                if (ttsState === 'speaking') {
-                  actionButtons.push(
-                    <button
-                      key="pause"
-                      onClick={pause}
-                      className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary hover:bg-primary/20 hover:text-foreground"
-                      title="Pause voice playback"
-                    >
-                      ⏸️ Pause
-                    </button>
-                  );
-                } else {
-                  actionButtons.push(
-                    <button
-                      key="resume"
-                      onClick={resume}
-                      className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary hover:bg-primary/20 hover:text-foreground"
-                      title="Resume voice playback"
-                    >
-                      ▶️ Resume
-                    </button>
-                  );
-                }
-                actionButtons.push(
-                  <button
-                    key="stop"
-                    onClick={stop}
-                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] text-foreground transition hover:border-danger hover:bg-danger/20 hover:text-foreground"
-                    title="Stop voice playback"
-                  >
-                    ⏹️ Stop
-                  </button>
-                );
-              } else {
-                actionButtons.push(
-                  <button
-                    key="tts"
-                    onClick={() => speak(msg.content, msg.id)}
-                    disabled={ttsState !== 'idle'}
-                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary hover:bg-primary/20 hover:text-foreground disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-foreground/60"
-                    title="Read response aloud"
-                  >
-                    🔊 Listen
-                  </button>
-                );
-              }
-              actionButtons.push(
-                <button
-                  key="regenerate"
-                  onClick={() => regenerateResponse(msgIndex)}
-                  disabled={loading || isStreaming}
-                  className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary hover:bg-primary/20 hover:text-foreground disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-foreground/60"
-                  title="Regenerate response"
-                >
-                  🔄 Regenerate
-                </button>
-              );
-            }
-
-            if (msg.role === 'user' && !isEditing) {
-              actionButtons.push(
-                <button
-                  key="branch"
-                  onClick={() => createBranch(msgIndex)}
-                  disabled={loading || isStreaming}
-                  className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] text-foreground transition hover:border-accent hover:bg-accent/20 hover:text-foreground disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-foreground/60"
-                  title="Branch conversation from here"
-                >
-                  🌿 Branch
-                </button>
-              );
-              actionButtons.push(
-                <button
-                  key="edit"
-                  onClick={() => startEditMessage(msg.id, msg.content)}
-                  disabled={loading || isStreaming}
-                  className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary hover:bg-primary/20 hover:text-foreground disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-foreground/60"
-                  title="Edit and re-run message"
-                >
-                  ✏️ Edit
-                </button>
-              );
-            }
-
-            const showActionRow = metadataBadges.length > 0 || actionButtons.length > 0;
-
-            return (
-              <div
-                key={msg.id}
-                className={`group flex items-start gap-3 ${
-                  isAssistant ? 'justify-start' : 'justify-end'
-                }`}
-              >
-                {isAssistant && (
-                  <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent text-sm font-semibold text-foreground shadow-lg">
-                    AI
-                  </div>
-                )}
-
-                <div
-                  className={`${bubbleWidthClass} ${bubblePaddingClass} relative rounded-3xl border shadow-xl shadow-black/30 backdrop-blur transition ${
-                    isAssistant
-                      ? 'border-border bg-surface text-foreground rounded-tl-xl'
-                      : 'border-primary bg-primary/10 text-foreground rounded-tr-xl'
-                  }`}
-                >
-                  <div className="mb-3 flex flex-wrap items-start justify-between gap-3 text-xs">
-                    <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.3em]">
-                      <span className={isAssistant ? 'text-primary/200' : 'text-foreground/80'}>
-                        {isAssistant ? activeThread?.agentName ?? 'FROK Assistant' : 'You'}
-                      </span>
-                      {isAssistant && msg.routing && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[10px] text-foreground">
-                          🧠 {msg.routing === 'orchestrator' ? 'Orchestrated' : 'Direct'}
-                        </span>
-                      )}
-                      {isAssistant && msg.model && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[10px] text-foreground">
-                          🧩 {msg.model}
-                        </span>
-                      )}
-                      {isAssistant && msg.complexity && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[10px] capitalize text-foreground">
-                          📊 {msg.complexity}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-foreground/70">
-                      {typeof msg.timestamp === 'number' && <span>{formatTimestamp(msg.timestamp)}</span>}
-                      {typeof msg.latencyMs === 'number' && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[10px] text-foreground">
-                          ⚡ {(msg.latencyMs / 1000).toFixed(1)}s
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {msg.images && msg.images.length > 0 && (
-                    <div className="mb-3 grid grid-cols-2 gap-2">
-                      {msg.images.map((img, i) => (
-                        <div key={i} className="relative h-48 overflow-hidden rounded-xl border border-border">
-                          <OptimizedImage
-                            src={img.url}
-                            alt={img.name}
-                            fill
-                            sizes="(max-width: 768px) 50vw, 25vw"
-                            className="object-cover"
-                          />
-                          <div className="absolute bottom-0 left-0 right-0 bg-surface/60 px-2 py-1 text-[10px] text-foreground">
-                            {img.name}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {isEditing ? (
-                    <div className="space-y-3">
-                      <textarea
-                        value={editContent}
-                        onChange={(event) => setEditContent(event.target.value)}
-                        className="w-full resize-none rounded-xl border border-border bg-background/80 px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        rows={4}
-                        autoFocus
-                        placeholder="Edit your message..."
-                      />
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => saveEditedMessage(msgIndex)}
-                          disabled={!editContent.trim() || loading}
-                          className="inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/20 px-3 py-1.5 text-sm font-medium text-primary transition hover:border-primary/70 hover:bg-primary/20 disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-foreground/60"
-                        >
-                          💾 Save & Re-run
-                        </button>
-                        <button
-                          onClick={cancelEdit}
-                          className="inline-flex items-center gap-2 rounded-lg border border-border bg-white/10 px-3 py-1.5 text-sm font-medium text-foreground transition hover:border-danger hover:bg-danger/20 hover:text-foreground"
-                        >
-                          ✕ Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <MessageContent content={msg.content} role={msg.role} />
-                  )}
-
-                  {msg.files && msg.files.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-foreground">
-                      {msg.files.map((file, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1"
-                        >
-                          📎 {file.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {msg.role === 'assistant' && msg.isRegenerating && (
-                    <div className="mt-3 flex items-center gap-2 text-xs text-primary/200">
-                      <span className="h-2 w-2 animate-pulse rounded-full bg-primary/400"></span>
-                      Regenerating...
-                    </div>
-                  )}
-
-                  {showActionRow && (
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-xs text-foreground/70">
-                      <div className="flex flex-wrap gap-2">{metadataBadges}</div>
-                      <div className="flex flex-wrap items-center gap-2 opacity-0 transition group-hover:opacity-100">
-                        {actionButtons}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {!isAssistant && (
-                  <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent text-sm font-semibold text-foreground shadow-lg">
-                    U
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          {isStreaming && streamingContent && (
-            <div className="group flex items-start gap-3 justify-start">
-              <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent text-sm font-semibold text-foreground shadow-lg">
-                AI
-              </div>
-
-              <div
-                className={`${isCompact ? 'max-w-2xl px-4 py-3' : 'max-w-3xl px-5 py-4'} rounded-3xl border border-primary/40 bg-gradient-to-br from-surface via-surface to-background/80 text-foreground shadow-xl shadow-black/30 backdrop-blur`}
-              >
-                {streamingMeta && (
-                  <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-primary/200">
-                    {streamingMeta.routing && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px]">
-                        🧠 {streamingMeta.routing === 'orchestrator' ? 'Orchestrated' : 'Direct'}
-                      </span>
-                    )}
-                    {streamingMeta.model && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px]">
-                        🧩 {streamingMeta.model}
-                      </span>
-                    )}
-                    {streamingMeta.complexity && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] capitalize">
-                        📊 {streamingMeta.complexity}
-                      </span>
-                    )}
-                    {streamingMeta.tools && streamingMeta.tools.length > 0 && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px]">
-                        🔧 {streamingMeta.tools.join(', ')}
-                      </span>
-                    )}
-                    {streamingMeta.toolSource && formatToolSource(streamingMeta.toolSource) && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px]">
-                        ⚙️ {formatToolSource(streamingMeta.toolSource)}
-                      </span>
-                    )}
-                  </div>
-                )}
-                <MessageContent content={streamingContent} role="assistant" />
-                <div className="mt-3 flex items-center gap-2 text-xs text-primary/300">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-primary/400"></span>
-                  Streaming…
-                </div>
-              </div>
-            </div>
-          )}
-          {loading && !isStreaming && (
-            <div className="group flex items-start gap-3 justify-start">
-              <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent text-sm font-semibold text-foreground shadow-lg">
-                AI
-              </div>
-
-              <div className={`${isCompact ? 'max-w-2xl px-4 py-3' : 'max-w-3xl px-5 py-4'} rounded-3xl border border-border bg-surface text-foreground shadow-xl shadow-black/30 backdrop-blur`}> 
-                <div className="flex items-center gap-2 text-xs text-foreground/70">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-primary/400"></span>
-                  Preparing response…
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {/* Scroll to bottom button */}
-          {showScrollButton && (
-            <button
-              onClick={scrollToBottom}
-              className="fixed bottom-24 right-8 z-10 rounded-full border border-border bg-background/80 p-3 text-foreground shadow-xl backdrop-blur transition hover:border-primary/40 hover:bg-primary/500/20 hover:text-foreground hover:shadow-primary/900/40"
-              title="Scroll to bottom"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-              </svg>
-            </button>
-          )}
-          
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Input Area */}
-        <div className="border-t border-border bg-background/80 px-6 py-5 backdrop-blur">
-          {/* Quick Actions */}
-          <QuickActions
-            onAction={handleSuggestedPrompt}
-            hasMessages={(activeThread?.messages.length ?? 0) > 0}
-            disabled={loading || isStreaming}
-          />
-          
-          {files.length > 0 && (
-            <div className="mb-2 space-y-2">
-              {/* Image previews */}
-              {files.filter(f => f.type.startsWith('image/')).length > 0 && (
-                <div className="grid grid-cols-4 gap-2">
-                  {files.filter(f => f.type.startsWith('image/')).map((file, i) => (
-                    <div
-                      key={i}
-                      className="group relative h-24 overflow-hidden rounded-xl border border-border"
-                    >
-                      <OptimizedImage
-                        src={URL.createObjectURL(file)}
-                        alt={file.name}
-                        fill
-                        sizes="(max-width: 768px) 25vw, 10vw"
-                        className="object-cover"
-                        priority
-                      />
-                      <button
-                        onClick={() =>
-                          setFiles((prev) => prev.filter((f) => f !== file))
-                        }
-                        className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-rose-500/80 text-xs text-foreground opacity-0 transition hover:bg-rose-500 group-hover:opacity-100"
-                      >
-                        ×
-                      </button>
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-2 py-1 text-[10px] text-foreground">
-                        {file.name}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {/* Other files */}
-              {files.filter(f => !f.type.startsWith('image/')).length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {files.filter(f => !f.type.startsWith('image/')).map((file, i) => (
-                    <div
-                      key={i}
-                      className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs text-foreground"
-                    >
-                      <span>📎 {file.name}</span>
-                      <button
-                        onClick={() =>
-                          setFiles((prev) => prev.filter((f) => f !== file))
-                        }
-                        className="text-foreground/60 transition hover:text-rose-300"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          <div className="mt-4 flex gap-3">
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files) {
-                  setFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
-                }
+        <ChatContent>
+          {activeThread ? (
+            <MessageList
+              threadId={activeThread.id}
+              isCompact={false}
+              isLoading={false}
+            />
+          ) : (
+            <EmptyState
+              onCreateThread={() => {
+                const threadId = createThread('New Chat', 'agent');
+                setActiveThread(threadId);
               }}
             />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={loading || recordingState !== 'idle'}
-              className="group relative inline-flex items-center justify-center rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground transition hover:border-primary hover:bg-primary/10 hover:text-foreground disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-foreground/60"
-              title="Attach images (Vision enabled)"
-            >
-              🖼️
-              <span className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded-md border border-border bg-surface/90 px-2 py-1 text-[10px] text-foreground opacity-0 shadow-lg transition group-hover:opacity-100 whitespace-nowrap">
-                Vision enabled
-              </span>
-            </button>
+          )}
+        </ChatContent>
 
-            {/* Voice Input Button */}
-            <button
-              onClick={handleVoiceInput}
-              disabled={loading || recordingState === 'processing'}
-              className={`group relative inline-flex items-center justify-center rounded-xl border px-3 py-2 text-sm font-medium transition ${
-                recordingState === 'recording'
-                  ? 'border-rose-500/60 bg-rose-500/20 text-rose-100 animate-pulse'
-                  : 'border-border bg-surface text-foreground hover:border-primary hover:bg-primary/10 hover:text-foreground'
-              } disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-foreground/60`}
-              title={recordingState === 'recording' ? 'Stop recording' : 'Voice input'}
-            >
-              {recordingState === 'recording' ? (
-                <span className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-white rounded-full" style={{ transform: `scale(${1 + audioLevel})` }}></div>
-                  🎤
-                </span>
-              ) : recordingState === 'processing' ? (
-                '⏳'
-              ) : (
-                '🎤'
-              )}
-              {recordingState === 'idle' && (
-                <span className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded-md border border-border bg-surface/90 px-2 py-1 text-[10px] text-foreground opacity-0 shadow-lg transition group-hover:opacity-100 whitespace-nowrap">
-                  Voice input
-                </span>
-              )}
-            </button>
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage();
-                }
-              }}
-              placeholder="Type a message... (Enter to send)"
-              className="flex-1 rounded-xl border border-border bg-surface px-4 py-2 text-sm text-foreground placeholder:text-foreground/60 focus:border-primary/500/60 focus:outline-none focus:ring-2 focus:ring-primary/500/20"
-              disabled={loading}
+        {/* Input */}
+        <ChatFooter>
+          {activeThread && (
+            <ChatInput
+              threadId={activeThread.id}
+              onSendMessage={handleSendMessage}
+              onVoiceToggle={handleVoiceToggle}
+              isVoiceActive={isVoiceSheetOpen}
+              isLoading={isStreaming}
+              placeholder="Ask the agent anything..."
+              maxLength={4000}
+              showCharCount={false}
             />
-            {isStreaming ? (
-              <button
-                onClick={stopStreaming}
-                className="rounded-xl border border-rose-500/60 bg-rose-500/20 px-5 py-2 text-sm font-semibold text-rose-100 transition hover:border-rose-400/60 hover:bg-rose-500/30"
-              >
-                ⬛ Stop
-              </button>
-            ) : (
-              <button
-                onClick={sendMessage}
-                disabled={loading || (!input.trim() && files.length === 0)}
-                className="rounded-xl bg-primary/500 px-6 py-2 text-sm font-semibold text-background transition hover:bg-primary/600 disabled:cursor-not-allowed disabled:bg-surface disabled:text-foreground/60"
-              >
-                {loading ? 'Sending...' : 'Send'}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+          )}
+        </ChatFooter>
+      </ChatLayout>
 
-      {/* Share Modal */}
-      {showShareModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur"
-          onClick={() => setShowShareModal(false)}
-        >
-          <div
-            className="w-full max-w-md rounded-2xl border border-border bg-background/90 px-6 py-6 text-foreground shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h2 className="text-lg font-semibold">Share Conversation</h2>
-            <p className="mt-1 text-sm text-foreground/60">
-              Generate a secure link to share this conversation with collaborators.
-            </p>
-
-            {shareUrl ? (
-              <div className="mt-5 space-y-4">
-                <div className="space-y-2">
-                  <label className="block text-xs font-semibold uppercase tracking-[0.3em] text-foreground/60">
-                    Share link
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={shareUrl}
-                      readOnly
-                      className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
-                    />
-                    <button
-                      onClick={copyShareUrl}
-                      className="rounded-lg border border-primary/40 bg-primary/20 px-3 py-2 text-sm font-medium text-primary transition hover:border-primary/70 hover:bg-primary/20"
-                    >
-                      📋 Copy
-                    </button>
-                  </div>
-                  <p className="text-xs text-foreground/60">
-                    Anyone with this link can view this conversation in read-only mode.
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowShareModal(false);
-                    setShareUrl(null);
-                  }}
-                  className="w-full rounded-lg border border-border bg-surface px-4 py-2 text-sm text-foreground transition hover:border-primary hover:bg-primary/10 hover:text-foreground"
-                >
-                  Close
-                </button>
-              </div>
-            ) : (
-              <div className="mt-5 space-y-4">
-                <p className="text-sm text-foreground/70">
-                  Decide how long your share link should remain available.
-                </p>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => handleShare()}
-                    disabled={shareLoading}
-                    className="w-full rounded-lg border border-primary/40 bg-primary/20 px-4 py-2 text-sm font-medium text-primary transition hover:border-primary/70 hover:bg-primary/20 disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-foreground/60"
-                  >
-                    {shareLoading ? 'Creating…' : 'Create permanent link'}
-                  </button>
-                  <button
-                    onClick={() => handleShare(7)}
-                    disabled={shareLoading}
-                    className="w-full rounded-lg border border-primary/40 bg-primary/20 px-4 py-2 text-sm font-medium text-primary transition hover:border-primary/70 hover:bg-primary/20 disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-foreground/60"
-                  >
-                    {shareLoading ? 'Creating…' : 'Create link (7-day expiry)'}
-                  </button>
-                </div>
-                <button
-                  onClick={() => setShowShareModal(false)}
-                  className="w-full rounded-lg border border-border bg-surface px-4 py-2 text-sm text-foreground transition hover:border-danger hover:bg-danger/20 hover:text-foreground"
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Thread Options Modal */}
-      {editingOptionsThreadId && (
-        <ThreadOptionsMenu
-          threadId={editingOptionsThreadId}
-          currentTitle={threads.find((t) => t.id === editingOptionsThreadId)?.title}
-          currentTags={threads.find((t) => t.id === editingOptionsThreadId)?.tags}
-          currentFolder={threads.find((t) => t.id === editingOptionsThreadId)?.folder}
-          currentTools={threads.find((t) => t.id === editingOptionsThreadId)?.enabledTools}
-          currentModel={threads.find((t) => t.id === editingOptionsThreadId)?.model}
-          currentStyle={threads.find((t) => t.id === editingOptionsThreadId)?.agentStyle}
-          allTags={allTags}
-          allFolders={allFolders}
-          onUpdateTitle={(title) => updateThreadTitle(editingOptionsThreadId, title)}
-          onUpdateTags={(tags) => updateThreadTags(editingOptionsThreadId, tags)}
-          onUpdateFolder={(folder) => updateThreadFolder(editingOptionsThreadId, folder)}
-          onUpdateTools={(tools) => updateThreadTools(editingOptionsThreadId, tools)}
-          onUpdateModel={(model) => updateThreadModel(editingOptionsThreadId, model)}
-          onUpdateStyle={(style) => updateThreadStyle(editingOptionsThreadId, style)}
-          onClose={() => setEditingOptionsThreadId(null)}
-        />
-      )}
-
-      {/* TTS Settings Modal */}
+      {/* Agent-Specific Modals */}
       {showTTSSettings && (
         <TTSSettingsModal
           settings={ttsSettings}
-          voices={ttsVoices}
-          onUpdate={(newSettings) => {
-            updateTTSSettings(newSettings);
-            toast.success('TTS settings updated');
-          }}
+          voices={voices}
+          onUpdate={updateTTS}
           onClose={() => setShowTTSSettings(false)}
         />
       )}
 
-      {/* Agent Memory Modal */}
       {showMemoryModal && (
         <AgentMemoryModal
-          agentName={activeThread?.agentName || 'FROK Assistant'}
+          agentName="default"
           onClose={() => setShowMemoryModal(false)}
         />
       )}
 
-      {/* User Memories Modal */}
-      {showUserMemoriesModal && (
-        <UserMemoriesModal
-          onClose={() => setShowUserMemoriesModal(false)}
-        />
+      {showUserMemories && (
+        <UserMemoriesModal onClose={() => setShowUserMemories(false)} />
       )}
+    </>
+  );
+}
 
+// ============================================================================
+// EmptyState Component
+// ============================================================================
+
+interface EmptyStateProps {
+  onCreateThread: () => void;
+}
+
+function EmptyState({ onCreateThread }: EmptyStateProps) {
+  return (
+    <div className="flex h-full items-center justify-center p-6">
+      <div className="max-w-md text-center">
+        <div className="mb-6 text-6xl">🤖</div>
+        <h2 className="mb-3 text-2xl font-semibold text-foreground">
+          Welcome to Agent Chat
+        </h2>
+        <p className="mb-6 text-sm text-foreground/60">
+          Your AI assistant with access to powerful tools and memory
+        </p>
+        <button
+          onClick={onCreateThread}
+          className="inline-flex items-center gap-2 rounded-lg border border-primary bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary/90"
+        >
+          <span>✨</span>
+          <span>Start Conversation</span>
+        </button>
+
+        {/* Features */}
+        <div className="mt-12 space-y-3">
+          <div className="text-xs font-medium text-foreground/50">Agent Capabilities:</div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FeatureCard
+              icon="🛠️"
+              title="Tool Access"
+              description="Weather, calendar, smart home control"
+            />
+            <FeatureCard
+              icon="🧠"
+              title="Memory"
+              description="Remembers context across conversations"
+            />
+            <FeatureCard
+              icon="🔊"
+              title="Text-to-Speech"
+              description="Listen to responses with TTS"
+            />
+            <FeatureCard
+              icon="📄"
+              title="Document Export"
+              description="Save conversations as markdown"
+            />
+          </div>
+        </div>
+      </div>
     </div>
-    </ErrorBoundary>
-    </Toaster>
+  );
+}
+
+// ============================================================================
+// FeatureCard Component
+// ============================================================================
+
+interface FeatureCardProps {
+  icon: string;
+  title: string;
+  description: string;
+}
+
+function FeatureCard({ icon, title, description }: FeatureCardProps) {
+  return (
+    <div className="rounded-lg border border-border bg-surface/60 p-4 text-left backdrop-blur-sm">
+      <div className="mb-2 text-2xl">{icon}</div>
+      <div className="mb-1 text-sm font-medium text-foreground">{title}</div>
+      <div className="text-xs text-foreground/60">{description}</div>
+    </div>
   );
 }

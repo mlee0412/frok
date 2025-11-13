@@ -4,6 +4,7 @@ import { useRef, useEffect, useState, memo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCard } from './MessageCard';
+import { MessageListSkeleton } from './MessageSkeleton';
 import { useUnifiedChatStore, type Message } from '@/store/unifiedChatStore';
 import { useTranslations } from '@/lib/i18n/I18nProvider';
 
@@ -55,12 +56,12 @@ export const MessageList = memo(function MessageList({
   const parentRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
 
-  // Virtual scrolling
+  // Virtual scrolling for 1000+ messages
   const virtualizer = useVirtualizer({
     count: messages.length + (streamingContent ? 1 : 0),
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 200, // Estimated message height
-    overscan: 5, // Render 5 extra items outside viewport
+    estimateSize: () => 200, // Fixed estimation for simplicity
+    overscan: 5,
   });
 
   // Auto-scroll to bottom on new messages
@@ -126,10 +127,8 @@ export const MessageList = memo(function MessageList({
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex-1 space-y-4 overflow-y-auto p-6">
-        <MessageSkeleton />
-        <MessageSkeleton isUser />
-        <MessageSkeleton />
+      <div className="flex-1 overflow-y-auto p-6">
+        <MessageListSkeleton count={3} isCompact={isCompact} />
       </div>
     );
   }
@@ -156,6 +155,9 @@ export const MessageList = memo(function MessageList({
         ref={parentRef}
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto p-6"
+        role="log"
+        aria-live="polite"
+        aria-label="Chat messages"
       >
         <div
           style={{
@@ -240,8 +242,9 @@ export const MessageList = memo(function MessageList({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             onClick={scrollToBottom}
-            className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface shadow-lg hover:border-primary hover:bg-primary/10 transition-colors"
+            className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface shadow-lg hover:border-primary hover:bg-primary/10 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
             title={t('scrollToBottom')}
+            aria-label={t('scrollToBottom')}
           >
             <svg
               className="h-5 w-5 text-foreground"
@@ -278,7 +281,7 @@ function StreamingMessage({ content }: StreamingMessageProps) {
         <div className="mb-2 flex items-center gap-2">
           <span className="text-base">🤖</span>
           <span className="text-xs font-medium opacity-70">Assistant</span>
-          <span className="ml-auto flex items-center gap-1 text-xs text-primary">
+          <span className="ml-auto flex items-center gap-1 text-xs text-primary" aria-live="polite" aria-label="Assistant is thinking">
             <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
             Thinking...
           </span>
@@ -289,28 +292,5 @@ function StreamingMessage({ content }: StreamingMessageProps) {
         </div>
       </div>
     </motion.div>
-  );
-}
-
-// ============================================================================
-// MessageSkeleton Component
-// ============================================================================
-
-interface MessageSkeletonProps {
-  isUser?: boolean;
-}
-
-function MessageSkeleton({ isUser = false }: MessageSkeletonProps) {
-  return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className="max-w-full space-y-2 rounded-2xl border border-border bg-surface/50 px-5 py-4 backdrop-blur-sm animate-pulse sm:max-w-3xl">
-        <div className="h-4 w-16 rounded bg-surface" />
-        <div className="space-y-2">
-          <div className="h-3 w-full rounded bg-surface" />
-          <div className="h-3 w-5/6 rounded bg-surface" />
-          <div className="h-3 w-4/6 rounded bg-surface" />
-        </div>
-      </div>
-    </div>
   );
 }

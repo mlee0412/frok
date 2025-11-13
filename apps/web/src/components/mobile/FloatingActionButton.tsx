@@ -69,10 +69,23 @@ export function FloatingActionButton({
       animate={{
         x: position.x,
         y: position.y,
+        boxShadow: [
+          '0 10px 15px -3px rgb(34 211 238 / 0.3), 0 4px 6px -4px rgb(34 211 238 / 0.3)',
+          '0 20px 25px -5px rgb(34 211 238 / 0.5), 0 8px 10px -6px rgb(34 211 238 / 0.5)',
+          '0 10px 15px -3px rgb(34 211 238 / 0.3), 0 4px 6px -4px rgb(34 211 238 / 0.3)',
+        ],
+      }}
+      transition={{
+        boxShadow: {
+          duration: 2,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        },
       }}
       whileTap={{ scale: 0.9 }}
+      whileHover={{ scale: 1.05 }}
       onClick={handleClick}
-      className={`md:hidden fixed bottom-20 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg transition-shadow hover:shadow-xl ${className}`}
+      className={`md:hidden fixed bottom-20 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white ${className}`}
       style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
       aria-label={ariaLabel}
     >

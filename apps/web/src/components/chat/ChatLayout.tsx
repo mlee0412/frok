@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUnifiedChatStore, useUIState } from '@/store/unifiedChatStore';
 import { ChatSidebar } from './ChatSidebar';
@@ -49,7 +49,16 @@ export function ChatLayout({ children, className }: ChatLayoutProps) {
         toggleSidebar();
       }
 
-      // Cmd/Ctrl + K: Toggle voice (handled by VoiceSheet)
+      // Cmd/Ctrl + K: New thread
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        const createThread = useUnifiedChatStore.getState().createThread;
+        const setActiveThread = useUnifiedChatStore.getState().setActiveThread;
+        const threadId = createThread('New Chat', 'default');
+        setActiveThread(threadId);
+      }
+
+      // Escape: Close voice sheet (handled by VoiceSheet)
     }
 
     window.addEventListener('keydown', handleKeyDown);
@@ -58,7 +67,10 @@ export function ChatLayout({ children, className }: ChatLayoutProps) {
 
   return (
     <div
-      className={`relative flex h-[100dvh] w-full overflow-hidden bg-background ${className || ''}`}
+      className={`relative flex h-[100dvh] w-full overflow-hidden ${className || ''}`}
+      style={{
+        background: 'radial-gradient(circle at 50% 50%, oklch(60% 0.15 250 / 0.05) 0%, var(--background) 70%)',
+      }}
     >
       {/* Desktop Sidebar (≥768px) */}
       <AnimatePresence mode="wait">
@@ -128,13 +140,26 @@ export function ChatHeader({
   actions,
   className,
 }: ChatHeaderProps) {
+  const [isScrolled, setIsScrolled] = useState(false);
   const toggleSidebar = useUnifiedChatStore((state) => state.toggleSidebar);
   const toggleVoiceSheet = useUnifiedChatStore((state) => state.toggleVoiceSheet);
   const { isSidebarOpen, isVoiceSheetOpen } = useUIState();
 
+  // Track scroll position for glassmorphism effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <header
-      className={`sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-border bg-surface/60 px-4 backdrop-blur-sm ${className || ''}`}
+      className={`sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-border px-4 transition-all duration-200 ${
+        isScrolled ? 'bg-surface/80 backdrop-blur-lg shadow-sm' : 'bg-surface/60 backdrop-blur-sm'
+      } ${className || ''}`}
     >
       {/* Mobile: Back button OR Sidebar toggle */}
       <div className="flex items-center gap-2 md:hidden">
@@ -143,7 +168,7 @@ export function ChatHeader({
             type="button"
             onClick={onBack}
             aria-label="Go back"
-            className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/70 hover:bg-surface hover:text-foreground transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/70 hover:bg-surface hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <svg
               className="h-5 w-5"
@@ -164,7 +189,7 @@ export function ChatHeader({
             type="button"
             onClick={toggleSidebar}
             aria-label="Toggle thread list"
-            className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/70 hover:bg-surface hover:text-foreground transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/70 hover:bg-surface hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <svg
               className="h-5 w-5"
@@ -188,7 +213,7 @@ export function ChatHeader({
         type="button"
         onClick={toggleSidebar}
         aria-label={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-        className="hidden h-8 w-8 items-center justify-center rounded-md text-foreground/70 hover:bg-surface hover:text-foreground transition-colors md:flex"
+        className="hidden h-8 w-8 items-center justify-center rounded-md text-foreground/70 hover:bg-surface hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary md:flex"
       >
         <svg
           className="h-5 w-5"
@@ -226,7 +251,7 @@ export function ChatHeader({
         type="button"
         onClick={toggleVoiceSheet}
         aria-label={isVoiceSheetOpen ? 'Close voice assistant' : 'Open voice assistant'}
-        className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
+        className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
           isVoiceSheetOpen
             ? 'bg-primary text-white'
             : 'text-foreground/70 hover:bg-surface hover:text-foreground'

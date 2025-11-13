@@ -51,11 +51,11 @@ export async function POST(req: NextRequest) {
   if (!validation.ok) return validation.response;
 
   try {
-    const { thread_id, role, content } = validation.data;
+    const { thread_id, role, content, source, file_urls } = validation.data;
 
     const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
-    const { data, error } = await auth.user.supabase
+    const { data, error} = await auth.user.supabase
       .from('chat_messages')
       .insert({
         id: messageId,
@@ -63,6 +63,8 @@ export async function POST(req: NextRequest) {
         thread_id,
         role,
         content,
+        source,
+        file_urls: file_urls || null,
       })
       .select()
       .single();

@@ -20,27 +20,28 @@
 import { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, VolumeX } from 'lucide-react';
 import { Button, Card } from '@frok/ui';
-import { useVoiceStore } from '@/store/voiceStore';
+import { useUnifiedChatStore, useVoiceState, useVoiceSettings, useThreadMessages } from '@/store/unifiedChatStore';
 import { AudioStreamer, base64ToUint8Array } from './AudioStreamer';
 import { VoiceActivityDetector } from './VoiceActivityDetector';
 import { WebSocketManager } from '@/lib/voice/websocketManager';
 import type { VoiceMessage } from '@/types/voice';
 
 export function VoiceAssistant() {
-  const {
-    state,
-    setState,
-    transcript,
-    response,
-    messages,
-    isConnected,
-    setConnected,
-    addMessage,
-    appendResponse,
-    clearResponse,
-    setTranscript,
-    vadSensitivity,
-  } = useVoiceStore();
+  // Voice state from unified store
+  const { mode, connected, transcript, response } = useVoiceState();
+  const { vadSensitivity } = useVoiceSettings();
+
+  // Voice actions from unified store
+  const setVoiceMode = useUnifiedChatStore((state) => state.setVoiceMode);
+  const setVoiceConnected = useUnifiedChatStore((state) => state.setVoiceConnected);
+  const setVoiceTranscript = useUnifiedChatStore((state) => state.setVoiceTranscript);
+  const appendVoiceResponse = useUnifiedChatStore((state) => state.appendVoiceResponse);
+  const clearVoiceResponse = useUnifiedChatStore((state) => state.clearVoiceResponse);
+  const finalizeVoiceMessage = useUnifiedChatStore((state) => state.finalizeVoiceMessage);
+
+  // Get active thread for voice message finalization
+  const activeThreadId = useUnifiedChatStore((state) => state.activeThreadId);
+  const threadMessages = useThreadMessages(activeThreadId);
 
   const wsManagerRef = useRef<WebSocketManager | null>(null);
   const audioStreamerRef = useRef<AudioStreamer | null>(null);
@@ -62,12 +63,12 @@ export function VoiceAssistant() {
       onError: handleWebSocketError,
       onOpen: () => {
         console.log('[VoiceAssistant] WebSocket connected');
-        setConnected(true);
+        setVoiceConnected(true);
         setError(null);
       },
       onClose: () => {
         console.log('[VoiceAssistant] WebSocket disconnected');
-        setConnected(false);
+        setVoiceConnected(false);
       },
     });
 
@@ -76,8 +77,8 @@ export function VoiceAssistant() {
     // Initialize Audio Streamer for playback
     audioStreamerRef.current = new AudioStreamer({
       mimeType: 'audio/mpeg',
-      onPlaybackStart: () => setState('speaking'),
-      onPlaybackEnd: () => setState('idle'),
+      onPlaybackStart: () => setVoiceMode('speaking'),
+      onPlaybackEnd: () => setVoiceMode('idle'),
       onError: (err) => {
         console.error('[VoiceAssistant] Audio playback error:', err);
         setError('Audio playback failed');
@@ -97,45 +98,34 @@ export function VoiceAssistant() {
     switch (msg.type) {
       case 'stt_result':
         // Display user's transcribed speech
-        setTranscript(msg.text);
-        addMessage({
-          role: 'user',
-          content: msg.text,
-          timestamp: Date.now(),
-        });
-        setState('processing');
+        setVoiceTranscript(msg.text);
+        setVoiceMode('processing');
         break;
 
       case 'llm_token':
         // Stream assistant response text
-        appendResponse(msg.token);
+        appendVoiceResponse(msg.token);
         break;
 
       case 'audio_chunk':
         // Play audio chunk
-        if (state !== 'speaking') setState('speaking');
+        if (mode !== 'speaking') setVoiceMode('speaking');
         const audioData = base64ToUint8Array(msg.data);
         audioStreamerRef.current?.appendAudio(audioData);
         break;
 
       case 'response_complete':
-        // Response finished, save to message history
-        const currentResponse = useVoiceStore.getState().response;
-        if (currentResponse.trim()) {
-          addMessage({
-            role: 'assistant',
-            content: currentResponse,
-            timestamp: Date.now(),
-          });
+        // Response finished, finalize to thread messages
+        if (activeThreadId) {
+          finalizeVoiceMessage(activeThreadId);
         }
-        clearResponse();
-        setState('idle');
+        setVoiceMode('idle');
         break;
 
       case 'error':
         console.error('[VoiceAssistant] Server error:', msg.error);
         setError(msg.error);
-        setState('error');
+        setVoiceMode('error');
         break;
     }
   };
@@ -143,7 +133,7 @@ export function VoiceAssistant() {
   const handleWebSocketError = (error: Event) => {
     console.error('[VoiceAssistant] WebSocket error:', error);
     setError('Connection error');
-    setState('error');
+    setVoiceMode('error');
   };
 
   // ============================================================================
@@ -153,7 +143,7 @@ export function VoiceAssistant() {
   const startListening = async () => {
     try {
       setError(null);
-      setState('listening');
+      setVoiceMode('listening');
 
       // Request microphone permission
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -175,7 +165,7 @@ export function VoiceAssistant() {
         threshold: vadSensitivity,
         onSpeechStart: () => {
           // If assistant is speaking, interrupt
-          if (state === 'speaking') {
+          if (mode === 'speaking') {
             handleInterrupt();
           }
         },
@@ -188,7 +178,7 @@ export function VoiceAssistant() {
     } catch (error) {
       console.error('[VoiceAssistant] Microphone error:', error);
       setError('Failed to access microphone');
-      setState('error');
+      setVoiceMode('error');
     }
   };
 
@@ -219,12 +209,12 @@ export function VoiceAssistant() {
     } catch (error) {
       console.error('[VoiceAssistant] MediaRecorder error:', error);
       setError('Failed to start recording');
-      setState('error');
+      setVoiceMode('error');
     }
   };
 
   const stopListening = () => {
-    setState('idle');
+    setVoiceMode('idle');
 
     // Stop media recorder
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
@@ -252,8 +242,8 @@ export function VoiceAssistant() {
     audioStreamerRef.current?.stop();
 
     // Clear response state
-    clearResponse();
-    setState('idle');
+    clearVoiceResponse();
+    setVoiceMode('idle');
   };
 
   // ============================================================================
@@ -278,20 +268,20 @@ export function VoiceAssistant() {
           <div className="flex items-center gap-3">
             <div
               className={`h-3 w-3 rounded-full ${
-                isConnected ? 'bg-success animate-pulse' : 'bg-danger'
+                connected ? 'bg-success animate-pulse' : 'bg-danger'
               }`}
             />
             <span className="text-sm text-foreground/70">
-              {isConnected ? 'Connected' : 'Disconnected'}
+              {connected ? 'Connected' : 'Disconnected'}
             </span>
           </div>
 
           <div className="text-sm font-medium text-foreground">
-            {state === 'listening' && '🎤 Listening...'}
-            {state === 'processing' && '🤔 Thinking...'}
-            {state === 'speaking' && '🗣️ Speaking...'}
-            {state === 'idle' && '💤 Idle'}
-            {state === 'error' && '⚠️ Error'}
+            {mode === 'listening' && '🎤 Listening...'}
+            {mode === 'processing' && '🤔 Thinking...'}
+            {mode === 'speaking' && '🗣️ Speaking...'}
+            {mode === 'idle' && '💤 Idle'}
+            {mode === 'error' && '⚠️ Error'}
           </div>
         </div>
 
@@ -305,26 +295,29 @@ export function VoiceAssistant() {
       {/* Conversation transcript */}
       <div className="flex-1 overflow-y-auto p-4">
         <div className="space-y-4">
-          {messages.map((msg, idx) => (
-            <Card
-              key={idx}
-              className={`p-3 ${
-                msg.role === 'user'
-                  ? 'bg-primary/10 border-primary/20'
-                  : 'bg-surface border-border'
-              }`}
-            >
-              <div className="flex items-start gap-2">
-                <span className="text-xs text-foreground/60">
-                  {msg.role === 'user' ? 'You' : 'Assistant'}
-                </span>
-              </div>
-              <p className="mt-1 text-sm text-foreground">{msg.content}</p>
-            </Card>
-          ))}
+          {/* Show finalized thread messages */}
+          {threadMessages
+            .filter((msg) => msg.source === 'voice')
+            .map((msg) => (
+              <Card
+                key={msg.id}
+                className={`p-3 ${
+                  msg.role === 'user'
+                    ? 'bg-primary/10 border-primary/20'
+                    : 'bg-surface border-border'
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <span className="text-xs text-foreground/60">
+                    {msg.role === 'user' ? 'You' : 'Assistant'}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-foreground">{msg.content}</p>
+              </Card>
+            ))}
 
           {/* Current transcript (user speaking) */}
-          {transcript && state === 'processing' && (
+          {transcript && mode === 'processing' && (
             <Card className="p-3 bg-primary/10 border-primary/20">
               <div className="text-xs text-foreground/60">You</div>
               <p className="mt-1 text-sm text-foreground">{transcript}</p>
@@ -344,12 +337,12 @@ export function VoiceAssistant() {
       {/* Controls */}
       <div className="border-t border-border p-4">
         <div className="flex items-center justify-center gap-4">
-          {state === 'idle' || state === 'error' ? (
+          {mode === 'idle' || mode === 'error' ? (
             <Button
               variant="primary"
               size="lg"
               onClick={startListening}
-              disabled={!isConnected}
+              disabled={!connected}
               className="gap-2"
             >
               <Mic className="h-5 w-5" />
@@ -367,7 +360,7 @@ export function VoiceAssistant() {
                 Stop
               </Button>
 
-              {state === 'speaking' && (
+              {mode === 'speaking' && (
                 <Button
                   variant="outline"
                   size="lg"
@@ -383,10 +376,10 @@ export function VoiceAssistant() {
         </div>
 
         <p className="mt-3 text-center text-xs text-foreground/50">
-          {state === 'idle' && 'Click to start voice conversation'}
-          {state === 'listening' && 'Speak naturally, pause when done'}
-          {state === 'processing' && 'Processing your request...'}
-          {state === 'speaking' && 'You can interrupt by speaking'}
+          {mode === 'idle' && 'Click to start voice conversation'}
+          {mode === 'listening' && 'Speak naturally, pause when done'}
+          {mode === 'processing' && 'Processing your request...'}
+          {mode === 'speaking' && 'You can interrupt by speaking'}
         </p>
       </div>
     </div>

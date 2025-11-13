@@ -29,6 +29,8 @@ export type ChatMessageRow = {
   user_id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  source?: 'text' | 'voice';
+  file_urls?: string[] | null;
   created_at: string;
   metadata: Record<string, unknown> | null;
 };

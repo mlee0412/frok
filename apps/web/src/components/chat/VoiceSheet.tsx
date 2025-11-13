@@ -44,6 +44,40 @@ export function VoiceSheet() {
   // Canvas for waveform
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Focus trap - save the previously focused element
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  // Handle Escape key to close
+  useEffect(() => {
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        toggleVoiceSheet();
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [toggleVoiceSheet]);
+
+  // Focus management
+  useEffect(() => {
+    // Save current focus
+    previousFocusRef.current = document.activeElement as HTMLElement;
+
+    // Focus the sheet
+    if (sheetRef.current) {
+      sheetRef.current.focus();
+    }
+
+    // Return focus on unmount
+    return () => {
+      if (previousFocusRef.current) {
+        previousFocusRef.current.focus();
+      }
+    };
+  }, []);
+
   // Start/Stop voice
   function handleToggleVoice() {
     if (mode === 'idle') {
@@ -119,6 +153,8 @@ export function VoiceSheet() {
     <>
       {/* Desktop: Slide from right */}
       <motion.aside
+        ref={sheetRef}
+        tabIndex={-1}
         initial={{ x: '100%' }}
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
@@ -127,7 +163,10 @@ export function VoiceSheet() {
           stiffness: 300,
           damping: 30,
         }}
-        className="hidden md:flex fixed right-0 top-0 bottom-0 z-40 w-80 flex-col border-l border-border bg-surface/95 backdrop-blur-md shadow-2xl"
+        className="hidden md:flex fixed right-0 top-0 bottom-0 z-40 w-80 flex-col border-l border-border bg-surface/95 backdrop-blur-md shadow-2xl focus:outline-none"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Voice assistant"
       >
         <VoiceSheetContent
           mode={mode}
@@ -152,6 +191,7 @@ export function VoiceSheet() {
 
       {/* Mobile: Slide from bottom */}
       <motion.div
+        tabIndex={-1}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
@@ -160,8 +200,11 @@ export function VoiceSheet() {
           stiffness: 300,
           damping: 30,
         }}
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex flex-col rounded-t-2xl border-t border-border bg-surface/95 backdrop-blur-md shadow-2xl"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex flex-col rounded-t-2xl border-t border-border bg-surface/95 backdrop-blur-md shadow-2xl focus:outline-none"
         style={{ height: '70vh' }}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Voice assistant"
       >
         <VoiceSheetContent
           mode={mode}
@@ -251,7 +294,7 @@ function VoiceSheetContent({
           type="button"
           onClick={onToggleSettings}
           aria-label="Settings"
-          className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/70 hover:bg-surface hover:text-foreground transition-colors"
+          className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/70 hover:bg-surface hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -262,7 +305,7 @@ function VoiceSheetContent({
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/70 hover:bg-surface hover:text-foreground transition-colors"
+          className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/70 hover:bg-surface hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

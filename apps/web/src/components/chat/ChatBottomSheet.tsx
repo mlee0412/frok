@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { motion, PanInfo } from 'framer-motion';
-import { useUnifiedChatStore, useActiveThread } from '@/store/unifiedChatStore';
+import { useUnifiedChatStore, useActiveThread, type Thread } from '@/store/unifiedChatStore';
 import { useTranslations } from '@/lib/i18n/I18nProvider';
+import { useGestures } from '@/hooks/useGestures';
+import { useHaptic } from '@/hooks/useHaptic';
 
 // ============================================================================
 // ChatBottomSheet - Mobile thread navigation
@@ -97,7 +99,12 @@ export function ChatBottomSheet() {
         stiffness: 300,
         damping: 30,
       }}
-      className="fixed bottom-0 left-0 right-0 z-30 flex flex-col overflow-hidden rounded-t-2xl border-t border-border bg-surface/95 backdrop-blur-md shadow-2xl"
+      className="fixed bottom-0 left-0 right-0 z-30 flex flex-col overflow-hidden rounded-t-2xl border-t border-border shadow-2xl"
+      style={{
+        background: 'linear-gradient(to bottom, var(--surface), var(--background))',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+      }}
     >
       {/* Drag Handle */}
       <div className="flex items-center justify-center py-2">
@@ -160,32 +167,12 @@ export function ChatBottomSheet() {
           {/* Thread List */}
           <nav className="flex-1 space-y-2 overflow-y-auto p-4">
             {activeThreads.map((thread) => (
-              <button
+              <ThreadItem
                 key={thread.id}
-                type="button"
-                onClick={() => handleSelectThread(thread.id)}
-                className={`w-full rounded-lg border p-3 text-left transition-colors ${
-                  thread.id === activeThread?.id
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-transparent bg-surface/60 text-foreground hover:border-border'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  {thread.pinned && (
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-primary">
-                      <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M4.146.146A.5.5 0 0 1 4.5 0h7a.5.5 0 0 1 .5.5c0 .68-.342 1.174-.646 1.479-.126.125-.25.224-.354.298v4.431l.078.048c.203.127.476.314.751.555C12.36 7.775 13 8.527 13 9.5a.5.5 0 0 1-.5.5h-4v4.5c0 .276-.224 1.5-.5 1.5s-.5-1.224-.5-1.5V10h-4a.5.5 0 0 1-.5-.5c0-.973.64-1.725 1.17-2.189A5.921 5.921 0 0 1 5 6.708V2.277a2.77 2.77 0 0 1-.354-.298C4.342 1.674 4 1.179 4 .5a.5.5 0 0 1 .146-.354z" />
-                      </svg>
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium">{thread.title || t('untitled')}</div>
-                    <div className="text-xs text-foreground/60">
-                      {thread.messageCount || 0} messages
-                    </div>
-                  </div>
-                </div>
-              </button>
+                thread={thread}
+                isActive={thread.id === activeThread?.id}
+                onSelect={() => handleSelectThread(thread.id)}
+              />
             ))}
 
             {activeThreads.length === 0 && (
@@ -197,6 +184,123 @@ export function ChatBottomSheet() {
         </div>
       )}
     </motion.div>
+  );
+}
+
+// ============================================================================
+// ThreadItem Component
+// ============================================================================
+
+interface ThreadItemProps {
+  thread: Thread;
+  isActive: boolean;
+  onSelect: () => void;
+}
+
+function ThreadItem({ thread, isActive, onSelect }: ThreadItemProps) {
+  const t = useTranslations('chat.sidebar');
+  const { vibrate } = useHaptic();
+  const deleteThread = useUnifiedChatStore((state) => state.deleteThread);
+  const pinThread = useUnifiedChatStore((state) => state.pinThread);
+
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [showSwipeActions, setShowSwipeActions] = useState(false);
+
+  const gestureRef = useGestures(
+    {
+      onSwipeLeft: () => {
+        // Swipe left to delete
+        vibrate('warning');
+        deleteThread(thread.id);
+      },
+      onSwipeRight: () => {
+        // Swipe right to pin/unpin
+        vibrate('success');
+        pinThread(thread.id, !thread.pinned);
+      },
+      onDragMove: (deltaX) => {
+        const maxSwipe = 100;
+        const clampedOffset = Math.max(-maxSwipe, Math.min(maxSwipe, deltaX));
+        setSwipeOffset(clampedOffset);
+
+        // Show action hints when swiped enough
+        if (Math.abs(clampedOffset) > 30 && !showSwipeActions) {
+          vibrate('light');
+          setShowSwipeActions(true);
+        }
+      },
+      onDragEnd: (deltaX) => {
+        const threshold = 60;
+
+        if (Math.abs(deltaX) > threshold) {
+          if (deltaX < 0) {
+            // Swipe left: delete
+            vibrate('warning');
+            deleteThread(thread.id);
+          } else {
+            // Swipe right: pin/unpin
+            vibrate('success');
+            pinThread(thread.id, !thread.pinned);
+          }
+        }
+
+        // Reset
+        setSwipeOffset(0);
+        setTimeout(() => setShowSwipeActions(false), 2000);
+      },
+    },
+    {
+      swipeThreshold: 60,
+      dragThreshold: 10,
+    }
+  );
+
+  return (
+    <div className="relative">
+      {/* Swipe Action Hints */}
+      {showSwipeActions && (
+        <div className="absolute inset-0 flex items-center justify-between px-4 z-0">
+          <div className="flex items-center gap-2 text-primary">
+            <span>📌</span>
+            <span className="text-xs">{thread.pinned ? 'Unpin' : 'Pin'}</span>
+          </div>
+          <div className="flex items-center gap-2 text-danger">
+            <span className="text-xs">Delete</span>
+            <span>🗑️</span>
+          </div>
+        </div>
+      )}
+
+      {/* Thread Button */}
+      <motion.button
+        ref={gestureRef as React.RefObject<HTMLButtonElement>}
+        type="button"
+        onClick={onSelect}
+        animate={{ x: swipeOffset }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        className={`relative z-10 w-full rounded-lg border p-3 text-left transition-colors cursor-grab active:cursor-grabbing ${
+          isActive
+            ? 'border-primary bg-primary/10 text-primary'
+            : 'border-transparent bg-surface/60 text-foreground hover:border-border'
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          {thread.pinned && (
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-primary">
+              <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M4.146.146A.5.5 0 0 1 4.5 0h7a.5.5 0 0 1 .5.5c0 .68-.342 1.174-.646 1.479-.126.125-.25.224-.354.298v4.431l.078.048c.203.127.476.314.751.555C12.36 7.775 13 8.527 13 9.5a.5.5 0 0 1-.5.5h-4v4.5c0 .276-.224 1.5-.5 1.5s-.5-1.224-.5-1.5V10h-4a.5.5 0 0 1-.5-.5c0-.973.64-1.725 1.17-2.189A5.921 5.921 0 0 1 5 6.708V2.277a2.77 2.77 0 0 1-.354-.298C4.342 1.674 4 1.179 4 .5a.5.5 0 0 1 .146-.354z" />
+              </svg>
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-medium">{thread.title || t('untitled')}</div>
+            <div className="text-xs text-foreground/60">
+              {thread.messageCount || 0} messages
+            </div>
+          </div>
+        </div>
+      </motion.button>
+    </div>
   );
 }
 

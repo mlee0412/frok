@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { useTranslations } from '@/lib/i18n/I18nProvider';
 import { useGestures } from '@/hooks/useGestures';
 import { useHaptic } from '@/hooks/useHaptic';
+import { useTextToSpeech } from '@/hooks/useTextToSpeech';
+import { MessageContent } from '@/components/MessageContent';
 import type { Message, ToolCall } from '@/store/unifiedChatStore';
 
 // ============================================================================
@@ -59,6 +61,26 @@ export const MessageCard = memo(function MessageCard({
   const [showSwipeActions, setShowSwipeActions] = useState(false);
 
   const { vibrate } = useHaptic();
+  const { ttsState, currentMessageId, speak, pause, resume, stop } = useTextToSpeech();
+
+  // Check if this message is currently being spoken
+  const isSpeaking = ttsState === 'speaking' && currentMessageId === message.id;
+  const isPaused = ttsState === 'paused' && currentMessageId === message.id;
+
+  // Handle TTS controls
+  const handleSpeak = () => {
+    if (isSpeaking) {
+      pause();
+    } else if (isPaused) {
+      resume();
+    } else {
+      speak(message.content, message.id);
+    }
+  };
+
+  const handleStopSpeak = () => {
+    stop();
+  };
 
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
@@ -186,7 +208,7 @@ export const MessageCard = memo(function MessageCard({
         ref={gestureRef as React.RefObject<HTMLDivElement>}
         animate={{ x: swipeOffset }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className={`${bubbleWidthClass} ${bubblePaddingClass} rounded-2xl border ${roleStyles[message.role]} backdrop-blur-sm cursor-grab active:cursor-grabbing`}
+        className={`${bubbleWidthClass} ${bubblePaddingClass} rounded-2xl border ${roleStyles[message.role]} backdrop-blur-sm cursor-grab active:cursor-grabbing transition-shadow duration-200 hover:shadow-sm active:shadow-md`}
       >
         {/* Message Header */}
         <div className="mb-2 flex items-center justify-between">
@@ -243,21 +265,11 @@ export const MessageCard = memo(function MessageCard({
             </div>
           </div>
         ) : (
-          <div className="prose prose-sm prose-invert max-w-none">
-            <MessageContent content={message.content} isAssistant={isAssistant} />
-          </div>
-        )}
-
-        {/* File Attachments */}
-        {message.fileUrls && message.fileUrls.length > 0 && (
-          <div className="mt-3 space-y-2">
-            <div className="text-xs font-medium opacity-70">{t('attachments')}</div>
-            <div className="grid grid-cols-2 gap-2">
-              {message.fileUrls.map((url, index) => (
-                <FilePreview key={index} url={url} />
-              ))}
-            </div>
-          </div>
+          <MessageContent
+            content={message.content}
+            role={message.role === 'system' ? 'assistant' : message.role}
+            fileUrls={message.fileUrls}
+          />
         )}
 
         {/* Tool Calls */}
@@ -308,7 +320,7 @@ export const MessageCard = memo(function MessageCard({
                   className="mt-2 overflow-hidden rounded-lg border border-border bg-background/50 p-3"
                 >
                   <div className="prose prose-sm prose-invert max-w-none">
-                    <MessageContent content={thinkingProcess} isAssistant />
+                    <MessageContent content={thinkingProcess} role="assistant" />
                   </div>
                 </motion.div>
               )}
@@ -327,13 +339,47 @@ export const MessageCard = memo(function MessageCard({
                 📋 {t('copy')}
               </button>
             )}
-            {isAssistant && onRegenerate && (
-              <button
-                onClick={onRegenerate}
-                className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs text-foreground transition hover:border-primary hover:bg-primary/20"
-              >
-                🔄 {t('regenerate')}
-              </button>
+            {isAssistant && (
+              <>
+                {/* TTS Speak Button */}
+                {(isSpeaking || isPaused) ? (
+                  <div className="inline-flex items-center gap-1">
+                    <motion.button
+                      onClick={handleSpeak}
+                      animate={isSpeaking ? { scale: [1, 1.05, 1] } : {}}
+                      transition={{ duration: 0.8, repeat: Infinity }}
+                      className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs transition ${
+                        isSpeaking
+                          ? 'border-primary bg-primary/20 text-primary'
+                          : 'border-border bg-surface text-foreground hover:border-primary hover:bg-primary/10'
+                      }`}
+                    >
+                      {isSpeaking ? '⏸️ Pause' : '▶️ Resume'}
+                    </motion.button>
+                    <button
+                      onClick={handleStopSpeak}
+                      className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs text-foreground transition hover:border-danger hover:bg-danger/20"
+                    >
+                      ⏹️ Stop
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleSpeak}
+                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs text-foreground transition hover:border-info hover:bg-info/20"
+                  >
+                    🔊 Speak
+                  </button>
+                )}
+                {onRegenerate && (
+                  <button
+                    onClick={onRegenerate}
+                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs text-foreground transition hover:border-primary hover:bg-primary/20"
+                  >
+                    🔄 {t('regenerate')}
+                  </button>
+                )}
+              </>
             )}
             {isUser && onEdit && (
               <button
@@ -357,34 +403,6 @@ export const MessageCard = memo(function MessageCard({
     </motion.div>
   );
 });
-
-// ============================================================================
-// MessageContent Component (Markdown rendering)
-// ============================================================================
-
-interface MessageContentProps {
-  content: string;
-  isAssistant: boolean;
-}
-
-function MessageContent({ content, isAssistant }: MessageContentProps) {
-  if (!isAssistant) {
-    // User messages: plain text with line breaks
-    return (
-      <div className="whitespace-pre-wrap break-words">
-        {content}
-      </div>
-    );
-  }
-
-  // Assistant messages: Markdown rendering (simplified for now)
-  // TODO: Add proper markdown library (react-markdown + remark-gfm)
-  return (
-    <div className="whitespace-pre-wrap break-words">
-      {content}
-    </div>
-  );
-}
 
 // ============================================================================
 // ToolCallCard Component
@@ -462,46 +480,3 @@ function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
   );
 }
 
-// ============================================================================
-// FilePreview Component
-// ============================================================================
-
-interface FilePreviewProps {
-  url: string;
-}
-
-function FilePreview({ url }: FilePreviewProps) {
-  const fileName = url.split('/').pop() || 'file';
-  const fileExtension = fileName.split('.').pop()?.toLowerCase();
-
-  const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(fileExtension || '');
-
-  if (isImage) {
-    return (
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-surface hover:border-primary transition-colors"
-      >
-        <img
-          src={url}
-          alt={fileName}
-          className="h-full w-full object-cover transition-transform group-hover:scale-105"
-        />
-      </a>
-    );
-  }
-
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-foreground hover:border-primary hover:bg-primary/10 transition-colors"
-    >
-      <span>📎</span>
-      <span className="truncate">{fileName}</span>
-    </a>
-  );
-}

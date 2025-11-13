@@ -50,8 +50,8 @@ export default function ChatPage() {
 
   // Handle sending messages
   const handleSendMessage = useCallback(
-    async (content: string, files?: File[]) => {
-      if (!content.trim() && !files?.length) return;
+    async (content: string, fileUrls?: string[]) => {
+      if (!content.trim() && !fileUrls?.length) return;
 
       let threadId = activeThread?.id;
 
@@ -62,14 +62,9 @@ export default function ChatPage() {
       }
 
       try {
-        // Handle file uploads first if present
-        let fileUrls: string[] = [];
-        if (files && files.length > 0) {
-          fileUrls = await uploadFiles(files);
-        }
-
         // Send message via API with streaming support
-        await sendMessageWithStreaming(threadId, content, fileUrls);
+        // (File uploads are now handled by ChatInput component before calling this)
+        await sendMessageWithStreaming(threadId, content, fileUrls || []);
 
         // Note: Thread's lastMessageAt is updated automatically by the API
 
@@ -167,24 +162,6 @@ export default function ChatPage() {
       setIsStreaming(false);
       setStreamingContent('');
     }
-  };
-
-  // Upload files to server
-  const uploadFiles = async (files: File[]): Promise<string[]> => {
-    const formData = new FormData();
-    files.forEach((file) => formData.append('files', file));
-
-    const response = await fetch('/api/chat/upload', {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to upload files');
-    }
-
-    const json = await response.json();
-    return json.urls || [];
   };
 
   // Handle voice toggle

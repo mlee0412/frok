@@ -17,8 +17,9 @@ type ChatMessage = {
   thread_id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  source?: 'text' | 'voice';
+  file_urls?: string[] | null;
   created_at: string;
-  file_urls: string[] | null;
 };
 
 // Query Keys
@@ -149,6 +150,7 @@ export function useSendMessage() {
       thread_id: string;
       content: string;
       role?: 'user' | 'assistant' | 'system';
+      source?: 'text' | 'voice';
       file_urls?: string[];
       model?: string;
     }) => {

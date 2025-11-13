@@ -1,9 +1,18 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, memo } from 'react';
+import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslations } from '@/lib/i18n/I18nProvider';
 import { useUnifiedChatStore } from '@/store/unifiedChatStore';
+import {
+  uploadFiles,
+  validateFile,
+  formatFileSize,
+  isImageFile,
+  getFileIcon,
+  type UploadProgress,
+} from '@/lib/storage/fileUpload';
+import { supabaseClient } from '@/lib/supabaseClient';
 
 // ============================================================================
 // ChatInput Component
@@ -29,7 +38,7 @@ import { useUnifiedChatStore } from '@/store/unifiedChatStore';
 
 export interface ChatInputProps {
   threadId: string;
-  onSendMessage: (content: string, files?: File[]) => Promise<void>;
+  onSendMessage: (content: string, fileUrls?: string[]) => Promise<void>;
   onVoiceToggle?: () => void;
   isVoiceActive?: boolean;
   isLoading?: boolean;
@@ -61,6 +70,9 @@ export const ChatInput = memo(function ChatInput({
   const [files, setFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [fileJustAdded, setFileJustAdded] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -111,12 +123,44 @@ export const ChatInput = memo(function ChatInput({
     if (isSending || isLoading || disabled) return;
 
     setIsSending(true);
+    setUploadError(null);
+
     try {
-      await onSendMessage(trimmed, files.length > 0 ? files : undefined);
+      let fileUrls: string[] | undefined;
+
+      // Upload files if present
+      if (files.length > 0) {
+        const client = supabaseClient();
+        const { data: { user } } = await client.auth.getUser();
+        if (!user) {
+          throw new Error('User not authenticated');
+        }
+
+        // Upload files with progress tracking
+        const results = await uploadFiles(files, user.id, threadId, (progress) => {
+          setUploadProgress(progress);
+        });
+
+        // Check for upload errors
+        const failedUploads = results.filter((r) => !r.success);
+        if (failedUploads.length > 0) {
+          const errorMsg = failedUploads[0]?.error || 'File upload failed';
+          setUploadError(errorMsg);
+          setIsSending(false);
+          return;
+        }
+
+        // Extract URLs from successful uploads
+        fileUrls = results.filter((r) => r.success && r.url).map((r) => r.url!);
+      }
+
+      // Send message with file URLs
+      await onSendMessage(trimmed, fileUrls);
 
       // Clear input and files on success
       setInput('');
       setFiles([]);
+      setUploadProgress([]);
       setDraftMessage(threadId, '');
 
       // Reset textarea height
@@ -125,7 +169,7 @@ export const ChatInput = memo(function ChatInput({
       }
     } catch (error) {
       console.error('Failed to send message:', error);
-      // TODO: Show error toast
+      setUploadError(error instanceof Error ? error.message : 'Failed to send message');
     } finally {
       setIsSending(false);
     }
@@ -159,6 +203,13 @@ export const ChatInput = memo(function ChatInput({
     }
   };
 
+  // Auto-focus textarea on mount
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, []);
+
   // Handle file selection
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
@@ -166,10 +217,33 @@ export const ChatInput = memo(function ChatInput({
   };
 
   const handleAddFiles = (newFiles: File[]) => {
+    setUploadError(null);
+
     // Limit to 5 files
     const remaining = 5 - files.length;
+    if (remaining <= 0) {
+      setUploadError('Maximum 5 files allowed per message');
+      return;
+    }
+
     const filesToAdd = newFiles.slice(0, remaining);
+
+    // Validate each file
+    for (const file of filesToAdd) {
+      const validation = validateFile(file);
+      if (!validation.valid) {
+        setUploadError(validation.error || 'Invalid file');
+        return;
+      }
+    }
+
     setFiles((prev) => [...prev, ...filesToAdd]);
+
+    // Trigger bounce animation
+    if (filesToAdd.length > 0) {
+      setFileJustAdded(true);
+      setTimeout(() => setFileJustAdded(false), 600);
+    }
   };
 
   const handleRemoveFile = (index: number) => {
@@ -199,6 +273,20 @@ export const ChatInput = memo(function ChatInput({
 
   return (
     <div className="flex flex-col gap-2 border-t border-border bg-surface/60 p-4 backdrop-blur-sm">
+      {/* Error Message */}
+      <AnimatePresence>
+        {uploadError && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
+          >
+            ⚠️ {uploadError}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* File Previews */}
       <AnimatePresence mode="popLayout">
         {files.length > 0 && (
@@ -208,13 +296,17 @@ export const ChatInput = memo(function ChatInput({
             exit={{ opacity: 0, height: 0 }}
             className="flex flex-wrap gap-2"
           >
-            {files.map((file, index) => (
-              <FilePreview
-                key={`${file.name}-${index}`}
-                file={file}
-                onRemove={() => handleRemoveFile(index)}
-              />
-            ))}
+            {files.map((file, index) => {
+              const progress = uploadProgress.find((p) => p.file === file);
+              return (
+                <FilePreview
+                  key={`${file.name}-${index}`}
+                  file={file}
+                  progress={progress}
+                  onRemove={() => handleRemoveFile(index)}
+                />
+              );
+            })}
           </motion.div>
         )}
       </AnimatePresence>
@@ -265,47 +357,73 @@ export const ChatInput = memo(function ChatInput({
         {/* Action Buttons */}
         <div className="flex items-end gap-1 pb-2 pr-2">
           {/* File Upload Button */}
-          <button
+          <motion.button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled || isSending || isLoading || files.length >= 5}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-foreground/70 transition hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            animate={
+              fileJustAdded
+                ? {
+                    y: [0, -10, 0, -5, 0],
+                    scale: [1, 1.1, 1, 1.05, 1],
+                  }
+                : {}
+            }
+            transition={{ duration: 0.6 }}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-foreground/70 transition hover:bg-surface hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
             title={t('attachFile')}
+            aria-label={t('attachFile')}
           >
             📎
-          </button>
+          </motion.button>
 
           {/* Voice Toggle Button */}
           {onVoiceToggle && (
-            <button
+            <motion.button
               type="button"
               onClick={onVoiceToggle}
               disabled={disabled || isSending || isLoading}
-              className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
+              animate={
+                isVoiceActive
+                  ? {
+                      scale: [1, 1.1, 1],
+                    }
+                  : {}
+              }
+              transition={{
+                duration: 1,
+                repeat: isVoiceActive ? Infinity : 0,
+                ease: 'easeInOut',
+              }}
+              className={`flex h-9 w-9 items-center justify-center rounded-lg transition focus:outline-none focus:ring-2 focus:ring-primary ${
                 isVoiceActive
                   ? 'bg-primary text-white'
                   : 'text-foreground/70 hover:bg-surface hover:text-foreground'
               }`}
               title={isVoiceActive ? t('stopVoice') : t('startVoice')}
+              aria-label={isVoiceActive ? t('stopVoice') : t('startVoice')}
             >
               {isVoiceActive ? '⏸️' : '🎤'}
-            </button>
+            </motion.button>
           )}
 
           {/* Send Button */}
-          <button
+          <motion.button
             type="button"
             onClick={handleSend}
             disabled={!canSend}
-            className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            whileTap={{ scale: 0.9, rotate: 360 }}
+            transition={{ duration: 0.3 }}
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white transition hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
             title={t('send')}
+            aria-label={t('send')}
           >
             {isSending || isLoading ? (
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
             ) : (
               '➤'
             )}
-          </button>
+          </motion.button>
         </div>
 
         {/* Hidden File Input */}
@@ -340,10 +458,11 @@ export const ChatInput = memo(function ChatInput({
 
 interface FilePreviewProps {
   file: File;
+  progress?: UploadProgress;
   onRemove: () => void;
 }
 
-function FilePreview({ file, onRemove }: FilePreviewProps) {
+function FilePreview({ file, progress, onRemove }: FilePreviewProps) {
   const [preview, setPreview] = useState<string | null>(null);
 
   useEffect(() => {
@@ -362,8 +481,11 @@ function FilePreview({ file, onRemove }: FilePreviewProps) {
     };
   }, [file]);
 
-  const isImage = file.type.startsWith('image/');
+  const isImage = isImageFile(file);
   const fileSize = formatFileSize(file.size);
+  const fileIcon = getFileIcon(file.name);
+  const isUploading = progress && progress.status === 'uploading';
+  const uploadPercent = progress?.progress || 0;
 
   return (
     <motion.div
@@ -378,42 +500,77 @@ function FilePreview({ file, onRemove }: FilePreviewProps) {
           <img
             src={preview}
             alt={file.name}
+            loading="lazy"
             className="h-full w-full object-cover"
           />
-          <button
-            onClick={onRemove}
-            className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-white opacity-0 transition group-hover:opacity-100"
-            title="Remove"
-          >
-            ×
-          </button>
+
+          {/* Upload Progress Overlay */}
+          {isUploading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+              <div className="text-xs font-medium text-primary">{uploadPercent}%</div>
+            </div>
+          )}
+
+          {/* Progress Bar */}
+          {isUploading && (
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-surface/50">
+              <motion.div
+                className="h-full bg-primary"
+                initial={{ width: 0 }}
+                animate={{ width: `${uploadPercent}%` }}
+                transition={{ duration: 0.3 }}
+              />
+            </div>
+          )}
+
+          {/* Remove Button */}
+          {!isUploading && (
+            <button
+              onClick={onRemove}
+              className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-white opacity-0 transition group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 focus:ring-offset-surface"
+              title="Remove"
+              aria-label="Remove file"
+            >
+              ×
+            </button>
+          )}
         </div>
       ) : (
         <div className="relative flex h-20 w-32 flex-col items-center justify-center gap-1 rounded-lg border border-border bg-surface p-2">
-          <span className="text-2xl">📄</span>
-          <span className="truncate text-xs text-foreground/70">{file.name}</span>
-          <span className="text-xs text-foreground/50">{fileSize}</span>
-          <button
-            onClick={onRemove}
-            className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-white opacity-0 transition group-hover:opacity-100"
-            title="Remove"
-          >
-            ×
-          </button>
+          <span className="text-2xl">{fileIcon}</span>
+          <span className="truncate w-full text-center text-xs text-foreground/70">{file.name}</span>
+
+          {isUploading ? (
+            <span className="text-xs font-medium text-primary">{uploadPercent}%</span>
+          ) : (
+            <span className="text-xs text-foreground/50">{fileSize}</span>
+          )}
+
+          {/* Progress Bar */}
+          {isUploading && (
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-surface/50 rounded-b-lg overflow-hidden">
+              <motion.div
+                className="h-full bg-primary"
+                initial={{ width: 0 }}
+                animate={{ width: `${uploadPercent}%` }}
+                transition={{ duration: 0.3 }}
+              />
+            </div>
+          )}
+
+          {/* Remove Button */}
+          {!isUploading && (
+            <button
+              onClick={onRemove}
+              className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-white opacity-0 transition group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 focus:ring-offset-surface"
+              title="Remove"
+              aria-label="Remove file"
+            >
+              ×
+            </button>
+          )}
         </div>
       )}
     </motion.div>
   );
-}
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }

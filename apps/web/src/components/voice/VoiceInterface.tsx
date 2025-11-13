@@ -89,7 +89,7 @@ export function VoiceInterface() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={toggleVoiceSheet}
-            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xl"
           />
 
           {/* Mobile: Fullscreen */}
@@ -107,7 +107,10 @@ export function VoiceInterface() {
               stiffness: 300,
               damping: 30,
             }}
-            className="md:hidden fixed inset-0 z-50 flex flex-col bg-background"
+            className="md:hidden fixed inset-0 z-50 flex flex-col"
+            style={{
+              background: 'radial-gradient(circle at 50% 30%, oklch(60% 0.15 250 / 0.08) 0%, var(--background) 60%)',
+            }}
           >
             {/* Drag Handle */}
             <div className="flex justify-center py-3">
@@ -138,7 +141,15 @@ export function VoiceInterface() {
             }}
             className="hidden md:flex fixed inset-0 z-50 items-center justify-center p-4"
           >
-            <div className="flex w-full max-w-4xl flex-col rounded-2xl border border-border bg-surface shadow-2xl" style={{ height: '80vh' }}>
+            <div
+              className="flex w-full max-w-4xl flex-col rounded-2xl border border-border shadow-2xl"
+              style={{
+                height: '80vh',
+                background: 'radial-gradient(circle at 50% 30%, oklch(60% 0.15 250 / 0.08) 0%, oklch(from var(--background) l c h / 0.95) 60%)',
+                backdropFilter: 'blur(40px)',
+                WebkitBackdropFilter: 'blur(40px)',
+              }}
+            >
               <VoiceInterfaceContent
                 mode={mode}
                 connected={connected}

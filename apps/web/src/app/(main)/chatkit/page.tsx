@@ -3,13 +3,18 @@
 import * as React from 'react';
 import { useChatKit } from '@openai/chatkit-react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
+import { Button } from '@frok/ui';
 
 const ChatKitNoSSR = dynamic(() => import('@openai/chatkit-react').then(m => m.ChatKit), { ssr: false });
 
 export default function ChatKitPage() {
+  const router = useRouter();
   const [status, setStatus] = React.useState<'idle' | 'fetching' | 'ok' | 'error'>('idle');
   const [message, setMessage] = React.useState<string>('');
   const fallbackRef = React.useRef<HTMLDivElement | null>(null);
+  const [countdown, setCountdown] = React.useState(5);
+  const [showDeprecation, setShowDeprecation] = React.useState(true);
 
   const getClientSecretFn = React.useCallback(async (currentClientSecret?: string | null) => {
     try {
@@ -114,6 +119,24 @@ export default function ChatKitPage() {
     console.log('ChatKit control ready', control);
   }, [control]);
 
+  // Auto-redirect countdown
+  React.useEffect(() => {
+    if (!showDeprecation) return;
+
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          router.push('/chat');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [showDeprecation, router]);
+
   const ensureChatKitWebComponent = React.useCallback(async () => {
     if (typeof window === 'undefined') return;
     if (customElements.get('openai-chatkit')) return;
@@ -138,6 +161,56 @@ export default function ChatKitPage() {
 
   return (
     <div style={{ height: '100%', minHeight: 600, position: 'relative' }}>
+      {/* Deprecation Banner */}
+      {showDeprecation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm">
+          <div className="mx-4 max-w-lg rounded-lg border border-warning bg-surface p-6 shadow-xl">
+            <div className="mb-4 flex items-center gap-3">
+              <span className="text-3xl">⚠️</span>
+              <h2 className="text-xl font-semibold text-foreground">ChatKit Deprecated</h2>
+            </div>
+            <p className="mb-4 text-foreground/70">
+              This ChatKit interface has been replaced with our new multimodal chat system featuring:
+            </p>
+            <ul className="mb-6 space-y-2 text-sm text-foreground/70">
+              <li className="flex items-center gap-2">
+                <span className="text-primary">✓</span> Voice integration with real-time transcription
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary">✓</span> File uploads (images, documents)
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary">✓</span> Mobile-optimized bottom sheet
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-primary">✓</span> Improved performance and UX
+              </li>
+            </ul>
+            <div className="mb-4 rounded-lg bg-warning/10 p-3">
+              <p className="text-center text-sm text-warning">
+                Redirecting in <strong className="text-lg">{countdown}</strong> seconds...
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => router.push('/chat')}
+                variant="primary"
+                className="flex-1"
+              >
+                Go to New Chat →
+              </Button>
+              <Button
+                onClick={() => setShowDeprecation(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                Stay Here (Not Recommended)
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ChatKitNoSSR control={control} style={{ height: 600, width: '100%' }} />
       <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.5)', color: '#fff', padding: '6px 10px', borderRadius: 6, fontSize: 12, zIndex: 9999 }}>
         <div>status: {status}</div>

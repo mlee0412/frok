@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useShallow } from 'zustand/react/shallow';
 
 // ============================================================================
 // Core Types
@@ -439,10 +440,28 @@ export const useUnifiedChatStore = create<UnifiedChatStore>()(
       },
 
       toggleVoiceSheet: () => {
+        const state = get();
+        const isClosing = state.isVoiceSheetOpen;
+
+        // When closing voice sheet, transfer voice transcript to text input draft
+        if (isClosing && state.voiceTranscript.trim() && state.activeThreadId) {
+          // Transfer voice transcript to draft message for seamless text mode switching
+          get().setDraftMessage(state.activeThreadId, state.voiceTranscript);
+          get().clearVoiceTranscript();
+        }
+
         set((state) => ({ isVoiceSheetOpen: !state.isVoiceSheetOpen }));
       },
 
       setVoiceSheetOpen: (open: boolean) => {
+        const state = get();
+
+        // When closing voice sheet, transfer voice transcript to text input draft
+        if (state.isVoiceSheetOpen && !open && state.voiceTranscript.trim() && state.activeThreadId) {
+          get().setDraftMessage(state.activeThreadId, state.voiceTranscript);
+          get().clearVoiceTranscript();
+        }
+
         set({ isVoiceSheetOpen: open });
       },
 
@@ -523,41 +542,54 @@ export const useActiveThread = () =>
 
 /**
  * Select messages for a specific thread
+ * Uses stable empty array reference to prevent infinite re-renders
  */
+const EMPTY_MESSAGES: Message[] = [];
+
 export const useThreadMessages = (threadId: string | null) =>
-  useUnifiedChatStore((state) => (threadId ? state.messages[threadId] || [] : []));
+  useUnifiedChatStore((state) =>
+    threadId ? state.messages[threadId] || EMPTY_MESSAGES : EMPTY_MESSAGES
+  );
 
 /**
  * Select voice state
+ * Uses shallow comparison to prevent re-renders when values haven't changed
  */
-export const useVoiceState = () => {
-  const mode = useUnifiedChatStore((state) => state.voiceMode);
-  const connected = useUnifiedChatStore((state) => state.voiceConnected);
-  const transcript = useUnifiedChatStore((state) => state.voiceTranscript);
-  const response = useUnifiedChatStore((state) => state.voiceResponse);
-
-  return { mode, connected, transcript, response };
-};
+export const useVoiceState = () =>
+  useUnifiedChatStore(
+    useShallow((state) => ({
+      mode: state.voiceMode,
+      connected: state.voiceConnected,
+      transcript: state.voiceTranscript,
+      response: state.voiceResponse,
+    }))
+  );
 
 /**
  * Select voice settings
+ * Uses shallow comparison to prevent re-renders when values haven't changed
  */
 export const useVoiceSettings = () =>
-  useUnifiedChatStore((state) => ({
-    voiceId: state.voiceId,
-    autoStart: state.autoStartVoice,
-    vadSensitivity: state.vadSensitivity,
-  }));
+  useUnifiedChatStore(
+    useShallow((state) => ({
+      voiceId: state.voiceId,
+      autoStart: state.autoStartVoice,
+      vadSensitivity: state.vadSensitivity,
+    }))
+  );
 
 /**
  * Select UI state
+ * Uses shallow comparison to prevent re-renders when values haven't changed
  */
 export const useUIState = () =>
-  useUnifiedChatStore((state) => ({
-    isSidebarOpen: state.isSidebarOpen,
-    isVoiceSheetOpen: state.isVoiceSheetOpen,
-    selectedMessageId: state.selectedMessageId,
-  }));
+  useUnifiedChatStore(
+    useShallow((state) => ({
+      isSidebarOpen: state.isSidebarOpen,
+      isVoiceSheetOpen: state.isVoiceSheetOpen,
+      selectedMessageId: state.selectedMessageId,
+    }))
+  );
 
 /**
  * Select draft message for a specific thread

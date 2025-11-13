@@ -41,6 +41,7 @@ export const createMessageSchema = z.object({
   thread_id: z.string().min(1), // Accept any non-empty string (could be temp ID)
   content: nonEmptyStringSchema.max(50000), // Max 50k characters
   role: z.enum(['user', 'assistant', 'system']).default('user'),
+  source: z.enum(['text', 'voice']).optional().default('text'), // Message source
   file_urls: z.array(urlSchema).max(10).optional(), // Max 10 files
   model: z.string().optional(),
 });
