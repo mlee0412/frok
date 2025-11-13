@@ -5,6 +5,7 @@ import { AppShell } from '@frok/ui';
 import { Menu } from 'lucide-react';
 import Breadcrumbs from './Breadcrumbs';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
+import { PageTransition } from '@/components/mobile';
 import { EnhancedBottomTabBar } from '@/components/navigation/EnhancedBottomTabBar';
 import { AppNavigationDrawer } from '@/components/navigation/AppNavigationDrawer';
 import { useTranslations } from '@/lib/i18n/I18nProvider';
@@ -45,7 +46,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
         {/* Main content with bottom padding on mobile for tab bar clearance */}
         <div className="pb-20 md:pb-0">
-          {children}
+          <PageTransition>
+            {children}
+          </PageTransition>
         </div>
 
         {/* Enhanced mobile bottom navigation */}

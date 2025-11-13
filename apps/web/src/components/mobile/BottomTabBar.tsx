@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { Home, MessageSquare, Lightbulb, Settings } from 'lucide-react';
 import { type ComponentPropsWithoutRef, forwardRef } from 'react';
+import { useHaptic } from '@/hooks/useHaptic';
 
 export interface BottomTabBarProps extends ComponentPropsWithoutRef<'nav'> {
   /**
@@ -75,6 +76,7 @@ export const BottomTabBar = forwardRef<HTMLElement, BottomTabBarProps>(
   ({ badges = {}, className, ...props }, ref) => {
     const pathname = usePathname();
     const router = useRouter();
+    const { vibrate } = useHaptic();
 
     const isTabActive = (tab: Tab): boolean => {
       if (!pathname) return false;
@@ -89,6 +91,9 @@ export const BottomTabBar = forwardRef<HTMLElement, BottomTabBarProps>(
     };
 
     const handleTabClick = (tab: Tab) => {
+      if (!isTabActive(tab)) {
+        vibrate('light'); // Haptic feedback on tab change
+      }
       router.push(tab.path);
     };
 
