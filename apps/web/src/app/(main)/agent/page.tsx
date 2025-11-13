@@ -141,9 +141,9 @@ export default function AgentPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          threadId,
-          message: content,
-          fileUrls,
+          thread_id: threadId,
+          input_as_text: content,
+          images: fileUrls || [],
         }),
       });
 
@@ -175,16 +175,33 @@ export default function AgentPage() {
               }
               try {
                 const parsed = JSON.parse(data);
-                if (parsed.content) {
-                  appendStreamingContent(threadId, assistantMessageId, parsed.content);
+
+                // Handle streaming delta chunks
+                if (parsed.delta && !parsed.done) {
+                  appendStreamingContent(threadId, assistantMessageId, parsed.delta);
                 }
-                // Handle tool calls, metadata, etc.
-                if (parsed.toolCalls) {
-                  // Update message with tool call metadata
-                  // (MessageCard already handles display)
+
+                // Handle final complete content
+                if (parsed.content && parsed.done) {
+                  // Final content already streamed via deltas, just mark as complete
+                  setStreamingMessageId(null);
                 }
-              } catch {
+
+                // Handle metadata (model, tools, etc.)
+                if (parsed.metadata) {
+                  // Could update message metadata here if needed
+                  console.log('[Agent] Metadata:', parsed.metadata);
+                }
+
+                // Handle errors
+                if (parsed.error) {
+                  console.error('[Agent] Error:', parsed.error);
+                  toast.error(parsed.error);
+                  throw new Error(parsed.error);
+                }
+              } catch (parseError) {
                 // Skip invalid JSON
+                console.warn('[Agent] Failed to parse SSE data:', data);
               }
             }
           }
