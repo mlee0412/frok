@@ -17,7 +17,7 @@ import type { ChatThreadRow, ChatMessageRow } from '@/types/database';
 // Lazy load heavy modal components
 const ThreadOptionsMenu = dynamic(() => import('@/components/ThreadOptionsMenu').then(mod => ({ default: mod.ThreadOptionsMenu })), {
   ssr: false,
-  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-background border border-border rounded-lg p-6 max-w-2xl w-full mx-4 animate-pulse"><div className="h-8 bg-surface rounded w-1/3 mb-4"></div><div className="h-32 bg-surface rounded"></div></div></div>
+  loading: () => <div className="fixed inset-0 bg-surface/50 flex items-center justify-center z-50"><div className="bg-background border border-border rounded-lg p-6 max-w-2xl w-full mx-4 animate-pulse"><div className="h-8 bg-surface rounded w-1/3 mb-4"></div><div className="h-32 bg-surface rounded"></div></div></div>
 });
 const TTSSettingsModal = dynamic(() => import('@/components/TTSSettings').then(mod => ({ default: mod.TTSSettingsModal })), { ssr: false });
 const AgentMemoryModal = dynamic(() => import('@/components/AgentMemoryModal').then(mod => ({ default: mod.AgentMemoryModal })), { ssr: false });
@@ -1293,10 +1293,10 @@ export default function AgentPage() {
       <div
         key={thread.id}
         onClick={() => setActiveThreadId(thread.id)}
-        className={`group relative cursor-pointer rounded-2xl border px-4 py-3 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/400 ${
+        className={`group relative cursor-pointer rounded-lg border px-4 py-3 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
           isActive
-            ? 'border-primary/500/60 bg-primary/500/10 shadow-lg shadow-primary/900/30'
-            : 'border-white/5 bg-white/5 hover:border-primary/500/40 hover:bg-white/10'
+            ? 'border-primary bg-primary/10 shadow-lg shadow-primary/30'
+            : 'border-border bg-surface hover:border-primary/70 hover:bg-surface/80'
         }`}
         role="button"
         tabIndex={0}
@@ -1309,15 +1309,15 @@ export default function AgentPage() {
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
-            <div className="flex items-center gap-2 text-sm font-semibold text-white">
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <span className="truncate">{thread.title}</span>
               {titleGeneratingThreadId === thread.id && (
-                <span title="Generating title..." className="animate-spin text-primary/400">⚙️</span>
+                <span title="Generating title..." className="animate-spin text-primary">⚙️</span>
               )}
-              {thread.pinned && <span title="Pinned" className="text-warning/300">📌</span>}
+              {thread.pinned && <span title="Pinned" className="text-warning">📌</span>}
               {thread.archived && <span title="Archived" className="text-foreground/60">📦</span>}
               {thread.branchedFrom && (
-                <span className="text-xs text-accent/300" title="Branched conversation">🌿</span>
+                <span className="text-xs text-accent" title="Branched conversation">🌿</span>
               )}
             </div>
             <div className="text-xs text-foreground/60 line-clamp-2 leading-relaxed">
@@ -1326,7 +1326,7 @@ export default function AgentPage() {
             <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-wide text-foreground/60">
               <span>{formatTimestamp(lastTimestamp)}</span>
               {thread.folder && (
-                <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-foreground/70">
+                <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] text-foreground/70">
                   📁 {thread.folder}
                 </span>
               )}
@@ -1341,7 +1341,7 @@ export default function AgentPage() {
                 event.stopPropagation();
                 setEditingOptionsThreadId(thread.id);
               }}
-              className="rounded-lg border border-white/10 bg-white/10 px-2 py-1 text-[11px] text-foreground hover:border-primary/400/40 hover:text-primary/200"
+              className="rounded-md border border-border bg-surface px-2 py-1 text-[11px] text-foreground hover:border-primary hover:text-primary"
               title="Thread options"
             >
               🛠️
@@ -1351,7 +1351,7 @@ export default function AgentPage() {
                 event.stopPropagation();
                 togglePinThread(thread.id);
               }}
-              className="rounded-lg border border-white/10 bg-white/10 px-2 py-1 text-[11px] text-foreground hover:border-warning/400/40 hover:text-warning/200"
+              className="rounded-md border border-border bg-surface px-2 py-1 text-[11px] text-foreground hover:border-warning hover:text-warning"
               title={thread.pinned ? 'Unpin thread' : 'Pin thread'}
             >
               📌
@@ -1361,7 +1361,7 @@ export default function AgentPage() {
                 event.stopPropagation();
                 toggleArchiveThread(thread.id);
               }}
-              className="rounded-lg border border-white/10 bg-white/10 px-2 py-1 text-[11px] text-foreground hover:border-accent/400/40 hover:text-accent/200"
+              className="rounded-md border border-border bg-surface px-2 py-1 text-[11px] text-foreground hover:border-accent hover:text-accent"
               title={thread.archived ? 'Unarchive thread' : 'Archive thread'}
             >
               {thread.archived ? '📂' : '📦'}
@@ -1371,7 +1371,7 @@ export default function AgentPage() {
                 event.stopPropagation();
                 deleteThread(thread.id);
               }}
-              className="rounded-lg border border-white/10 bg-white/10 px-2 py-1 text-[11px] text-rose-300 hover:border-rose-400/40 hover:text-rose-200"
+              className="rounded-md border border-border bg-surface px-2 py-1 text-[11px] text-danger hover:border-danger hover:text-danger/70"
               title="Delete thread"
             >
               ✕
@@ -1713,11 +1713,11 @@ export default function AgentPage() {
   return (
     <Toaster>
     <ErrorBoundary>
-    <div className="relative flex min-h-screen bg-gradient-to-br from-background via-surface to-background text-white">
+    <div className="relative flex min-h-screen bg-background text-foreground">
       {/* Mobile Menu Button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="fixed left-4 top-4 z-50 flex items-center gap-2 rounded-xl border border-white/10 bg-surface/90 px-3 py-2 text-sm font-medium text-foreground shadow-lg backdrop-blur transition hover:border-primary/500/40 hover:text-white lg:hidden"
+        className="fixed left-4 top-4 z-50 flex items-center gap-2 rounded-lg border border-border bg-surface/90 px-3 py-2 text-sm font-medium text-foreground shadow-lg backdrop-blur transition hover:border-primary hover:text-foreground lg:hidden"
         aria-label="Toggle sidebar"
       >
         <span className="text-base">{sidebarOpen ? '✕' : '☰'}</span>
@@ -1727,7 +1727,7 @@ export default function AgentPage() {
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-30 bg-surface/60 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
           aria-hidden="true"
         />
@@ -1736,7 +1736,7 @@ export default function AgentPage() {
       {/* Mobile menu button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2.5 rounded-lg bg-surface/90 border border-white/20 hover:border-primary/400/40 hover:bg-surface transition backdrop-blur-sm shadow-lg"
+        className="lg:hidden fixed top-4 left-4 z-50 p-2.5 rounded-lg bg-surface/90 border border-border hover:border-primary hover:bg-surface transition backdrop-blur-sm shadow-lg"
         aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
       >
         {sidebarOpen ? (
@@ -1753,7 +1753,7 @@ export default function AgentPage() {
       {/* Sidebar overlay on mobile */}
       {sidebarOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-30 bg-black/50 backdrop-blur-sm"
+          className="lg:hidden fixed inset-0 z-30 bg-surface/50 backdrop-blur-sm"
           onClick={() => setSidebarOpen(false)}
           aria-hidden="true"
         />
@@ -1761,20 +1761,20 @@ export default function AgentPage() {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-40 w-full sm:w-80 md:w-72 transform border-r border-white/10 bg-background/90 backdrop-blur transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-full sm:w-80 md:w-72 transform border-r border-border bg-background/90 backdrop-blur transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex h-full flex-col">
-          <div className="border-b border-white/10 px-5 py-5">
+          <div className="border-b border-border px-5 py-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/60">Conversations</p>
-                <h2 className="text-lg font-semibold text-white">Agent workspace</h2>
+                <h2 className="text-lg font-semibold text-foreground">Agent workspace</h2>
               </div>
               <button
                 onClick={createNewThread}
-                className="rounded-lg border border-primary/500/60 bg-primary/500/20 px-3 py-1.5 text-sm font-semibold text-primary/100 shadow-sm transition hover:border-primary/400 hover:bg-primary/500/30"
+                className="rounded-md border border-primary bg-primary/10 px-3 py-1.5 text-sm font-semibold text-primary shadow-sm transition hover:border-primary/70 hover:bg-primary/20"
                 title="Cmd/Ctrl + K"
               >
                 + New
@@ -1787,12 +1787,12 @@ export default function AgentPage() {
                 placeholder="Search by title, tag, or content"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/5 py-2 pl-9 pr-9 text-sm text-white placeholder:text-foreground/60 focus:border-primary/500/60 focus:outline-none focus:ring-2 focus:ring-primary/500/20"
+                className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-9 text-sm text-foreground placeholder:text-foreground/60 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute inset-y-0 right-3 flex items-center text-foreground/60 transition hover:text-white"
+                  className="absolute inset-y-0 right-3 flex items-center text-foreground/60 transition hover:text-foreground"
                   aria-label="Clear search"
                 >
                   ✕
@@ -1800,10 +1800,10 @@ export default function AgentPage() {
               )}
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-foreground/60">
-              <span className="rounded-full bg-white/5 px-2 py-0.5">⌘K new chat</span>
-              <span className="rounded-full bg-white/5 px-2 py-0.5">⌘⇧L delete chat</span>
+              <span className="rounded-full bg-surface px-2 py-0.5">⌘K new chat</span>
+              <span className="rounded-full bg-surface px-2 py-0.5">⌘⇧L delete chat</span>
               {showArchived && (
-                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-200">Showing archived</span>
+                <span className="rounded-full bg-success/10 px-2 py-0.5 text-success">Showing archived</span>
               )}
             </div>
           </div>
@@ -1817,8 +1817,8 @@ export default function AgentPage() {
                       onClick={() => setSelectedFolder(null)}
                       className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
                         selectedFolder === null
-                          ? 'border-primary/500/40 bg-primary/500/10 text-white'
-                          : 'border-white/5 bg-white/5 text-foreground/70 hover:border-primary/500/30 hover:text-white'
+                          ? 'border-primary bg-primary/10 text-foreground'
+                          : 'border-border bg-surface text-foreground/70 hover:border-primary hover:text-foreground'
                       }`}
                     >
                       All conversations
@@ -1829,8 +1829,8 @@ export default function AgentPage() {
                         onClick={() => setSelectedFolder(folder)}
                         className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
                           selectedFolder === folder
-                            ? 'border-primary/500/40 bg-primary/500/10 text-white'
-                            : 'border-white/5 bg-white/5 text-foreground/70 hover:border-primary/500/30 hover:text-white'
+                            ? 'border-primary bg-primary/10 text-foreground'
+                            : 'border-border bg-surface text-foreground/70 hover:border-primary hover:text-foreground'
                         }`}
                       >
                         {folder}
@@ -1858,8 +1858,8 @@ export default function AgentPage() {
                           }}
                           className={`rounded-full px-3 py-1 text-xs transition ${
                             isSelected
-                              ? 'bg-primary/500 text-black shadow shadow-primary/500/30'
-                              : 'bg-white/5 text-foreground/70 hover:bg-primary/500/20 hover:text-white'
+                              ? 'bg-primary text-background shadow shadow-primary/30'
+                              : 'bg-surface text-foreground/70 hover:bg-primary/20 hover:text-foreground'
                           }`}
                         >
                           #{tag}
@@ -1870,13 +1870,13 @@ export default function AgentPage() {
                 </div>
               )}
 
-              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-foreground/70">
+              <div className="flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-xs text-foreground/70">
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     checked={showArchived}
                     onChange={(event) => setShowArchived(event.target.checked)}
-                    className="h-4 w-4 rounded border-white/20 bg-surface text-primary/500 focus:ring-primary/500"
+                    className="h-4 w-4 rounded border-border bg-surface text-primary focus:ring-primary/20"
                   />
                   <span>Show archived ({archivedCount})</span>
                 </label>
@@ -1887,7 +1887,7 @@ export default function AgentPage() {
                       setSelectedTags([]);
                       setSearchQuery('');
                     }}
-                    className="text-[11px] font-medium text-primary/300 underline-offset-4 hover:underline"
+                    className="text-[11px] font-medium text-primary underline-offset-4 hover:underline"
                   >
                     Clear filters
                   </button>
@@ -1898,7 +1898,7 @@ export default function AgentPage() {
                 {loadingThreads ? (
                   <ThreadListSkeleton />
                 ) : filteredThreads.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-10 text-center text-sm text-foreground/60">
+                  <div className="rounded-lg border border-dashed border-border bg-surface px-4 py-10 text-center text-sm text-foreground/60">
                     {searchQuery || selectedTags.length > 0 || selectedFolder
                       ? 'No conversations match the current filters.'
                       : 'Create your first conversation to get started.'}
@@ -1931,26 +1931,26 @@ export default function AgentPage() {
             </div>
 
             {/* Quick Navigation Section */}
-            <div className="border-t border-white/10 px-5 py-4 mt-auto">
+            <div className="border-t border-border px-5 py-4 mt-auto">
               <p className="mb-3 text-[11px] uppercase tracking-[0.3em] text-foreground/60">Quick Navigation</p>
               <div className="space-y-2">
                 <a
                   href="/dashboard"
-                  className="flex items-center gap-2 w-full rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-sm text-foreground/70 transition hover:border-primary/500/30 hover:bg-primary/500/10 hover:text-white"
+                  className="flex items-center gap-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground/70 transition hover:border-primary hover:bg-primary/10 hover:text-foreground"
                 >
                   <span>🏠</span>
                   <span>Dashboard</span>
                 </a>
                 <a
                   href="/dashboard/smart-home"
-                  className="flex items-center gap-2 w-full rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-sm text-foreground/70 transition hover:border-primary/500/30 hover:bg-primary/500/10 hover:text-white"
+                  className="flex items-center gap-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground/70 transition hover:border-primary hover:bg-primary/10 hover:text-foreground"
                 >
                   <span>💡</span>
                   <span>Smart Home</span>
                 </a>
                 <a
                   href="/dashboard/finances"
-                  className="flex items-center gap-2 w-full rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-sm text-foreground/70 transition hover:border-primary/500/30 hover:bg-primary/500/10 hover:text-white"
+                  className="flex items-center gap-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground/70 transition hover:border-primary hover:bg-primary/10 hover:text-foreground"
                 >
                   <span>💰</span>
                   <span>Finances</span>
@@ -1964,38 +1964,38 @@ export default function AgentPage() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <div className="border-b border-white/10 bg-gradient-to-r from-background/95 to-surface/95 px-6 py-4 backdrop-blur-xl shadow-lg">
+        <div className="border-b border-border bg-surface px-6 py-4 backdrop-blur-xl shadow-lg">
           <div className="flex flex-wrap items-start justify-between gap-2 md:gap-4">
             {/* Left Section - Thread Info */}
             <div className="flex-1 min-w-0 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-primary/400/80">
-                  <span className="h-2 w-2 rounded-full bg-primary/400 animate-pulse"></span>
+                <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-primary">
+                  <span className="h-2 w-2 rounded-full bg-primary animate-pulse"></span>
                   <span>AI Agent</span>
                 </div>
                 {exportSuccess && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-200">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
                     ✓ Exported
                   </span>
                 )}
               </div>
 
               {/* Thread Title */}
-              <h1 className="text-xl font-bold text-white truncate max-w-full sm:max-w-2xl">
+              <h1 className="text-xl font-bold text-foreground truncate max-w-full sm:max-w-2xl">
                 {activeThread?.title || 'New Conversation'}
               </h1>
 
               {/* Thread Metadata */}
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 {/* Model */}
-                <div className="inline-flex items-center gap-1.5 rounded-lg border border-primary/500/30 bg-primary/500/10 px-2.5 py-1 text-primary/200">
+                <div className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-primary">
                   <span>🧠</span>
                   <span className="font-medium">{modelName}</span>
                 </div>
 
                 {/* Agent Style */}
                 {activeThread?.agentStyle && (
-                  <div className="inline-flex items-center gap-1.5 rounded-lg border border-accent/500/30 bg-accent/500/10 px-2.5 py-1 text-accent/200 capitalize">
+                  <div className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-2.5 py-1 text-accent capitalize">
                     <span>🎨</span>
                     <span>{activeThread.agentStyle}</span>
                   </div>
@@ -2003,7 +2003,7 @@ export default function AgentPage() {
 
                 {/* Tools Count */}
                 {activeThread?.enabledTools && activeThread.enabledTools.length > 0 && (
-                  <div className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-emerald-200">
+                  <div className="inline-flex items-center gap-1.5 rounded-lg border border-success/40 bg-success/10 px-2.5 py-1 text-success">
                     <span>🧰</span>
                     <span>{activeThread.enabledTools.length} tools</span>
                   </div>
@@ -2013,7 +2013,7 @@ export default function AgentPage() {
                 {activeThread && (
                   <button
                     onClick={() => setEditingOptionsThreadId(activeThread.id)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-foreground/70 transition hover:border-primary/500/30 hover:bg-primary/500/10 hover:text-white"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 text-foreground/70 transition hover:border-primary hover:bg-primary/10 hover:text-foreground"
                     title="Thread settings"
                   >
                     <span>⚙️</span>
@@ -2025,11 +2025,11 @@ export default function AgentPage() {
             {/* Right Section - Actions */}
             <div className="flex flex-wrap items-center gap-2">
               {/* Density Toggle */}
-              <div className="flex items-center overflow-hidden rounded-lg border border-white/10 bg-white/5">
+              <div className="flex items-center overflow-hidden rounded-lg border border-border bg-surface">
                 <button
                   onClick={() => setDensity('cozy')}
                   className={`px-2.5 py-1.5 text-xs transition ${
-                    !isCompact ? 'bg-primary/500/20 text-white' : 'text-foreground/60 hover:text-white'
+                    !isCompact ? 'bg-primary/20 text-foreground' : 'text-foreground/60 hover:text-foreground'
                   }`}
                   title="Cozy view"
                 >
@@ -2038,7 +2038,7 @@ export default function AgentPage() {
                 <button
                   onClick={() => setDensity('compact')}
                   className={`px-2.5 py-1.5 text-xs transition ${
-                    isCompact ? 'bg-primary/500/20 text-white' : 'text-foreground/60 hover:text-white'
+                    isCompact ? 'bg-primary/20 text-foreground' : 'text-foreground/60 hover:text-foreground'
                   }`}
                   title="Compact view"
                 >
@@ -2051,10 +2051,10 @@ export default function AgentPage() {
                 onClick={handleTTSToggle}
                 className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition ${
                   ttsState === 'speaking'
-                    ? 'border-success/400/50 bg-success/500/20 text-success/200'
+                    ? 'border-success bg-success/20 text-success'
                     : ttsState === 'paused'
-                    ? 'border-warning/400/50 bg-warning/500/20 text-warning/200'
-                    : 'border-white/10 bg-white/5 text-foreground hover:border-primary/400/40 hover:bg-primary/500/10 hover:text-white'
+                    ? 'border-warning bg-warning/20 text-warning'
+                    : 'border-border bg-surface text-foreground hover:border-primary hover:bg-primary/10 hover:text-foreground'
                 }`}
                 title={ttsState === 'speaking' ? 'Pause speech' : ttsState === 'paused' ? 'Resume speech' : 'Read last message'}
                 disabled={!activeThread || activeThread.messages.filter(m => m.role === 'assistant').length === 0}
@@ -2069,10 +2069,10 @@ export default function AgentPage() {
                 onClick={handleVoiceInput}
                 className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition ${
                   recordingState === 'recording'
-                    ? 'border-danger/400/50 bg-danger/500/20 text-danger/200 animate-pulse'
+                    ? 'border-danger bg-danger/20 text-danger animate-pulse'
                     : recordingState === 'processing'
-                    ? 'border-accent/400/50 bg-accent/500/20 text-accent/200'
-                    : 'border-white/10 bg-white/5 text-foreground hover:border-primary/400/40 hover:bg-primary/500/10 hover:text-white'
+                    ? 'border-accent bg-accent/20 text-accent'
+                    : 'border-border bg-surface text-foreground hover:border-primary hover:bg-primary/10 hover:text-foreground'
                 }`}
                 title={recordingState === 'recording' ? 'Stop recording' : 'Record voice input'}
                 disabled={recordingState === 'processing'}
@@ -2087,20 +2087,20 @@ export default function AgentPage() {
               <div className="relative more-menu-container">
                 <button
                   onClick={() => setShowMoreMenu(!showMoreMenu)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/10 hover:text-white"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs text-foreground transition hover:border-primary hover:bg-primary/10 hover:text-foreground"
                   title="More options"
                 >
                   ⚙️
                   <span className="hidden sm:inline">More</span>
                 </button>
                 {showMoreMenu && (
-                  <div className="absolute right-0 top-full mt-2 min-w-[180px] overflow-hidden rounded-lg border border-white/10 bg-surface/98 shadow-2xl backdrop-blur-xl z-50">
+                  <div className="absolute right-0 top-full mt-2 min-w-[180px] overflow-hidden rounded-lg border border-border bg-surface/98 shadow-2xl backdrop-blur-xl z-50">
                     <button
                       onClick={() => {
                         setShowMemoryModal(true);
                         setShowMoreMenu(false);
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/500/10 hover:text-white"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/10 hover:text-foreground"
                     >
                       <span>🧠</span>
                       <span>Agent Memory</span>
@@ -2110,7 +2110,7 @@ export default function AgentPage() {
                         setShowUserMemoriesModal(true);
                         setShowMoreMenu(false);
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/500/10 hover:text-white"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/10 hover:text-foreground"
                     >
                       <span>📚</span>
                       <span>My Notebook</span>
@@ -2120,7 +2120,7 @@ export default function AgentPage() {
                         setShowTTSSettings(true);
                         setShowMoreMenu(false);
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/500/10 hover:text-white"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/10 hover:text-foreground"
                     >
                       <span>🎚️</span>
                       <span>Voice Settings</span>
@@ -2133,7 +2133,7 @@ export default function AgentPage() {
                 <>
                   <button
                     onClick={() => setShowShareModal(true)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/10 hover:text-white"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs text-foreground transition hover:border-primary hover:bg-primary/10 hover:text-foreground"
                     title="Share conversation"
                   >
                     🔗
@@ -2142,24 +2142,24 @@ export default function AgentPage() {
                   <div className="relative export-menu-container">
                     <button
                       onClick={() => setShowExportMenu(!showExportMenu)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/10 hover:text-white"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs text-foreground transition hover:border-primary hover:bg-primary/10 hover:text-foreground"
                       title="Export conversation"
                     >
                       📥
                       <span className="hidden sm:inline">Export</span>
                     </button>
                     {showExportMenu && (
-                      <div className="absolute right-0 top-full mt-2 min-w-[160px] overflow-hidden rounded-lg border border-white/10 bg-surface/98 shadow-2xl backdrop-blur-xl z-50">
+                      <div className="absolute right-0 top-full mt-2 min-w-[160px] overflow-hidden rounded-lg border border-border bg-surface/98 shadow-2xl backdrop-blur-xl z-50">
                         <button
                           onClick={handleExportDownload}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/500/10 hover:text-white"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/10 hover:text-foreground"
                         >
                           <span>💾</span>
                           <span>Download</span>
                         </button>
                         <button
                           onClick={handleExportCopy}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/500/10 hover:text-white"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-primary/10 hover:text-foreground"
                         >
                           <span>📋</span>
                           <span>Copy</span>
@@ -2204,7 +2204,7 @@ export default function AgentPage() {
               metadataBadges.push(
                 <span
                   key="model"
-                  className="inline-flex items-center gap-1 rounded-full border border-accent/400/30 bg-accent/500/10 px-3 py-1 text-accent/300"
+                  className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-accent"
                 >
                   🤖 {msg.model}
                 </span>
@@ -2215,10 +2215,10 @@ export default function AgentPage() {
             if (msg.complexity) {
               const complexityIcon = msg.complexity === 'simple' ? '⚡' : msg.complexity === 'moderate' ? '⚙️' : '🧠';
               const complexityClass = msg.complexity === 'simple'
-                ? 'border-success/400/30 bg-success/500/10 text-success/300'
+                ? 'border-success/40 bg-success/10 text-success'
                 : msg.complexity === 'moderate'
-                ? 'border-warning/400/30 bg-warning/500/10 text-warning/300'
-                : 'border-danger/400/30 bg-danger/500/10 text-danger/300';
+                ? 'border-warning/40 bg-warning/10 text-warning'
+                : 'border-danger/40 bg-danger/10 text-danger';
 
               metadataBadges.push(
                 <span
@@ -2235,7 +2235,7 @@ export default function AgentPage() {
               metadataBadges.push(
                 <span
                   key="routing"
-                  className="inline-flex items-center gap-1 rounded-full border border-accent/400/30 bg-accent/500/10 px-3 py-1 text-accent/300"
+                  className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-accent"
                 >
                   🎯 {msg.routing === 'orchestrator' ? 'Multi-agent' : 'Direct'}
                 </span>
@@ -2246,7 +2246,7 @@ export default function AgentPage() {
               metadataBadges.push(
                 <span
                   key="tool-source"
-                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1"
+                  className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1"
                 >
                   ⚙️ {toolSourceLabel}
                 </span>
@@ -2256,7 +2256,7 @@ export default function AgentPage() {
               metadataBadges.push(
                 <span
                   key="tools"
-                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1"
+                  className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1"
                 >
                   🔧 {msg.toolsUsed.join(', ')}
                 </span>
@@ -2266,7 +2266,7 @@ export default function AgentPage() {
               metadataBadges.push(
                 <span
                   key="execution"
-                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1"
+                  className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1"
                 >
                   ⏱️ {(msg.executionTime / 1000).toFixed(2)}s
                 </span>
@@ -2277,7 +2277,7 @@ export default function AgentPage() {
               <button
                 key="copy"
                 onClick={() => copyMessageToClipboard(msg)}
-                className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-foreground transition hover:border-emerald-400/40 hover:bg-emerald-500/20 hover:text-white"
+                className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] text-foreground transition hover:border-success hover:bg-success/20 hover:text-foreground"
               >
                 📋 Copy
               </button>,
@@ -2290,7 +2290,7 @@ export default function AgentPage() {
                     <button
                       key="pause"
                       onClick={pause}
-                      className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/20 hover:text-white"
+                      className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary hover:bg-primary/20 hover:text-foreground"
                       title="Pause voice playback"
                     >
                       ⏸️ Pause
@@ -2301,7 +2301,7 @@ export default function AgentPage() {
                     <button
                       key="resume"
                       onClick={resume}
-                      className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/20 hover:text-white"
+                      className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary hover:bg-primary/20 hover:text-foreground"
                       title="Resume voice playback"
                     >
                       ▶️ Resume
@@ -2312,7 +2312,7 @@ export default function AgentPage() {
                   <button
                     key="stop"
                     onClick={stop}
-                    className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-foreground transition hover:border-rose-400/40 hover:bg-rose-500/20 hover:text-white"
+                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] text-foreground transition hover:border-danger hover:bg-danger/20 hover:text-foreground"
                     title="Stop voice playback"
                   >
                     ⏹️ Stop
@@ -2324,7 +2324,7 @@ export default function AgentPage() {
                     key="tts"
                     onClick={() => speak(msg.content, msg.id)}
                     disabled={ttsState !== 'idle'}
-                    className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/20 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-foreground/60"
+                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary hover:bg-primary/20 hover:text-foreground disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-foreground/60"
                     title="Read response aloud"
                   >
                     🔊 Listen
@@ -2336,7 +2336,7 @@ export default function AgentPage() {
                   key="regenerate"
                   onClick={() => regenerateResponse(msgIndex)}
                   disabled={loading || isStreaming}
-                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/20 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-foreground/60"
+                  className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary hover:bg-primary/20 hover:text-foreground disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-foreground/60"
                   title="Regenerate response"
                 >
                   🔄 Regenerate
@@ -2350,7 +2350,7 @@ export default function AgentPage() {
                   key="branch"
                   onClick={() => createBranch(msgIndex)}
                   disabled={loading || isStreaming}
-                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-foreground transition hover:border-accent/400/40 hover:bg-accent/500/20 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-foreground/60"
+                  className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] text-foreground transition hover:border-accent hover:bg-accent/20 hover:text-foreground disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-foreground/60"
                   title="Branch conversation from here"
                 >
                   🌿 Branch
@@ -2361,7 +2361,7 @@ export default function AgentPage() {
                   key="edit"
                   onClick={() => startEditMessage(msg.id, msg.content)}
                   disabled={loading || isStreaming}
-                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/20 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-foreground/60"
+                  className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] text-foreground transition hover:border-primary hover:bg-primary/20 hover:text-foreground disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-foreground/60"
                   title="Edit and re-run message"
                 >
                   ✏️ Edit
@@ -2379,7 +2379,7 @@ export default function AgentPage() {
                 }`}
               >
                 {isAssistant && (
-                  <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent/500 to-accent/500 text-sm font-semibold text-white shadow-lg">
+                  <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent text-sm font-semibold text-foreground shadow-lg">
                     AI
                   </div>
                 )}
@@ -2387,27 +2387,27 @@ export default function AgentPage() {
                 <div
                   className={`${bubbleWidthClass} ${bubblePaddingClass} relative rounded-3xl border shadow-xl shadow-black/30 backdrop-blur transition ${
                     isAssistant
-                      ? 'border-white/10 bg-white/5 text-foreground rounded-tl-xl'
-                      : 'border-primary/500/40 bg-gradient-to-br from-primary via-accent to-accent text-white rounded-tr-xl'
+                      ? 'border-border bg-surface text-foreground rounded-tl-xl'
+                      : 'border-primary bg-primary/10 text-foreground rounded-tr-xl'
                   }`}
                 >
                   <div className="mb-3 flex flex-wrap items-start justify-between gap-3 text-xs">
                     <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.3em]">
-                      <span className={isAssistant ? 'text-primary/200' : 'text-white/80'}>
+                      <span className={isAssistant ? 'text-primary/200' : 'text-foreground/80'}>
                         {isAssistant ? activeThread?.agentName ?? 'FROK Assistant' : 'You'}
                       </span>
                       {isAssistant && msg.routing && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-foreground">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[10px] text-foreground">
                           🧠 {msg.routing === 'orchestrator' ? 'Orchestrated' : 'Direct'}
                         </span>
                       )}
                       {isAssistant && msg.model && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-foreground">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[10px] text-foreground">
                           🧩 {msg.model}
                         </span>
                       )}
                       {isAssistant && msg.complexity && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] capitalize text-foreground">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[10px] capitalize text-foreground">
                           📊 {msg.complexity}
                         </span>
                       )}
@@ -2415,7 +2415,7 @@ export default function AgentPage() {
                     <div className="flex flex-wrap items-center gap-2 text-[11px] text-foreground/70">
                       {typeof msg.timestamp === 'number' && <span>{formatTimestamp(msg.timestamp)}</span>}
                       {typeof msg.latencyMs === 'number' && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-foreground">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[10px] text-foreground">
                           ⚡ {(msg.latencyMs / 1000).toFixed(1)}s
                         </span>
                       )}
@@ -2425,7 +2425,7 @@ export default function AgentPage() {
                   {msg.images && msg.images.length > 0 && (
                     <div className="mb-3 grid grid-cols-2 gap-2">
                       {msg.images.map((img, i) => (
-                        <div key={i} className="relative h-48 overflow-hidden rounded-xl border border-white/10">
+                        <div key={i} className="relative h-48 overflow-hidden rounded-xl border border-border">
                           <OptimizedImage
                             src={img.url}
                             alt={img.name}
@@ -2433,7 +2433,7 @@ export default function AgentPage() {
                             sizes="(max-width: 768px) 50vw, 25vw"
                             className="object-cover"
                           />
-                          <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1 text-[10px] text-white">
+                          <div className="absolute bottom-0 left-0 right-0 bg-surface/60 px-2 py-1 text-[10px] text-foreground">
                             {img.name}
                           </div>
                         </div>
@@ -2446,7 +2446,7 @@ export default function AgentPage() {
                       <textarea
                         value={editContent}
                         onChange={(event) => setEditContent(event.target.value)}
-                        className="w-full resize-none rounded-xl border border-white/10 bg-background/80 px-4 py-3 text-sm text-white focus:border-primary/500/60 focus:outline-none focus:ring-2 focus:ring-primary/500/30"
+                        className="w-full resize-none rounded-xl border border-border bg-background/80 px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                         rows={4}
                         autoFocus
                         placeholder="Edit your message..."
@@ -2455,13 +2455,13 @@ export default function AgentPage() {
                         <button
                           onClick={() => saveEditedMessage(msgIndex)}
                           disabled={!editContent.trim() || loading}
-                          className="inline-flex items-center gap-2 rounded-lg border border-primary/400/40 bg-primary/500/20 px-3 py-1.5 text-sm font-medium text-primary/100 transition hover:border-primary/300 hover:bg-primary/500/30 disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-foreground/60"
+                          className="inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/20 px-3 py-1.5 text-sm font-medium text-primary transition hover:border-primary/70 hover:bg-primary/20 disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-foreground/60"
                         >
                           💾 Save & Re-run
                         </button>
                         <button
                           onClick={cancelEdit}
-                          className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/10 px-3 py-1.5 text-sm font-medium text-foreground transition hover:border-rose-400/40 hover:bg-rose-500/20 hover:text-white"
+                          className="inline-flex items-center gap-2 rounded-lg border border-border bg-white/10 px-3 py-1.5 text-sm font-medium text-foreground transition hover:border-danger hover:bg-danger/20 hover:text-foreground"
                         >
                           ✕ Cancel
                         </button>
@@ -2476,7 +2476,7 @@ export default function AgentPage() {
                       {msg.files.map((file, index) => (
                         <span
                           key={index}
-                          className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1"
+                          className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1"
                         >
                           📎 {file.name}
                         </span>
@@ -2492,7 +2492,7 @@ export default function AgentPage() {
                   )}
 
                   {showActionRow && (
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3 text-xs text-foreground/70">
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-xs text-foreground/70">
                       <div className="flex flex-wrap gap-2">{metadataBadges}</div>
                       <div className="flex flex-wrap items-center gap-2 opacity-0 transition group-hover:opacity-100">
                         {actionButtons}
@@ -2502,7 +2502,7 @@ export default function AgentPage() {
                 </div>
 
                 {!isAssistant && (
-                  <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent text-sm font-semibold text-white shadow-lg">
+                  <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent text-sm font-semibold text-foreground shadow-lg">
                     U
                   </div>
                 )}
@@ -2511,37 +2511,37 @@ export default function AgentPage() {
           })}
           {isStreaming && streamingContent && (
             <div className="group flex items-start gap-3 justify-start">
-              <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent/500 to-accent/500 text-sm font-semibold text-white shadow-lg">
+              <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent text-sm font-semibold text-foreground shadow-lg">
                 AI
               </div>
 
               <div
-                className={`${isCompact ? 'max-w-2xl px-4 py-3' : 'max-w-3xl px-5 py-4'} rounded-3xl border border-primary/500/40 bg-gradient-to-br from-surface via-surface to-background/80 text-foreground shadow-xl shadow-black/30 backdrop-blur`}
+                className={`${isCompact ? 'max-w-2xl px-4 py-3' : 'max-w-3xl px-5 py-4'} rounded-3xl border border-primary/40 bg-gradient-to-br from-surface via-surface to-background/80 text-foreground shadow-xl shadow-black/30 backdrop-blur`}
               >
                 {streamingMeta && (
                   <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-primary/200">
                     {streamingMeta.routing && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/500/40 bg-primary/500/15 px-2 py-0.5 text-[10px]">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px]">
                         🧠 {streamingMeta.routing === 'orchestrator' ? 'Orchestrated' : 'Direct'}
                       </span>
                     )}
                     {streamingMeta.model && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/500/40 bg-primary/500/15 px-2 py-0.5 text-[10px]">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px]">
                         🧩 {streamingMeta.model}
                       </span>
                     )}
                     {streamingMeta.complexity && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/500/40 bg-primary/500/15 px-2 py-0.5 text-[10px] capitalize">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] capitalize">
                         📊 {streamingMeta.complexity}
                       </span>
                     )}
                     {streamingMeta.tools && streamingMeta.tools.length > 0 && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/500/40 bg-primary/500/15 px-2 py-0.5 text-[10px]">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px]">
                         🔧 {streamingMeta.tools.join(', ')}
                       </span>
                     )}
                     {streamingMeta.toolSource && formatToolSource(streamingMeta.toolSource) && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/500/40 bg-primary/500/15 px-2 py-0.5 text-[10px]">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px]">
                         ⚙️ {formatToolSource(streamingMeta.toolSource)}
                       </span>
                     )}
@@ -2557,11 +2557,11 @@ export default function AgentPage() {
           )}
           {loading && !isStreaming && (
             <div className="group flex items-start gap-3 justify-start">
-              <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent/500 to-accent/500 text-sm font-semibold text-white shadow-lg">
+              <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent text-sm font-semibold text-foreground shadow-lg">
                 AI
               </div>
 
-              <div className={`${isCompact ? 'max-w-2xl px-4 py-3' : 'max-w-3xl px-5 py-4'} rounded-3xl border border-white/10 bg-white/5 text-foreground shadow-xl shadow-black/30 backdrop-blur`}> 
+              <div className={`${isCompact ? 'max-w-2xl px-4 py-3' : 'max-w-3xl px-5 py-4'} rounded-3xl border border-border bg-surface text-foreground shadow-xl shadow-black/30 backdrop-blur`}> 
                 <div className="flex items-center gap-2 text-xs text-foreground/70">
                   <span className="h-2 w-2 animate-pulse rounded-full bg-primary/400"></span>
                   Preparing response…
@@ -2574,7 +2574,7 @@ export default function AgentPage() {
           {showScrollButton && (
             <button
               onClick={scrollToBottom}
-              className="fixed bottom-24 right-8 z-10 rounded-full border border-white/10 bg-background/80 p-3 text-white shadow-xl backdrop-blur transition hover:border-primary/500/40 hover:bg-primary/500/20 hover:text-white hover:shadow-primary/900/40"
+              className="fixed bottom-24 right-8 z-10 rounded-full border border-border bg-background/80 p-3 text-foreground shadow-xl backdrop-blur transition hover:border-primary/40 hover:bg-primary/500/20 hover:text-foreground hover:shadow-primary/900/40"
               title="Scroll to bottom"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2587,7 +2587,7 @@ export default function AgentPage() {
         </div>
 
         {/* Input Area */}
-        <div className="border-t border-white/10 bg-background/80 px-6 py-5 backdrop-blur">
+        <div className="border-t border-border bg-background/80 px-6 py-5 backdrop-blur">
           {/* Quick Actions */}
           <QuickActions
             onAction={handleSuggestedPrompt}
@@ -2603,7 +2603,7 @@ export default function AgentPage() {
                   {files.filter(f => f.type.startsWith('image/')).map((file, i) => (
                     <div
                       key={i}
-                      className="group relative h-24 overflow-hidden rounded-xl border border-white/10"
+                      className="group relative h-24 overflow-hidden rounded-xl border border-border"
                     >
                       <OptimizedImage
                         src={URL.createObjectURL(file)}
@@ -2617,11 +2617,11 @@ export default function AgentPage() {
                         onClick={() =>
                           setFiles((prev) => prev.filter((f) => f !== file))
                         }
-                        className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-rose-500/80 text-xs text-white opacity-0 transition hover:bg-rose-500 group-hover:opacity-100"
+                        className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-rose-500/80 text-xs text-foreground opacity-0 transition hover:bg-rose-500 group-hover:opacity-100"
                       >
                         ×
                       </button>
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-2 py-1 text-[10px] text-white">
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-2 py-1 text-[10px] text-foreground">
                         {file.name}
                       </div>
                     </div>
@@ -2634,7 +2634,7 @@ export default function AgentPage() {
                   {files.filter(f => !f.type.startsWith('image/')).map((file, i) => (
                     <div
                       key={i}
-                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-foreground"
+                      className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs text-foreground"
                     >
                       <span>📎 {file.name}</span>
                       <button
@@ -2667,11 +2667,11 @@ export default function AgentPage() {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={loading || recordingState !== 'idle'}
-              className="group relative inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/10 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-foreground/60"
+              className="group relative inline-flex items-center justify-center rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground transition hover:border-primary hover:bg-primary/10 hover:text-foreground disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-foreground/60"
               title="Attach images (Vision enabled)"
             >
               🖼️
-              <span className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded-md border border-white/10 bg-surface/90 px-2 py-1 text-[10px] text-white opacity-0 shadow-lg transition group-hover:opacity-100 whitespace-nowrap">
+              <span className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded-md border border-border bg-surface/90 px-2 py-1 text-[10px] text-foreground opacity-0 shadow-lg transition group-hover:opacity-100 whitespace-nowrap">
                 Vision enabled
               </span>
             </button>
@@ -2683,8 +2683,8 @@ export default function AgentPage() {
               className={`group relative inline-flex items-center justify-center rounded-xl border px-3 py-2 text-sm font-medium transition ${
                 recordingState === 'recording'
                   ? 'border-rose-500/60 bg-rose-500/20 text-rose-100 animate-pulse'
-                  : 'border-white/10 bg-white/5 text-foreground hover:border-primary/400/40 hover:bg-primary/500/10 hover:text-white'
-              } disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/5 disabled:text-foreground/60`}
+                  : 'border-border bg-surface text-foreground hover:border-primary hover:bg-primary/10 hover:text-foreground'
+              } disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-foreground/60`}
               title={recordingState === 'recording' ? 'Stop recording' : 'Voice input'}
             >
               {recordingState === 'recording' ? (
@@ -2698,7 +2698,7 @@ export default function AgentPage() {
                 '🎤'
               )}
               {recordingState === 'idle' && (
-                <span className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded-md border border-white/10 bg-surface/90 px-2 py-1 text-[10px] text-white opacity-0 shadow-lg transition group-hover:opacity-100 whitespace-nowrap">
+                <span className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded-md border border-border bg-surface/90 px-2 py-1 text-[10px] text-foreground opacity-0 shadow-lg transition group-hover:opacity-100 whitespace-nowrap">
                   Voice input
                 </span>
               )}
@@ -2714,7 +2714,7 @@ export default function AgentPage() {
                 }
               }}
               placeholder="Type a message... (Enter to send)"
-              className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white placeholder:text-foreground/60 focus:border-primary/500/60 focus:outline-none focus:ring-2 focus:ring-primary/500/20"
+              className="flex-1 rounded-xl border border-border bg-surface px-4 py-2 text-sm text-foreground placeholder:text-foreground/60 focus:border-primary/500/60 focus:outline-none focus:ring-2 focus:ring-primary/500/20"
               disabled={loading}
             />
             {isStreaming ? (
@@ -2728,7 +2728,7 @@ export default function AgentPage() {
               <button
                 onClick={sendMessage}
                 disabled={loading || (!input.trim() && files.length === 0)}
-                className="rounded-xl bg-primary/500 px-6 py-2 text-sm font-semibold text-background transition hover:bg-primary/600 disabled:cursor-not-allowed disabled:bg-white/5 disabled:text-foreground/60"
+                className="rounded-xl bg-primary/500 px-6 py-2 text-sm font-semibold text-background transition hover:bg-primary/600 disabled:cursor-not-allowed disabled:bg-surface disabled:text-foreground/60"
               >
                 {loading ? 'Sending...' : 'Send'}
               </button>
@@ -2744,7 +2744,7 @@ export default function AgentPage() {
           onClick={() => setShowShareModal(false)}
         >
           <div
-            className="w-full max-w-md rounded-2xl border border-white/10 bg-background/90 px-6 py-6 text-foreground shadow-2xl"
+            className="w-full max-w-md rounded-2xl border border-border bg-background/90 px-6 py-6 text-foreground shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
             <h2 className="text-lg font-semibold">Share Conversation</h2>
@@ -2763,11 +2763,11 @@ export default function AgentPage() {
                       type="text"
                       value={shareUrl}
                       readOnly
-                      className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+                      className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
                     />
                     <button
                       onClick={copyShareUrl}
-                      className="rounded-lg border border-primary/400/40 bg-primary/500/20 px-3 py-2 text-sm font-medium text-primary/100 transition hover:border-primary/300 hover:bg-primary/500/30"
+                      className="rounded-lg border border-primary/40 bg-primary/20 px-3 py-2 text-sm font-medium text-primary transition hover:border-primary/70 hover:bg-primary/20"
                     >
                       📋 Copy
                     </button>
@@ -2781,7 +2781,7 @@ export default function AgentPage() {
                     setShowShareModal(false);
                     setShareUrl(null);
                   }}
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-foreground transition hover:border-primary/400/40 hover:bg-primary/500/10 hover:text-white"
+                  className="w-full rounded-lg border border-border bg-surface px-4 py-2 text-sm text-foreground transition hover:border-primary hover:bg-primary/10 hover:text-foreground"
                 >
                   Close
                 </button>
@@ -2795,21 +2795,21 @@ export default function AgentPage() {
                   <button
                     onClick={() => handleShare()}
                     disabled={shareLoading}
-                    className="w-full rounded-lg border border-primary/400/40 bg-primary/500/20 px-4 py-2 text-sm font-medium text-primary/100 transition hover:border-primary/300 hover:bg-primary/500/30 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-foreground/60"
+                    className="w-full rounded-lg border border-primary/40 bg-primary/20 px-4 py-2 text-sm font-medium text-primary transition hover:border-primary/70 hover:bg-primary/20 disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-foreground/60"
                   >
                     {shareLoading ? 'Creating…' : 'Create permanent link'}
                   </button>
                   <button
                     onClick={() => handleShare(7)}
                     disabled={shareLoading}
-                    className="w-full rounded-lg border border-primary/400/40 bg-primary/500/20 px-4 py-2 text-sm font-medium text-primary/100 transition hover:border-primary/300 hover:bg-primary/500/30 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-foreground/60"
+                    className="w-full rounded-lg border border-primary/40 bg-primary/20 px-4 py-2 text-sm font-medium text-primary transition hover:border-primary/70 hover:bg-primary/20 disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-foreground/60"
                   >
                     {shareLoading ? 'Creating…' : 'Create link (7-day expiry)'}
                   </button>
                 </div>
                 <button
                   onClick={() => setShowShareModal(false)}
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-foreground transition hover:border-rose-400/40 hover:bg-rose-500/20 hover:text-white"
+                  className="w-full rounded-lg border border-border bg-surface px-4 py-2 text-sm text-foreground transition hover:border-danger hover:bg-danger/20 hover:text-foreground"
                 >
                   Cancel
                 </button>
