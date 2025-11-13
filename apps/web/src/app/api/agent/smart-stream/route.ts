@@ -229,6 +229,23 @@ export async function POST(req: NextRequest) {
           historyItems = conversationHistory;
         }
 
+        // Save user message to database (for persistence)
+        if (threadId && input_as_text) {
+          try {
+            const supabase = auth.user.supabase;
+            await supabase.from('chat_messages').insert({
+              thread_id: threadId,
+              user_id: user_id,
+              role: 'user',
+              content: input_as_text,
+              metadata: images.length > 0 ? { images } : null,
+            });
+          } catch (dbError) {
+            console.error('[smart-stream] User message save failed:', dbError);
+            // Continue anyway - streaming is more important than persistence
+          }
+        }
+
         // Smart routing: Classify query complexity
         const complexity = await classifyQuery(input_as_text);
         const { model: selectedModel, tools: selectedTools, orchestrate } = selectModelAndTools(
@@ -435,6 +452,39 @@ Examples of good formatting:
             for (let i = 0; i < output.length; i += chunkSize) {
               const delta = output.slice(i, Math.min(i + chunkSize, output.length));
               send({ delta, done: false });
+            }
+
+            // Save assistant message to database (for persistence)
+            if (threadId) {
+              try {
+                const supabase = auth.user.supabase;
+                await supabase.from('chat_messages').insert({
+                  thread_id: threadId,
+                  user_id: user_id,
+                  role: 'assistant',
+                  content: output,
+                  metadata: {
+                    model: metadataModel,
+                    route: orchestrate ? 'orchestrator' : 'direct',
+                    complexity,
+                    durationMs,
+                    tools: orchestrate ? undefined : finalToolNames,
+                  },
+                });
+
+                // Update thread's last_message_at timestamp
+                await supabase
+                  .from('chat_threads')
+                  .update({
+                    last_message_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', threadId)
+                  .eq('user_id', user_id);
+              } catch (dbError) {
+                console.error('[smart-stream] Assistant message save failed:', dbError);
+                // Don't fail the response - message already streamed to client
+              }
             }
 
             send({

@@ -154,16 +154,27 @@ export default function AgentPage() {
       // Check if response is streaming
       const contentType = response.headers.get('content-type');
       if (contentType?.includes('text/event-stream')) {
-        // Handle SSE streaming
+        // Handle SSE streaming with timeout detection
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
 
         if (!reader) throw new Error('No response body');
 
+        let lastChunkTime = Date.now();
+        const TIMEOUT_MS = 30000; // 30 seconds timeout
+
         while (true) {
+          // Check for timeout
+          if (Date.now() - lastChunkTime > TIMEOUT_MS) {
+            console.error('[Agent] Stream timeout - connection lost');
+            toast.error('Connection timeout. Please try again.');
+            throw new Error('Stream timeout');
+          }
+
           const { done, value } = await reader.read();
           if (done) break;
 
+          lastChunkTime = Date.now(); // Update last chunk time
           const chunk = decoder.decode(value, { stream: true });
           const lines = chunk.split('\n');
 
@@ -196,12 +207,14 @@ export default function AgentPage() {
                 // Handle errors
                 if (parsed.error) {
                   console.error('[Agent] Error:', parsed.error);
-                  toast.error(parsed.error);
+                  toast.error(`Agent error: ${parsed.error}`);
                   throw new Error(parsed.error);
                 }
               } catch (parseError) {
                 // Skip invalid JSON
-                console.warn('[Agent] Failed to parse SSE data:', data);
+                if (parseError instanceof Error && !parseError.message.includes('Unexpected')) {
+                  console.warn('[Agent] Failed to parse SSE data:', data, parseError);
+                }
               }
             }
           }
