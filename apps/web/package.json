@@ -27,6 +27,7 @@
     "@deepgram/sdk": "^4.11.2",
     "@frok/clients": "workspace:*",
     "@frok/ui": "workspace:*",
+    "@frok/voice-utils": "workspace:*",
     "@hookform/resolvers": "^5.2.2",
     "@scalar/nextjs-api-reference": "^0.8.23",
     "@sentry/nextjs": "^10.22.0",
