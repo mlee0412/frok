@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const input_as_text = String(body?.input_as_text ?? '').trim();
         const images = body?.images || [];
-        const userModel = body?.model; // From thread settings
+        const userModel = body?.user_model ?? body?.model; // From thread settings (new + legacy)
         const enabledTools = body?.enabled_tools; // From thread settings
         const conversationHistory = body?.conversation_history || []; // Previous messages
         const threadId = body?.thread_id; // For loading history from DB

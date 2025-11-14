@@ -126,9 +126,11 @@ export default function AgentPage() {
   ) => {
     setIsStreaming(true);
 
+    let assistantMessageId: string | null = null;
+
     try {
       // Create assistant message placeholder
-      const assistantMessageId = addMessage({
+      assistantMessageId = addMessage({
         threadId,
         role: 'assistant',
         content: '',
@@ -195,10 +197,7 @@ export default function AgentPage() {
                 }
 
                 // Handle final complete content
-                if (parsed.content && parsed.done) {
-                  // Final content already streamed via deltas, just mark as complete
-                  setStreamingMessageId(null);
-                }
+                // Final content already streamed via deltas, just mark as complete
 
                 // Handle metadata (model, tools, etc.)
                 if (parsed.metadata) {
@@ -231,6 +230,9 @@ export default function AgentPage() {
 
       setStreamingMessageId(null);
     } finally {
+      if (assistantMessageId) {
+        setStreamingMessageId(null);
+      }
       setIsStreaming(false);
     }
   };

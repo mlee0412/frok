@@ -18,7 +18,12 @@
     "noFallthroughCasesInSwitch": true,
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "baseUrl": "./src",
+    "paths": {
+      "@frok/voice-utils": ["../../packages/voice-utils/src/index.ts"],
+      "@frok/voice-utils/*": ["../../packages/voice-utils/src/*"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

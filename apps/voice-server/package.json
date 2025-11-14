@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@frok/voice-utils": "workspace:*",
     "@deepgram/sdk": "^4.11.2",
     "@supabase/supabase-js": "^2.39.7",
     "cors": "^2.8.5",

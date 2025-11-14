@@ -21,6 +21,7 @@
 import { STTService } from './sttService.js';
 import { TTSService } from './ttsService.js';
 import OpenAI from 'openai';
+import type { ResponseInput } from 'openai/resources/responses/responses';
 import { WebSocket } from 'ws';
 
 // Voice message types (adapted from @/types/voice)
@@ -195,12 +196,10 @@ export class VoiceSessionManager {
       this.llmAbortController = new AbortController();
       this.currentResponse = '';
 
-      const stream = await getOpenAI().chat.completions.create(
+      const stream = await getOpenAI().responses.stream(
         {
-          model: 'gpt-4o', // GPT-5 equivalent, use gpt-4o-mini for cost savings
-          messages: this.conversationHistory as any,
-          stream: true,
-          max_tokens: 500, // Limit response length for cost control
+          model: process.env['VOICE_RESPONSE_MODEL'] ?? 'gpt-5-mini',
+          input: this.buildResponseInput(),
           temperature: 0.7,
         },
         {
@@ -211,37 +210,38 @@ export class VoiceSessionManager {
       let textBuffer = '';
       const assistantMessage = { role: 'assistant', content: '' };
 
-      for await (const chunk of stream) {
-        const delta = chunk.choices[0]?.delta;
-
-        if (delta?.content) {
-          const token = delta.content;
+      for await (const event of stream) {
+        if (event.type === 'response.output_text.delta') {
+          const token = event.delta;
           textBuffer += token;
           assistantMessage.content += token;
 
-          // Send token to client for display
           this.send({
             type: 'llm_token',
             token,
           });
 
-          // Send to TTS on sentence boundaries or after 100+ chars
           if (this.shouldSendToTTS(textBuffer)) {
             await this.synthesizeText(textBuffer);
             textBuffer = '';
           }
         }
+
+        if (event.type === 'error') {
+          const message = (event as { error?: { message?: string } }).error?.message;
+          throw new Error(message ?? 'Realtime response error');
+        }
       }
 
-      // Send any remaining text to TTS
       if (textBuffer.trim().length > 0) {
         await this.synthesizeText(textBuffer);
       }
 
-      // Add to conversation history
       this.conversationHistory.push(assistantMessage);
+      if (this.conversationHistory.length > 40) {
+        this.conversationHistory = this.conversationHistory.slice(-40);
+      }
 
-      // Notify client that response is complete
       this.send({
         type: 'response_complete',
       });
@@ -256,6 +256,23 @@ export class VoiceSessionManager {
       console.error('[VoiceSessionManager] LLM processing error:', error);
       this.sendError('Failed to generate response');
     }
+  }
+
+  /**
+   * Convert stored chat history into Responses API inputs
+   */
+  private buildResponseInput(): ResponseInput {
+    const history = this.conversationHistory.map((message) => ({
+      role: message.role as 'system' | 'user' | 'assistant',
+      content: [
+        {
+          type: 'text' as const,
+          text: message.content,
+        },
+      ],
+    }));
+
+    return history as unknown as ResponseInput;
   }
 
   /**

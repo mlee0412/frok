@@ -17,7 +17,9 @@
       "@frok/config/*": ["packages/config/src/*"],
       "@frok/db/*": ["packages/db/src/*"],
       "@frok/clients": ["packages/clients/src/index.ts"],
-      "@frok/clients/*": ["packages/clients/src/*"]
+      "@frok/clients/*": ["packages/clients/src/*"],
+      "@frok/voice-utils": ["packages/voice-utils/src/index.ts"],
+      "@frok/voice-utils/*": ["packages/voice-utils/src/*"]
       /* add more as you create them */
     },
     /* Enhanced type safety */

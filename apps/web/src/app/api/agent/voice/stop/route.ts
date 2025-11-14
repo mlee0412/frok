@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api/withAuth';
 import { validate } from '@/lib/api/withValidation';
 import { z } from 'zod';
+import { removeVoiceAgent } from '@/lib/agent/voiceRegistry';
 
 // Request validation schema
 const VoiceStopRequestSchema = z.object({
@@ -39,11 +40,19 @@ export async function POST(req: NextRequest) {
   const body: VoiceStopRequest = validation.data.body;
 
   try {
-    // Note: In full implementation, this would:
-    // - Retrieve voice agent instance from session store
-    // - Call voiceAgent.stop()
-    // - Clean up WebRTC connections
-    // - Remove session from store
+    const agent = removeVoiceAgent(body.sessionId, auth.user.userId);
+
+    if (!agent) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: 'Voice session not found',
+        },
+        { status: 404 }
+      );
+    }
+
+    await agent.stop();
 
     console.log('[voice/stop] Session stopped:', {
       sessionId: body.sessionId,
