@@ -37,7 +37,7 @@ export interface ChatLayoutProps {
  * - Accessibility (keyboard navigation, ARIA)
  */
 export function ChatLayout({ children, className }: ChatLayoutProps) {
-  const { isSidebarOpen, isVoiceSheetOpen } = useUIState();
+  const { isSidebarOpen } = useUIState();
   const toggleSidebar = useUnifiedChatStore((state) => state.toggleSidebar);
 
   // Keyboard shortcuts
