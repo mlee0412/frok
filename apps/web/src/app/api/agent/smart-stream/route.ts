@@ -55,9 +55,10 @@ async function classifyQuery(query: string): Promise<'simple' | 'moderate' | 'co
   return 'moderate';
 }
 
+// AI Models - GPT-5 family with fallbacks
 const FAST_MODEL = process.env["OPENAI_FAST_MODEL"] ?? 'gpt-5-nano';
 const BALANCED_MODEL = process.env["OPENAI_BALANCED_MODEL"] ?? process.env["OPENAI_GENERAL_MODEL"] ?? 'gpt-5-mini';
-const COMPLEX_MODEL = process.env["OPENAI_COMPLEX_MODEL"] ?? process.env["OPENAI_AGENT_MODEL"] ?? 'gpt-5-think';
+const COMPLEX_MODEL = process.env["OPENAI_COMPLEX_MODEL"] ?? process.env["OPENAI_AGENT_MODEL"] ?? 'gpt-5-thinking';
 
 function selectModelAndTools(
   complexity: 'simple' | 'moderate' | 'complex',
@@ -72,15 +73,15 @@ function selectModelAndTools(
   const isSearchQuery = /\b(search|find|lookup|what is|who is|when|where|how to|recipe|news)\b/i.test(queryLower);
 
   // User preference overrides (from thread settings)
-  if (normalizedPreference === 'gpt-5-nano') {
+  if (normalizedPreference === 'gpt-5-nano' || normalizedPreference === 'nano' || normalizedPreference === 'fast') {
     return { model: FAST_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: false };
   }
 
-  if (normalizedPreference === 'gpt-5-mini') {
+  if (normalizedPreference === 'gpt-5-mini' || normalizedPreference === 'mini' || normalizedPreference === 'balanced') {
     return { model: BALANCED_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: false };
   }
 
-  if (normalizedPreference === 'gpt-5-think') {
+  if (normalizedPreference === 'gpt-5-thinking' || normalizedPreference === 'thinking' || normalizedPreference === 'reasoning') {
     return {
       model: COMPLEX_MODEL,
       tools: ['home_assistant', 'memory', 'web_search'],
@@ -88,12 +89,21 @@ function selectModelAndTools(
     };
   }
 
-  if (normalizedPreference === 'gpt-5') {
+  if (normalizedPreference === 'gpt-5' || normalizedPreference === 'gpt-5-pro' || normalizedPreference === 'pro') {
     return {
-      model: 'gpt-5',
+      model: 'gpt-5', // Main GPT-5 model
       tools: ['home_assistant', 'memory', 'web_search'],
       orchestrate: complexity !== 'simple',
     };
+  }
+
+  // Legacy model support (gpt-4o era)
+  if (normalizedPreference === 'gpt-4o' || normalizedPreference === 'gpt-4o-mini') {
+    return { model: BALANCED_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: false };
+  }
+
+  if (normalizedPreference === 'o1') {
+    return { model: COMPLEX_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: true };
   }
 
   // Smart routing based on complexity AND query type
@@ -498,7 +508,23 @@ Examples of good formatting:
               tools: orchestrate ? undefined : finalToolNames,
             });
           } else {
-            send({ error: 'No response from agent' });
+            // Enhanced error logging for blank responses
+            console.error('[smart-stream] No finalOutput from agent:', {
+              resultKeys: Object.keys(result),
+              finalOutput: result.finalOutput,
+              model: selectedModel,
+              complexity,
+              orchestrate,
+              hasTools: finalTools.length > 0,
+            });
+            send({
+              error: 'No response from agent',
+              debug: process.env.NODE_ENV === 'development' ? {
+                model: selectedModel,
+                resultType: typeof result.finalOutput,
+                resultValue: result.finalOutput
+              } : undefined
+            });
           }
         });
 

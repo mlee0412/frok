@@ -7,6 +7,8 @@ import { useUnifiedChatStore, useVoiceState, useActiveThread } from '@/store/uni
 import { useTranslations } from '@/lib/i18n/I18nProvider';
 import { VoiceVisualizer } from './VoiceVisualizer';
 import { TranscriptDisplay } from './TranscriptDisplay';
+import { WebSocketManager } from '@/lib/voice/websocketManager';
+import type { VoiceMessage } from '@/types/voice';
 
 // ============================================================================
 // VoiceInterface Component
@@ -37,15 +39,83 @@ export function VoiceInterface() {
 
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
+  const wsManagerRef = useRef<WebSocketManager | null>(null);
+
+  // Initialize WebSocket manager
+  useEffect(() => {
+    if (!wsManagerRef.current) {
+      wsManagerRef.current = new WebSocketManager({
+        url: '/api/voice/stream', // Voice WebSocket endpoint
+        onMessage: (message: VoiceMessage) => {
+          // Handle STT results (user speech transcription)
+          if (message.type === 'stt_result') {
+            useUnifiedChatStore.getState().setVoiceTranscript(message.text);
+          }
+          // Handle LLM tokens (assistant response streaming)
+          else if (message.type === 'llm_token') {
+            useUnifiedChatStore.getState().appendVoiceResponse(message.token);
+          }
+          // Handle response completion
+          else if (message.type === 'response_complete') {
+            setVoiceMode('idle');
+          }
+          // Handle errors
+          else if (message.type === 'error') {
+            console.error('[VoiceInterface] WebSocket error:', message.error);
+            setVoiceMode('error');
+            setVoiceConnected(false);
+          }
+        },
+        onOpen: () => {
+          console.log('[VoiceInterface] WebSocket connected');
+          setVoiceConnected(true);
+        },
+        onClose: () => {
+          console.log('[VoiceInterface] WebSocket disconnected');
+          setVoiceConnected(false);
+        },
+        onError: (error) => {
+          console.error('[VoiceInterface] WebSocket error:', error);
+          setVoiceMode('error');
+          setVoiceConnected(false);
+        },
+      });
+    }
+
+    return () => {
+      // Cleanup on unmount
+      if (wsManagerRef.current) {
+        wsManagerRef.current.disconnect();
+        wsManagerRef.current = null;
+      }
+    };
+  }, [setVoiceMode, setVoiceConnected]);
 
   // Start/Stop voice
-  function handleToggleVoice() {
+  async function handleToggleVoice() {
     if (mode === 'idle') {
-      // TODO: Connect to voice WebSocket
-      setVoiceConnected(true);
-      setVoiceMode('listening');
+      // Connect to voice WebSocket
+      if (wsManagerRef.current && activeThread?.id) {
+        try {
+          await wsManagerRef.current.connect();
+          // Send start command with thread context
+          wsManagerRef.current.send({
+            type: 'start',
+            threadId: activeThread.id,
+          });
+          setVoiceMode('listening');
+        } catch (error) {
+          console.error('[VoiceInterface] Failed to connect:', error);
+          setVoiceMode('idle');
+          setVoiceConnected(false);
+        }
+      }
     } else {
-      // Stop
+      // Stop and disconnect
+      if (wsManagerRef.current) {
+        wsManagerRef.current.send({ type: 'stop' });
+        wsManagerRef.current.disconnect();
+      }
       setVoiceMode('idle');
       setVoiceConnected(false);
     }

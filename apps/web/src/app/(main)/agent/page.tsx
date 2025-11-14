@@ -72,6 +72,7 @@ export default function AgentPage() {
   const [showTTSSettings, setShowTTSSettings] = useState(false);
   const [showMemoryModal, setShowMemoryModal] = useState(false);
   const [showUserMemories, setShowUserMemories] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>('auto');
 
   // ===== Message Sending =====
 
@@ -144,6 +145,7 @@ export default function AgentPage() {
           thread_id: threadId,
           input_as_text: content,
           images: fileUrls || [],
+          user_model: selectedModel !== 'auto' ? selectedModel : undefined, // Send model preference
         }),
       });
 
@@ -278,6 +280,23 @@ export default function AgentPage() {
           showBack={false}
           actions={
             <div className="flex items-center gap-2">
+              {/* Model Selector */}
+              <select
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+                className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface/80 transition focus:outline-none focus:ring-2 focus:ring-primary"
+                title="Select AI Model"
+              >
+                <option value="auto">🤖 Auto (Smart Routing)</option>
+                <optgroup label="GPT-5 Family">
+                  <option value="gpt-5">⚡ GPT-5 (Main Model)</option>
+                  <option value="gpt-5-mini">🎯 GPT-5 Mini (Balanced)</option>
+                  <option value="gpt-5-nano">💨 GPT-5 Nano (Fast)</option>
+                  <option value="gpt-5-thinking">🧠 GPT-5 Thinking (Reasoning)</option>
+                  <option value="gpt-5-pro">🚀 GPT-5 Pro (Enhanced)</option>
+                </optgroup>
+              </select>
+
               <button
                 onClick={() => setShowTTSSettings(true)}
                 className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface/80 transition"
