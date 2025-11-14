@@ -3,8 +3,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@frok/ui';
-import { useUnifiedChatStore, useVoiceState, useVoiceSettings, useActiveThread } from '@/store/unifiedChatStore';
+import {
+  useUnifiedChatStore,
+  useVoiceState,
+  useVoiceSettings,
+  useActiveThread,
+} from '@/store/unifiedChatStore';
 import { useTranslations } from '@/lib/i18n/I18nProvider';
+import {
+  startVoicePipeline,
+  stopVoicePipeline,
+  destroyVoicePipeline,
+} from '@/lib/voice/voicePipeline';
 
 // ============================================================================
 // VoiceSheet Component
@@ -27,12 +37,10 @@ export function VoiceSheet() {
   // const t = useTranslations('voice'); // TODO: Add i18n support for voice sheet
 
   // Store state
-  const { mode, connected, transcript, response } = useVoiceState();
+  const { mode, connected, transcript, response, connecting, error } = useVoiceState();
   const { voiceId, autoStart, vadSensitivity } = useVoiceSettings();
   const activeThread = useActiveThread();
   const toggleVoiceSheet = useUnifiedChatStore((state) => state.toggleVoiceSheet);
-  const setVoiceMode = useUnifiedChatStore((state) => state.setVoiceMode);
-  const setVoiceConnected = useUnifiedChatStore((state) => state.setVoiceConnected);
   const finalizeVoiceMessage = useUnifiedChatStore((state) => state.finalizeVoiceMessage);
   const setVoiceId = useUnifiedChatStore((state) => state.setVoiceId);
   const setAutoStartVoice = useUnifiedChatStore((state) => state.setAutoStartVoice);
@@ -52,13 +60,13 @@ export function VoiceSheet() {
   useEffect(() => {
     function handleEscape(e: KeyboardEvent) {
       if (e.key === 'Escape') {
-        toggleVoiceSheet();
+        void handleClose();
       }
     }
 
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [toggleVoiceSheet]);
+  }, [handleClose]);
 
   // Focus management
   useEffect(() => {
@@ -78,27 +86,32 @@ export function VoiceSheet() {
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      void destroyVoicePipeline();
+    };
+  }, []);
+
   // Start/Stop voice
-  function handleToggleVoice() {
-    if (mode === 'idle') {
-      // TODO: Connect to voice WebSocket
-      setVoiceConnected(true);
-      setVoiceMode('listening');
+  async function handleToggleVoice() {
+    if (mode === 'idle' || mode === 'error') {
+      await startVoicePipeline();
     } else {
-      // Stop and finalize
-      if (activeThread?.id) {
-        finalizeVoiceMessage(activeThread.id);
-      }
-      setVoiceMode('idle');
-      setVoiceConnected(false);
+      await stopVoicePipeline();
     }
   }
 
   // Finalize and close
-  function handleFinalize() {
+  async function handleFinalize() {
     if (activeThread?.id) {
       finalizeVoiceMessage(activeThread.id);
     }
+    await stopVoicePipeline();
+    toggleVoiceSheet();
+  }
+
+  async function handleClose() {
+    await stopVoicePipeline();
     toggleVoiceSheet();
   }
 
@@ -171,14 +184,16 @@ export function VoiceSheet() {
         <VoiceSheetContent
           mode={mode}
           connected={connected}
+          connecting={connecting}
           transcript={transcript}
           response={response}
           showSettings={showSettings}
           onToggleSettings={() => setShowSettings(!showSettings)}
-          onClose={toggleVoiceSheet}
+          onClose={handleClose}
           onToggleVoice={handleToggleVoice}
           onFinalize={handleFinalize}
           canvasRef={canvasRef}
+          error={error}
           // Settings
           voiceId={voiceId}
           autoStart={autoStart}
@@ -209,14 +224,16 @@ export function VoiceSheet() {
         <VoiceSheetContent
           mode={mode}
           connected={connected}
+          connecting={connecting}
           transcript={transcript}
           response={response}
           showSettings={showSettings}
           onToggleSettings={() => setShowSettings(!showSettings)}
-          onClose={toggleVoiceSheet}
+          onClose={handleClose}
           onToggleVoice={handleToggleVoice}
           onFinalize={handleFinalize}
           canvasRef={canvasRef}
+          error={error}
           // Settings
           voiceId={voiceId}
           autoStart={autoStart}
@@ -237,6 +254,7 @@ export function VoiceSheet() {
 interface VoiceSheetContentProps {
   mode: 'idle' | 'listening' | 'processing' | 'speaking' | 'error';
   connected: boolean;
+  connecting: boolean;
   transcript: string;
   response: string;
   showSettings: boolean;
@@ -245,6 +263,7 @@ interface VoiceSheetContentProps {
   onToggleVoice: () => void;
   onFinalize: () => void;
   canvasRef: React.RefObject<HTMLCanvasElement>;
+  error: string | null;
   // Settings
   voiceId: string | null;
   autoStart: boolean;
@@ -257,6 +276,7 @@ interface VoiceSheetContentProps {
 function VoiceSheetContent({
   mode,
   connected,
+  connecting,
   transcript,
   response,
   showSettings,
@@ -265,6 +285,7 @@ function VoiceSheetContent({
   onToggleVoice,
   onFinalize,
   canvasRef,
+  error,
   voiceId,
   autoStart,
   vadSensitivity,
@@ -287,7 +308,11 @@ function VoiceSheetContent({
         <div className="flex-1">
           <h2 className="text-sm font-semibold text-foreground">{t('title')}</h2>
           <p className="text-xs text-foreground/60">
-            {connected ? t('connected') : t('disconnected')}
+            {connecting
+              ? 'Connecting…'
+              : connected
+              ? t('connected')
+              : t('disconnected')}
           </p>
         </div>
         <button
@@ -312,6 +337,11 @@ function VoiceSheetContent({
           </svg>
         </button>
       </div>
+      {error && (
+        <div className="px-4 text-xs text-danger">
+          <div className="mt-2 rounded bg-danger/10 p-2">{error}</div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto p-4">
@@ -340,17 +370,20 @@ function VoiceSheetContent({
       <div className="flex flex-col gap-2 border-t border-border p-4">
         {/* Voice Toggle Button */}
         <Button
-          variant={mode === 'idle' ? 'primary' : 'outline'}
+          variant={mode === 'idle' || mode === 'error' ? 'primary' : 'outline'}
           size="lg"
           onClick={onToggleVoice}
           className="w-full"
+          disabled={
+            mode === 'idle' || mode === 'error' ? !connected || connecting : false
+          }
         >
-          {mode === 'idle' && (
+          {(mode === 'idle' || mode === 'error') && (
             <>
               <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
               </svg>
-              {t('start')}
+              {connecting ? 'Connecting…' : t('start')}
             </>
           )}
           {mode === 'listening' && (

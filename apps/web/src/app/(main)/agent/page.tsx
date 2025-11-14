@@ -126,9 +126,12 @@ export default function AgentPage() {
   ) => {
     setIsStreaming(true);
 
+    let assistantMessageId: string | null = null;
+    let appendedError = false;
+
     try {
       // Create assistant message placeholder
-      const assistantMessageId = addMessage({
+      assistantMessageId = addMessage({
         threadId,
         role: 'assistant',
         content: '',
@@ -195,10 +198,7 @@ export default function AgentPage() {
                 }
 
                 // Handle final complete content
-                if (parsed.content && parsed.done) {
-                  // Final content already streamed via deltas, just mark as complete
-                  setStreamingMessageId(null);
-                }
+                // Final content already streamed via deltas, just mark as complete
 
                 // Handle metadata (model, tools, etc.)
                 if (parsed.metadata) {
@@ -210,6 +210,14 @@ export default function AgentPage() {
                 if (parsed.error) {
                   console.error('[Agent] Error:', parsed.error);
                   toast.error(`Agent error: ${parsed.error}`);
+                  if (assistantMessageId && !appendedError) {
+                    appendStreamingContent(
+                      threadId,
+                      assistantMessageId,
+                      `⚠️ ${parsed.error}`
+                    );
+                    appendedError = true;
+                  }
                   throw new Error(parsed.error);
                 }
               } catch (parseError) {
@@ -230,7 +238,17 @@ export default function AgentPage() {
       }
 
       setStreamingMessageId(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unexpected error';
+      if (assistantMessageId && !appendedError) {
+        appendStreamingContent(threadId, assistantMessageId, `⚠️ ${message}`);
+        appendedError = true;
+      }
+      throw error;
     } finally {
+      if (assistantMessageId) {
+        setStreamingMessageId(null);
+      }
       setIsStreaming(false);
     }
   };

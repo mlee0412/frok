@@ -15,7 +15,24 @@
  * @see apps/web/src/app/api/agent/voice/start/route.ts
  */
 
+import { Runner, type AgentInputItem } from '@openai/agents';
+import OpenAI from 'openai';
+import { toFile } from 'openai/uploads';
 import type { EnhancedAgentSuite } from './orchestrator-enhanced';
+
+let sharedOpenAI: OpenAI | null = null;
+
+function getOpenAIClient(): OpenAI {
+  if (!sharedOpenAI) {
+    const apiKey = process.env['OPENAI_API_KEY'];
+    if (!apiKey) {
+      throw new Error('OPENAI_API_KEY is required for voice features');
+    }
+    sharedOpenAI = new OpenAI({ apiKey });
+  }
+
+  return sharedOpenAI;
+}
 
 /**
  * Voice configuration options
@@ -30,7 +47,7 @@ export interface VoiceAgentConfig {
   /** Enable voice activity detection */
   vadEnabled?: boolean;
   /** STT model selection */
-  sttModel?: 'whisper-1';
+  sttModel?: 'whisper-1' | 'whisper-1.5' | 'gpt-4o-mini-transcribe';
   /** Language code for STT (e.g., 'en', 'ko') */
   language?: string;
 }
@@ -55,26 +72,32 @@ export interface VoiceSession {
  * additional setup. This implementation provides a foundation
  * for future integration.
  *
- * Current Status: Placeholder implementation
- * - Frontend TTS is functional (useTextToSpeech hook)
- * - Full VoicePipeline integration pending official release
+ * Current Status: Server pipeline available
+ * - Uses OpenAI transcription + agent suite for responses
+ * - Streams synthesized speech back with OpenAI TTS
  */
 export class VoiceAgent {
   private session: VoiceSession | null = null;
   private config: Required<VoiceAgentConfig>;
+  private readonly agentSuite: EnhancedAgentSuite;
+  private readonly runner: Runner;
+  private history: AgentInputItem[];
 
   constructor(
-    _agentSuite: EnhancedAgentSuite,
+    agentSuite: EnhancedAgentSuite,
     config: VoiceAgentConfig
   ) {
+    this.agentSuite = agentSuite;
     this.config = {
       userId: config.userId,
       ttsVoice: config.ttsVoice ?? 'alloy',
       sttEnabled: config.sttEnabled ?? true,
       vadEnabled: config.vadEnabled ?? true,
-      sttModel: config.sttModel ?? 'whisper-1',
+      sttModel: config.sttModel ?? 'gpt-4o-mini-transcribe',
       language: config.language ?? 'en',
     };
+    this.runner = new Runner();
+    this.history = [...agentSuite.primer];
   }
 
   /**
@@ -130,16 +153,71 @@ export class VoiceAgent {
       throw new Error('No active voice session');
     }
 
-    // Placeholder: Full implementation requires OpenAI VoicePipeline
-    // For now, this demonstrates the expected flow:
-    //
-    // 1. STT: Convert audio to text using Whisper
-    // 2. Agent: Process text through orchestrator
-    // 3. TTS: Convert response to audio
-    // 4. Return audio buffer for playback
-
     console.log('[VoiceAgent] Processing voice input...');
-    throw new Error('VoicePipeline integration pending official OpenAI SDK release');
+
+    if (!this.config.sttEnabled) {
+      throw new Error('Speech-to-text is disabled for this session');
+    }
+
+    const openai = getOpenAIClient();
+
+    const audioBuffer = Buffer.from(new Uint8Array(_audioData));
+    const uploadable = await toFile(audioBuffer, 'voice-input.wav');
+
+    const transcription = await openai.audio.transcriptions.create({
+      file: uploadable,
+      model: this.config.sttModel,
+      language: this.config.language,
+    });
+
+    const transcript = transcription.text?.trim();
+
+    if (!transcript) {
+      throw new Error('No speech detected in audio sample');
+    }
+
+    const conversation: AgentInputItem[] = [
+      ...this.history,
+      {
+        role: 'user',
+        content: [{ type: 'input_text', text: transcript }],
+      },
+    ];
+
+    const result = await this.runner.run(this.agentSuite.general, conversation);
+    const finalOutput = String(result.finalOutput ?? '').trim();
+
+    if (!finalOutput) {
+      throw new Error('Assistant produced an empty response');
+    }
+
+    this.history = [
+      ...conversation,
+      {
+        role: 'assistant',
+        status: 'completed',
+        content: [{ type: 'output_text', text: finalOutput }],
+      },
+    ].slice(-20); // Keep the last 20 turns
+
+    this.session.isListening = false;
+    this.session.isSpeaking = true;
+
+    const speech = await openai.audio.speech.create({
+      model: 'gpt-4o-mini-tts',
+      voice: this.config.ttsVoice,
+      input: finalOutput,
+    });
+
+    const responseBuffer = Buffer.from(await speech.arrayBuffer());
+
+    this.session.isSpeaking = false;
+    this.session.isListening = true;
+
+    return responseBuffer.buffer.slice(
+      responseBuffer.byteOffset,
+      responseBuffer.byteOffset + responseBuffer.byteLength
+    );
   }
 
   /**
@@ -221,8 +299,11 @@ export function validateVoiceConfig(config: VoiceAgentConfig): {
     errors.push('Invalid ttsVoice selection');
   }
 
-  if (config.sttModel && config.sttModel !== 'whisper-1') {
-    errors.push('Only whisper-1 STT model is supported');
+  if (
+    config.sttModel &&
+    !['whisper-1', 'whisper-1.5', 'gpt-4o-mini-transcribe'].includes(config.sttModel)
+  ) {
+    errors.push('Unsupported STT model selection');
   }
 
   return {

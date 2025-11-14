@@ -86,6 +86,8 @@ interface UnifiedChatState {
   voiceTranscript: string; // Current user utterance being transcribed
   voiceResponse: string; // Current assistant response being streamed
   voiceConnected: boolean;
+  voiceConnecting: boolean;
+  voiceError: string | null;
 
   // Voice Settings (Persisted)
   voiceId: string | null; // ElevenLabs voice ID
@@ -127,6 +129,8 @@ interface UnifiedChatActions {
   // ===== Voice Actions =====
   setVoiceMode: (mode: VoiceState) => void;
   setVoiceConnected: (connected: boolean) => void;
+  setVoiceConnecting: (connecting: boolean) => void;
+  setVoiceError: (error: string | null) => void;
   setVoiceTranscript: (transcript: string) => void;
   appendVoiceResponse: (token: string) => void;
   clearVoiceTranscript: () => void;
@@ -179,6 +183,8 @@ const initialState: UnifiedChatState = {
   voiceTranscript: '',
   voiceResponse: '',
   voiceConnected: false,
+  voiceConnecting: false,
+  voiceError: null,
 
   // Voice Settings (Persisted)
   voiceId: null,
@@ -364,6 +370,14 @@ export const useUnifiedChatStore = create<UnifiedChatStore>()(
 
       setVoiceConnected: (connected: boolean) => {
         set({ voiceConnected: connected });
+      },
+
+      setVoiceConnecting: (connecting: boolean) => {
+        set({ voiceConnecting: connecting });
+      },
+
+      setVoiceError: (error: string | null) => {
+        set({ voiceError: error });
       },
 
       setVoiceTranscript: (transcript: string) => {
@@ -560,8 +574,10 @@ export const useVoiceState = () =>
     useShallow((state) => ({
       mode: state.voiceMode,
       connected: state.voiceConnected,
+      connecting: state.voiceConnecting,
       transcript: state.voiceTranscript,
       response: state.voiceResponse,
+      error: state.voiceError,
     }))
   );
 

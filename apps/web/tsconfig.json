@@ -4,7 +4,7 @@
     "jsx": "preserve",
     "noEmit": true,
     "baseUrl": "src",
-    "types": ["@testing-library/jest-dom"],
+    "types": ["@testing-library/jest-dom", "node"],
     "paths": {
       "@/*": [
         "*"
@@ -20,6 +20,12 @@
       ],
       "@frok/types/*": [
         "../../../packages/types/src/*"
+      ],
+      "@frok/voice-utils": [
+        "../../../packages/voice-utils/src/index.ts"
+      ],
+      "@frok/voice-utils/*": [
+        "../../../packages/voice-utils/src/*"
       ]
     },
     "allowJs": true,

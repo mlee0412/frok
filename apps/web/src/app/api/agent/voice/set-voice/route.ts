@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api/withAuth';
 import { validate } from '@/lib/api/withValidation';
 import { z } from 'zod';
+import { getVoiceAgent } from '@/lib/agent/voiceRegistry';
 
 // Request validation schema
 const SetVoiceRequestSchema = z.object({
@@ -40,10 +41,19 @@ export async function POST(req: NextRequest) {
   const body: SetVoiceRequest = validation.data.body;
 
   try {
-    // Note: In full implementation, this would:
-    // - Retrieve voice agent instance from session store
-    // - Call voiceAgent.setVoice(body.voice)
-    // - Update session configuration
+    const agent = getVoiceAgent(body.sessionId, auth.user.userId);
+
+    if (!agent) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: 'Voice session not found',
+        },
+        { status: 404 }
+      );
+    }
+
+    await agent.setVoice(body.voice);
 
     console.log('[voice/set-voice] Voice updated:', {
       sessionId: body.sessionId,

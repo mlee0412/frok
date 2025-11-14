@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { Agent, AgentInputItem, Runner, withTrace } from '@openai/agents';
 import { performance } from 'perf_hooks';
 import { createAgentSuite, getReasoningEffort, supportsReasoning } from '@/lib/agent/orchestrator';
+import { extractFinalText } from '@/lib/agent/extractAgentOutput';
 import { withAuth } from '@/lib/api/withAuth';
 import { withRateLimit, rateLimitPresets } from '@/lib/api/withRateLimit';
 
@@ -173,7 +174,7 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const input_as_text = String(body?.input_as_text ?? '').trim();
         const images = body?.images || [];
-        const userModel = body?.model; // From thread settings
+        const userModel = body?.user_model ?? body?.model; // From thread settings (new + legacy)
         const enabledTools = body?.enabled_tools; // From thread settings
         const conversationHistory = body?.conversation_history || []; // Previous messages
         const threadId = body?.thread_id; // For loading history from DB
@@ -455,16 +456,17 @@ Examples of good formatting:
 
           const durationMs = Math.round(performance.now() - startedAt);
 
-          if (result.finalOutput) {
-            const output = String(result.finalOutput);
+          const output = extractFinalText(result);
+
+          if (output) {
+            const finalText = output.trim();
             const chunkSize = 64;
 
-            for (let i = 0; i < output.length; i += chunkSize) {
-              const delta = output.slice(i, Math.min(i + chunkSize, output.length));
+            for (let i = 0; i < finalText.length; i += chunkSize) {
+              const delta = finalText.slice(i, Math.min(i + chunkSize, finalText.length));
               send({ delta, done: false });
             }
 
-            // Save assistant message to database (for persistence)
             if (threadId) {
               try {
                 const supabase = auth.user.supabase;
@@ -472,7 +474,7 @@ Examples of good formatting:
                   thread_id: threadId,
                   user_id: user_id,
                   role: 'assistant',
-                  content: output,
+                  content: finalText,
                   metadata: {
                     model: metadataModel,
                     route: orchestrate ? 'orchestrator' : 'direct',
@@ -482,7 +484,6 @@ Examples of good formatting:
                   },
                 });
 
-                // Update thread's last_message_at timestamp
                 await supabase
                   .from('chat_threads')
                   .update({
@@ -493,12 +494,11 @@ Examples of good formatting:
                   .eq('user_id', user_id);
               } catch (dbError) {
                 console.error('[smart-stream] Assistant message save failed:', dbError);
-                // Don't fail the response - message already streamed to client
               }
             }
 
             send({
-              content: output,
+              content: finalText,
               done: true,
               metrics: {
                 durationMs,
@@ -508,10 +508,8 @@ Examples of good formatting:
               tools: orchestrate ? undefined : finalToolNames,
             });
           } else {
-            // Enhanced error logging for blank responses
-            console.error('[smart-stream] No finalOutput from agent:', {
-              resultKeys: Object.keys(result),
-              finalOutput: result.finalOutput,
+            console.error('[smart-stream] No final output resolved from agent:', {
+              resultKeys: result ? Object.keys(result) : [],
               model: selectedModel,
               complexity,
               orchestrate,
@@ -519,11 +517,13 @@ Examples of good formatting:
             });
             send({
               error: 'No response from agent',
-              debug: process.env.NODE_ENV === 'development' ? {
-                model: selectedModel,
-                resultType: typeof result.finalOutput,
-                resultValue: result.finalOutput
-              } : undefined
+              debug:
+                process.env.NODE_ENV === 'development'
+                  ? {
+                      model: selectedModel,
+                      resultType: typeof result?.finalOutput,
+                    }
+                  : undefined,
             });
           }
         });

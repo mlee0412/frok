@@ -70,7 +70,7 @@ export interface EnhancedAgentSuiteOptions {
 const FAST_MODEL_FALLBACK = process.env['OPENAI_FAST_MODEL'] ?? 'gpt-5-nano';
 const BALANCED_MODEL_FALLBACK = process.env['OPENAI_GENERAL_MODEL'] ?? 'gpt-5-mini';
 const COMPLEX_MODEL_FALLBACK =
-  process.env['OPENAI_COMPLEX_MODEL'] ?? process.env['OPENAI_AGENT_MODEL'] ?? 'gpt-5-think';
+  process.env['OPENAI_COMPLEX_MODEL'] ?? process.env['OPENAI_AGENT_MODEL'] ?? 'gpt-5-thinking';
 
 // ============================================================================
 // Helper Functions

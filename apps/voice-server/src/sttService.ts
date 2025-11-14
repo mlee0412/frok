@@ -18,10 +18,13 @@
  */
 
 import { createClient } from '@deepgram/sdk';
+import OpenAI from 'openai';
+import { toFile } from 'openai/uploads';
 
 export class STTService {
   private deepgram: ReturnType<typeof createClient>;
   private apiKey: string;
+  private openai?: OpenAI;
 
   constructor() {
     this.apiKey = process.env['DEEPGRAM_API_KEY'] || '';
@@ -31,6 +34,13 @@ export class STTService {
     }
 
     this.deepgram = createClient(this.apiKey);
+
+    const openaiKey = process.env['OPENAI_API_KEY'];
+    if (openaiKey) {
+      this.openai = new OpenAI({ apiKey: openaiKey });
+    } else {
+      console.warn('[STTService] OPENAI_API_KEY not set. Falling back to Deepgram only.');
+    }
   }
 
   /**
@@ -39,36 +49,36 @@ export class STTService {
    */
   async transcribe(audio: Uint8Array): Promise<string | null> {
     try {
-      if (!this.apiKey) {
-        throw new Error('DEEPGRAM_API_KEY not configured');
+      const openaiTranscript = await this.tryOpenAITranscription(audio);
+      if (openaiTranscript) {
+        return openaiTranscript;
       }
-
-      const { result } = await this.deepgram.listen.prerecorded.transcribeFile(
-        Buffer.from(audio),
-        {
-          model: 'nova-2',
-          smart_format: true, // Auto-format text (dates, numbers, etc.)
-          punctuate: true, // Add punctuation
-          language: 'en', // Or 'auto' for detection
-        }
-      );
-
-      const transcript = result?.results?.channels?.[0]?.alternatives?.[0]?.transcript;
-
-      if (!transcript || transcript.trim().length === 0) {
-        console.warn('[STTService] No speech detected in audio');
-        return null;
-      }
-
-      return transcript.trim();
     } catch (error) {
-      console.error('[STTService] Transcription error:', error);
-
-      // Optional: Fallback to Whisper
-      // return this.fallbackToWhisper(audio);
-
-      throw error;
+      console.warn('[STTService] OpenAI transcription failed, falling back to Deepgram:', error);
     }
+
+    if (!this.apiKey) {
+      throw new Error('DEEPGRAM_API_KEY not configured');
+    }
+
+    const { result } = await this.deepgram.listen.prerecorded.transcribeFile(
+      Buffer.from(audio),
+      {
+        model: 'nova-2',
+        smart_format: true, // Auto-format text (dates, numbers, etc.)
+        punctuate: true, // Add punctuation
+        language: 'en', // Or 'auto' for detection
+      }
+    );
+
+    const transcript = result?.results?.channels?.[0]?.alternatives?.[0]?.transcript;
+
+    if (!transcript || transcript.trim().length === 0) {
+      console.warn('[STTService] No speech detected in audio');
+      return null;
+    }
+
+    return transcript.trim();
   }
 
   /**
@@ -122,5 +132,21 @@ export class STTService {
    */
   cleanup() {
     // No persistent connections in batch mode
+  }
+
+  private async tryOpenAITranscription(audio: Uint8Array): Promise<string | null> {
+    if (!this.openai) {
+      return null;
+    }
+
+    const file = await toFile(Buffer.from(audio), 'utterance.wav');
+    const transcription = await this.openai.audio.transcriptions.create({
+      file,
+      model: 'gpt-4o-mini-transcribe',
+      language: 'en',
+    });
+
+    const text = transcription.text?.trim();
+    return text && text.length > 0 ? text : null;
   }
 }

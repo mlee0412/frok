@@ -13,6 +13,7 @@ import { NextRequest } from 'next/server';
 import { AgentInputItem, Runner, withTrace, type Tool } from '@openai/agents';
 import { performance } from 'perf_hooks';
 import { createEnhancedAgentSuite } from '@/lib/agent/orchestrator-enhanced';
+import { extractFinalText } from '@/lib/agent/extractAgentOutput';
 import { withAuth } from '@/lib/api/withAuth';
 import { withRateLimit, rateLimitPresets } from '@/lib/api/withRateLimit';
 import { agentCache } from '@/lib/cache/agentCache';
@@ -451,31 +452,30 @@ export async function POST(req: NextRequest) {
           // Process & Stream Response
           // ============================================================================
 
-          if (result.finalOutput) {
-            const output = String(result.finalOutput);
+          const output = extractFinalText(result);
 
-            // Try to parse structured output
+          if (output) {
+            const finalText = output.trim();
+
             let parsedResponse = null;
             if (useStructuredOutputs) {
               try {
-                parsedResponse = parseAgentResponse(output);
+                parsedResponse = parseAgentResponse(finalText);
                 console.log('[smart-stream] Structured output:', parsedResponse.type);
               } catch (e) {
                 console.warn('[smart-stream] Failed to parse structured output, using raw:', e);
               }
             }
 
-            // Stream output
             const chunkSize = 64;
-            for (let i = 0; i < output.length; i += chunkSize) {
-              const delta = output.slice(i, Math.min(i + chunkSize, output.length));
+            for (let i = 0; i < finalText.length; i += chunkSize) {
+              const delta = finalText.slice(i, Math.min(i + chunkSize, finalText.length));
               send({ type: 'content_delta', delta, done: false });
             }
 
-            // Send final response
             send({
               type: 'done',
-              content: output,
+              content: finalText,
               structuredOutput: parsedResponse,
               done: true,
               metrics: {
@@ -487,28 +487,31 @@ export async function POST(req: NextRequest) {
               tools: toolsConfig.metadata.map((t) => t.displayName),
             });
 
-            // ============================================================================
-            // Cache Response
-            // ============================================================================
-
             if (useCache && images.length === 0) {
-              await agentCache.set(input_as_text, user_id, {
-                output,
-                metadata: {
-                  model: metadataModel,
-                  complexity,
-                  routing: orchestrate ? 'orchestrator' : 'direct',
-                  toolsUsed: toolsConfig.metadata.map((t) => t.displayName),
-                  toolSource: suite ? 'enhanced' : 'custom',
-                  models: orchestrate ? suite?.models : { general: metadataModel },
+              await agentCache.set(
+                input_as_text,
+                user_id,
+                {
+                  output: finalText,
+                  metadata: {
+                    model: metadataModel,
+                    complexity,
+                    routing: orchestrate ? 'orchestrator' : 'direct',
+                    toolsUsed: toolsConfig.metadata.map((t) => t.displayName),
+                    toolSource: suite ? 'enhanced' : 'custom',
+                    models: orchestrate ? suite?.models : { general: metadataModel },
+                  },
                 },
-              }, threadId);
+                threadId,
+              );
             }
           } else {
-            send(createErrorResponse('No response from agent', {
-              errorCode: 'NO_RESPONSE',
-              retryable: true,
-            }));
+            send(
+              createErrorResponse('No response from agent', {
+                errorCode: 'NO_RESPONSE',
+                retryable: true,
+              })
+            );
           }
         });
 

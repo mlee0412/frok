@@ -529,6 +529,8 @@ describe('unifiedChatStore', () => {
         storeHook.result.current.setVoiceMode('listening');
         storeHook.result.current.setVoiceConnected(true);
         storeHook.result.current.setVoiceTranscript('Hello');
+        storeHook.result.current.setVoiceConnecting(true);
+        storeHook.result.current.setVoiceError('Oops');
       });
 
       voiceHook.rerender();
@@ -536,6 +538,8 @@ describe('unifiedChatStore', () => {
       expect(voiceHook.result.current.mode).toBe('listening');
       expect(voiceHook.result.current.connected).toBe(true);
       expect(voiceHook.result.current.transcript).toBe('Hello');
+      expect(voiceHook.result.current.connecting).toBe(true);
+      expect(voiceHook.result.current.error).toBe('Oops');
     });
   });
 

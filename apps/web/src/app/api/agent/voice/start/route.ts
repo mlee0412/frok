@@ -12,6 +12,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { validate } from '@/lib/api/withValidation';
 import { createEnhancedAgentSuite } from '@/lib/agent/orchestrator-enhanced';
 import { createVoiceAgent, validateVoiceConfig } from '@/lib/agent/voiceAgent';
+import { registerVoiceAgent } from '@/lib/agent/voiceRegistry';
 import type { VoiceAgentConfig } from '@/lib/agent/voiceAgent';
 import { z } from 'zod';
 
@@ -22,6 +23,7 @@ const VoiceStartRequestSchema = z.object({
     sttEnabled: z.boolean().optional(),
     vadEnabled: z.boolean().optional(),
     language: z.string().optional(),
+    sttModel: z.enum(['whisper-1', 'whisper-1.5', 'gpt-4o-mini-transcribe']).optional(),
   }).optional(),
 });
 
@@ -53,6 +55,7 @@ export async function POST(req: NextRequest) {
       ttsVoice: body.config?.ttsVoice ?? 'alloy',
       sttEnabled: body.config?.sttEnabled ?? true,
       vadEnabled: body.config?.vadEnabled ?? true,
+      sttModel: body.config?.sttModel ?? 'gpt-4o-mini-transcribe',
       language: body.config?.language ?? 'en',
     };
 
@@ -79,6 +82,7 @@ export async function POST(req: NextRequest) {
 
     // 7. Start voice session
     const sessionId = await voiceAgent.start();
+    registerVoiceAgent(sessionId, auth.user.userId, voiceAgent);
 
     console.log('[voice/start] Session started:', {
       sessionId,
@@ -90,6 +94,7 @@ export async function POST(req: NextRequest) {
       ok: true,
       sessionId,
       config: voiceConfig,
+      ttlSeconds: 15 * 60,
     });
   } catch (error: unknown) {
     console.error('[voice/start] Error:', error);

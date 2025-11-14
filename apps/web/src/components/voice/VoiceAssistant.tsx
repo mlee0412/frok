@@ -1,264 +1,42 @@
-/**
- * Voice Assistant - Main Container Component
- *
- * Real-time voice conversation interface with MediaSource audio playback.
- *
- * Features:
- * - Real-time audio capture and streaming
- * - Voice Activity Detection for barge-in
- * - MediaSource Extensions for low-latency playback
- * - WebSocket communication with backend
- * - Conversation transcript display
- *
- * Architecture:
- * - Browser: MediaRecorder → WebSocket → AudioStreamer
- * - Server: STT (Deepgram) → LLM (GPT-5) → TTS (ElevenLabs)
- */
-
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { Mic, MicOff, VolumeX } from 'lucide-react';
 import { Button, Card } from '@frok/ui';
-import { useUnifiedChatStore, useVoiceState, useVoiceSettings, useThreadMessages } from '@/store/unifiedChatStore';
-import { AudioStreamer, base64ToUint8Array } from './AudioStreamer';
-import { VoiceActivityDetector } from './VoiceActivityDetector';
-import { WebSocketManager } from '@/lib/voice/websocketManager';
-import type { VoiceMessage } from '@/types/voice';
+import {
+  useUnifiedChatStore,
+  useVoiceState,
+  useThreadMessages,
+} from '@/store/unifiedChatStore';
+import {
+  startVoicePipeline,
+  stopVoicePipeline,
+  interruptVoicePipeline,
+  destroyVoicePipeline,
+} from '@/lib/voice/voicePipeline';
 
 export function VoiceAssistant() {
-  // Voice state from unified store
-  const { mode, connected, transcript, response } = useVoiceState();
-  const { vadSensitivity } = useVoiceSettings();
-
-  // Voice actions from unified store
-  const setVoiceMode = useUnifiedChatStore((state) => state.setVoiceMode);
-  const setVoiceConnected = useUnifiedChatStore((state) => state.setVoiceConnected);
-  const setVoiceTranscript = useUnifiedChatStore((state) => state.setVoiceTranscript);
-  const appendVoiceResponse = useUnifiedChatStore((state) => state.appendVoiceResponse);
-  const clearVoiceResponse = useUnifiedChatStore((state) => state.clearVoiceResponse);
-  const finalizeVoiceMessage = useUnifiedChatStore((state) => state.finalizeVoiceMessage);
-
-  // Get active thread for voice message finalization
+  const { mode, connected, transcript, response, connecting, error } = useVoiceState();
   const activeThreadId = useUnifiedChatStore((state) => state.activeThreadId);
   const threadMessages = useThreadMessages(activeThreadId);
 
-  const wsManagerRef = useRef<WebSocketManager | null>(null);
-  const audioStreamerRef = useRef<AudioStreamer | null>(null);
-  const vadRef = useRef<VoiceActivityDetector | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-
-  const [error, setError] = useState<string | null>(null);
-
-  // ============================================================================
-  // Initialization
-  // ============================================================================
-
   useEffect(() => {
-    // Initialize WebSocket connection
-    wsManagerRef.current = new WebSocketManager({
-      url: '/api/voice/stream',
-      onMessage: handleWebSocketMessage,
-      onError: handleWebSocketError,
-      onOpen: () => {
-        console.log('[VoiceAssistant] WebSocket connected');
-        setVoiceConnected(true);
-        setError(null);
-      },
-      onClose: () => {
-        console.log('[VoiceAssistant] WebSocket disconnected');
-        setVoiceConnected(false);
-      },
-    });
-
-    wsManagerRef.current.connect();
-
-    // Initialize Audio Streamer for playback
-    audioStreamerRef.current = new AudioStreamer({
-      mimeType: 'audio/mpeg',
-      onPlaybackStart: () => setVoiceMode('speaking'),
-      onPlaybackEnd: () => setVoiceMode('idle'),
-      onError: (err) => {
-        console.error('[VoiceAssistant] Audio playback error:', err);
-        setError('Audio playback failed');
-      },
-    });
-
     return () => {
-      cleanup();
+      void destroyVoicePipeline();
     };
   }, []);
 
-  // ============================================================================
-  // WebSocket Message Handling
-  // ============================================================================
-
-  const handleWebSocketMessage = (msg: VoiceMessage) => {
-    switch (msg.type) {
-      case 'stt_result':
-        // Display user's transcribed speech
-        setVoiceTranscript(msg.text);
-        setVoiceMode('processing');
-        break;
-
-      case 'llm_token':
-        // Stream assistant response text
-        appendVoiceResponse(msg.token);
-        break;
-
-      case 'audio_chunk':
-        // Play audio chunk
-        if (mode !== 'speaking') setVoiceMode('speaking');
-        const audioData = base64ToUint8Array(msg.data);
-        audioStreamerRef.current?.appendAudio(audioData);
-        break;
-
-      case 'response_complete':
-        // Response finished, finalize to thread messages
-        if (activeThreadId) {
-          finalizeVoiceMessage(activeThreadId);
-        }
-        setVoiceMode('idle');
-        break;
-
-      case 'error':
-        console.error('[VoiceAssistant] Server error:', msg.error);
-        setError(msg.error);
-        setVoiceMode('error');
-        break;
-    }
+  const handleStart = async () => {
+    await startVoicePipeline();
   };
 
-  const handleWebSocketError = (error: Event) => {
-    console.error('[VoiceAssistant] WebSocket error:', error);
-    setError('Connection error');
-    setVoiceMode('error');
-  };
-
-  // ============================================================================
-  // Audio Recording
-  // ============================================================================
-
-  const startListening = async () => {
-    try {
-      setError(null);
-      setVoiceMode('listening');
-
-      // Request microphone permission
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 16000,
-        },
-      });
-
-      streamRef.current = stream;
-
-      // Initialize VAD for interruption detection
-      const audioContext = new AudioContext({ sampleRate: 16000 });
-      const source = audioContext.createMediaStreamSource(stream);
-
-      vadRef.current = new VoiceActivityDetector(audioContext, {
-        threshold: vadSensitivity,
-        onSpeechStart: () => {
-          // If assistant is speaking, interrupt
-          if (mode === 'speaking') {
-            handleInterrupt();
-          }
-        },
-      });
-
-      source.connect(vadRef.current.analyser);
-
-      // Start capturing and sending audio
-      startAudioCapture(stream);
-    } catch (error) {
-      console.error('[VoiceAssistant] Microphone error:', error);
-      setError('Failed to access microphone');
-      setVoiceMode('error');
-    }
-  };
-
-  const startAudioCapture = (stream: MediaStream) => {
-    try {
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus',
-      });
-
-      mediaRecorderRef.current = mediaRecorder;
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64 = (reader.result as string).split(',')[1];
-            wsManagerRef.current?.send({
-              type: 'audio_input',
-              data: base64,
-            });
-          };
-          reader.readAsDataURL(event.data);
-        }
-      };
-
-      // Send audio chunks every 300ms
-      mediaRecorder.start(300);
-    } catch (error) {
-      console.error('[VoiceAssistant] MediaRecorder error:', error);
-      setError('Failed to start recording');
-      setVoiceMode('error');
-    }
-  };
-
-  const stopListening = () => {
-    setVoiceMode('idle');
-
-    // Stop media recorder
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-
-    // Release microphone
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-
-    // Cleanup VAD
-    vadRef.current?.destroy();
-    vadRef.current = null;
+  const handleStop = async () => {
+    await stopVoicePipeline();
   };
 
   const handleInterrupt = () => {
-    console.log('[VoiceAssistant] Interrupting...');
-
-    // Send interrupt signal to server
-    wsManagerRef.current?.send({ type: 'interrupt' });
-
-    // Stop audio playback immediately
-    audioStreamerRef.current?.stop();
-
-    // Clear response state
-    clearVoiceResponse();
-    setVoiceMode('idle');
+    interruptVoicePipeline();
   };
-
-  // ============================================================================
-  // Cleanup
-  // ============================================================================
-
-  const cleanup = () => {
-    stopListening();
-    wsManagerRef.current?.disconnect();
-    audioStreamerRef.current?.destroy();
-  };
-
-  // ============================================================================
-  // Render
-  // ============================================================================
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -277,11 +55,12 @@ export function VoiceAssistant() {
           </div>
 
           <div className="text-sm font-medium text-foreground">
-            {mode === 'listening' && '🎤 Listening...'}
-            {mode === 'processing' && '🤔 Thinking...'}
-            {mode === 'speaking' && '🗣️ Speaking...'}
-            {mode === 'idle' && '💤 Idle'}
-            {mode === 'error' && '⚠️ Error'}
+            {connecting && '🔄 Connecting...'}
+            {!connecting && mode === 'listening' && '🎤 Listening...'}
+            {!connecting && mode === 'processing' && '🤔 Thinking...'}
+            {!connecting && mode === 'speaking' && '🗣️ Speaking...'}
+            {!connecting && mode === 'idle' && '💤 Idle'}
+            {!connecting && mode === 'error' && '⚠️ Error'}
           </div>
         </div>
 
@@ -341,19 +120,19 @@ export function VoiceAssistant() {
             <Button
               variant="primary"
               size="lg"
-              onClick={startListening}
-              disabled={!connected}
+              onClick={handleStart}
+              disabled={!connected || connecting}
               className="gap-2"
             >
               <Mic className="h-5 w-5" />
-              Start Listening
+              {connecting ? 'Connecting' : 'Start Listening'}
             </Button>
           ) : (
             <>
               <Button
                 variant="outline"
                 size="lg"
-                onClick={stopListening}
+                onClick={handleStop}
                 className="gap-2"
               >
                 <MicOff className="h-5 w-5" />
