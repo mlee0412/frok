@@ -1,9 +1,15 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { Button } from '@frok/ui';
-import { useUnifiedChatStore, useVoiceState, useActiveThread, useVoiceSettings } from '@/store/unifiedChatStore';
+import {
+  useUnifiedChatStore,
+  useVoiceState,
+  useActiveThread,
+  useVoiceSettings,
+  type Thread,
+} from '@/store/unifiedChatStore';
 import { useTranslations } from '@/lib/i18n/I18nProvider';
 import { VoiceVisualizer } from './VoiceVisualizer';
 import { TranscriptDisplay } from './TranscriptDisplay';
@@ -11,6 +17,29 @@ import { WebSocketManager } from '@/lib/voice/websocketManager';
 import { AudioStreamer, base64ToUint8Array } from './AudioStreamer';
 import { VoiceActivityDetector } from './VoiceActivityDetector';
 import type { VoiceMessage } from '@/types/voice';
+import type { ChatThreadRow } from '@/types/database';
+
+const mapThreadRowToThread = (row: ChatThreadRow): Thread => ({
+  id: row.id,
+  title: row.title || 'New Chat',
+  agentId: row.agent_id || 'default',
+  createdAt: new Date(row.created_at).getTime(),
+  updatedAt: new Date(row.updated_at).getTime(),
+  lastMessageAt: row.last_message_at ? new Date(row.last_message_at).getTime() : undefined,
+  archived: row.archived || false,
+  pinned: row.pinned || false,
+  folder: row.folder || undefined,
+  tags: row.tags || undefined,
+  messageCount: row.message_count || 0,
+  metadata: {
+    toolsEnabled: row.tools_enabled ?? true,
+    enabledTools: row.enabled_tools || [],
+    model: row.model || undefined,
+    agentStyle: row.agent_style || undefined,
+    projectContext: row.project_context || undefined,
+    ...(row.metadata || {}),
+  },
+});
 
 // ============================================================================
 // VoiceInterface Component
@@ -36,8 +65,6 @@ export function VoiceInterface() {
   const activeThread = useActiveThread();
   const { vadSensitivity } = useVoiceSettings();
   const toggleVoiceSheet = useUnifiedChatStore((state) => state.toggleVoiceSheet);
-  const createThread = useUnifiedChatStore((state) => state.createThread);
-  const setActiveThread = useUnifiedChatStore((state) => state.setActiveThread);
   const finalizeVoiceMessage = useUnifiedChatStore((state) => state.finalizeVoiceMessage);
 
   // Refs
@@ -48,6 +75,63 @@ export function VoiceInterface() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const ensureServerThread = useCallback(async (): Promise<string> => {
+    const currentThread = activeThread;
+    if (currentThread && currentThread.id.startsWith('thread_')) {
+      return currentThread.id;
+    }
+
+    const response = await fetch('/api/chat/threads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: currentThread?.title || 'Voice Chat',
+        agentId: currentThread?.agentId || 'voice',
+      }),
+    });
+
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok || !json.ok || !json.thread) {
+      throw new Error(json.error || 'Failed to create chat thread');
+    }
+
+    const serverThread = mapThreadRowToThread(json.thread as ChatThreadRow);
+
+    useUnifiedChatStore.setState((state) => {
+      const messages = { ...state.messages };
+      const drafts = { ...state.draftMessage };
+
+      if (currentThread) {
+        const existingMessages = state.messages[currentThread.id] || [];
+        messages[serverThread.id] = existingMessages.map((msg) => ({
+          ...msg,
+          threadId: serverThread.id,
+        }));
+        delete messages[currentThread.id];
+
+        if (drafts[currentThread.id]) {
+          drafts[serverThread.id] = drafts[currentThread.id];
+          delete drafts[currentThread.id];
+        }
+      } else if (!messages[serverThread.id]) {
+        messages[serverThread.id] = [];
+      }
+
+      const filteredThreads = state.threads.filter(
+        (thread) => thread.id !== serverThread.id && thread.id !== currentThread?.id
+      );
+
+      return {
+        threads: [serverThread, ...filteredThreads],
+        activeThreadId: serverThread.id,
+        messages,
+        draftMessage: drafts,
+      };
+    });
+
+    return serverThread.id;
+  }, [activeThread]);
 
   const stopListening = () => {
     const store = useUnifiedChatStore.getState();
@@ -115,14 +199,9 @@ export function VoiceInterface() {
       }
 
       setError(null);
-
       await wsManagerRef.current.connect();
 
-      let threadId = activeThread?.id;
-      if (!threadId) {
-        threadId = createThread('Voice Chat', 'voice');
-        setActiveThread(threadId);
-      }
+      const threadId = await ensureServerThread();
 
       const store = useUnifiedChatStore.getState();
       store.clearVoiceTranscript();
@@ -155,6 +234,11 @@ export function VoiceInterface() {
       source.connect(vadRef.current.analyser);
 
       startAudioCapture(stream);
+
+      wsManagerRef.current.send({
+        type: 'start',
+        threadId,
+      });
     } catch (err) {
       console.error('[VoiceInterface] Microphone error:', err);
       setError('Failed to access microphone');
