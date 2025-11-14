@@ -107,7 +107,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         error: 'WebSocket upgrade not supported',
-        hint: 'Vercel serverless functions do not support WebSocket connections. To use voice features, deploy this endpoint to Railway, Render, Fly.io, or a self-hosted server with WebSocket support.',
+        hint: 'Vercel serverless functions do not support native WebSocket upgrades.',
+        nextSteps: [
+          'Deploy /api/voice/stream to a WebSocket-friendly host (Railway, Fly.io, Render, or your own Node server).',
+          'Expose the URL via NEXT_PUBLIC_VOICE_WS_URL so the frontend connects to the right origin.',
+          'Review docs/architecture/VOICE_ASSISTANT_DESIGN.md for full streaming requirements (Deepgram STT + ElevenLabs TTS).',
+        ],
         documentation: 'https://vercel.com/docs/functions/runtimes#websockets',
       },
       { status: 501 } // 501 Not Implemented

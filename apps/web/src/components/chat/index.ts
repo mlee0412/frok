@@ -12,7 +12,6 @@ export {
 
 export { ChatSidebar } from './ChatSidebar';
 export { ChatBottomSheet } from './ChatBottomSheet';
-export { VoiceSheet } from './VoiceSheet';
 
 // Message Components
 export { MessageCard, type MessageCardProps } from './MessageCard';

@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { Button } from '@frok/ui';
-import { useUnifiedChatStore, useVoiceState, useActiveThread } from '@/store/unifiedChatStore';
+import { useUnifiedChatStore, useVoiceState, useActiveThread, useVoiceSettings } from '@/store/unifiedChatStore';
 import { useTranslations } from '@/lib/i18n/I18nProvider';
 import { VoiceVisualizer } from './VoiceVisualizer';
 import { TranscriptDisplay } from './TranscriptDisplay';
 import { WebSocketManager } from '@/lib/voice/websocketManager';
+import { AudioStreamer, base64ToUint8Array } from './AudioStreamer';
+import { VoiceActivityDetector } from './VoiceActivityDetector';
 import type { VoiceMessage } from '@/types/voice';
 
 // ============================================================================
@@ -32,101 +34,247 @@ export function VoiceInterface() {
   const isVoiceSheetOpen = useUnifiedChatStore((state) => state.isVoiceSheetOpen);
   const { mode, connected, transcript, response } = useVoiceState();
   const activeThread = useActiveThread();
+  const { vadSensitivity } = useVoiceSettings();
   const toggleVoiceSheet = useUnifiedChatStore((state) => state.toggleVoiceSheet);
-  const setVoiceMode = useUnifiedChatStore((state) => state.setVoiceMode);
-  const setVoiceConnected = useUnifiedChatStore((state) => state.setVoiceConnected);
+  const createThread = useUnifiedChatStore((state) => state.createThread);
+  const setActiveThread = useUnifiedChatStore((state) => state.setActiveThread);
   const finalizeVoiceMessage = useUnifiedChatStore((state) => state.finalizeVoiceMessage);
 
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
   const wsManagerRef = useRef<WebSocketManager | null>(null);
+  const audioStreamerRef = useRef<AudioStreamer | null>(null);
+  const vadRef = useRef<VoiceActivityDetector | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Initialize WebSocket manager
-  useEffect(() => {
-    if (!wsManagerRef.current) {
-      wsManagerRef.current = new WebSocketManager({
-        url: '/api/voice/stream', // Voice WebSocket endpoint
-        onMessage: (message: VoiceMessage) => {
-          // Handle STT results (user speech transcription)
-          if (message.type === 'stt_result') {
-            useUnifiedChatStore.getState().setVoiceTranscript(message.text);
-          }
-          // Handle LLM tokens (assistant response streaming)
-          else if (message.type === 'llm_token') {
-            useUnifiedChatStore.getState().appendVoiceResponse(message.token);
-          }
-          // Handle response completion
-          else if (message.type === 'response_complete') {
-            setVoiceMode('idle');
-          }
-          // Handle errors
-          else if (message.type === 'error') {
-            console.error('[VoiceInterface] WebSocket error:', message.error);
-            setVoiceMode('error');
-            setVoiceConnected(false);
-          }
-        },
-        onOpen: () => {
-          console.log('[VoiceInterface] WebSocket connected');
-          setVoiceConnected(true);
-        },
-        onClose: () => {
-          console.log('[VoiceInterface] WebSocket disconnected');
-          setVoiceConnected(false);
-        },
-        onError: (error) => {
-          console.error('[VoiceInterface] WebSocket error:', error);
-          setVoiceMode('error');
-          setVoiceConnected(false);
+  const stopListening = () => {
+    const store = useUnifiedChatStore.getState();
+    store.setVoiceMode('idle');
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    vadRef.current?.destroy();
+    vadRef.current = null;
+
+    wsManagerRef.current?.send({ type: 'end_utterance' });
+  };
+
+  const handleInterrupt = () => {
+    console.log('[VoiceInterface] Interrupting assistant playback');
+    wsManagerRef.current?.send({ type: 'interrupt' });
+    audioStreamerRef.current?.stop();
+    const store = useUnifiedChatStore.getState();
+    store.clearVoiceResponse();
+    store.setVoiceMode('idle');
+  };
+
+  const startAudioCapture = (stream: MediaStream) => {
+    try {
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus',
+      });
+
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64 = (reader.result as string).split(',')[1];
+            wsManagerRef.current?.send({
+              type: 'audio_input',
+              data: base64,
+            });
+          };
+          reader.readAsDataURL(event.data);
+        }
+      };
+
+      mediaRecorder.start(300);
+    } catch (err) {
+      console.error('[VoiceInterface] MediaRecorder error:', err);
+      setError('Failed to start recording');
+      const store = useUnifiedChatStore.getState();
+      store.setVoiceMode('error');
+    }
+  };
+
+  const startListening = async () => {
+    try {
+      if (!wsManagerRef.current) {
+        throw new Error('Voice connection unavailable');
+      }
+
+      setError(null);
+
+      await wsManagerRef.current.connect();
+
+      let threadId = activeThread?.id;
+      if (!threadId) {
+        threadId = createThread('Voice Chat', 'voice');
+        setActiveThread(threadId);
+      }
+
+      const store = useUnifiedChatStore.getState();
+      store.clearVoiceTranscript();
+      store.clearVoiceResponse();
+      store.setVoiceMode('listening');
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 16000,
         },
       });
-    }
 
-    return () => {
-      // Cleanup on unmount
-      if (wsManagerRef.current) {
-        wsManagerRef.current.disconnect();
-        wsManagerRef.current = null;
+      streamRef.current = stream;
+
+      const audioContext = new AudioContext({ sampleRate: 16000 });
+      const source = audioContext.createMediaStreamSource(stream);
+
+      vadRef.current = new VoiceActivityDetector(audioContext, {
+        threshold: vadSensitivity,
+        onSpeechStart: () => {
+          if (useUnifiedChatStore.getState().voiceMode === 'speaking') {
+            handleInterrupt();
+          }
+        },
+      });
+
+      source.connect(vadRef.current.analyser);
+
+      startAudioCapture(stream);
+    } catch (err) {
+      console.error('[VoiceInterface] Microphone error:', err);
+      setError('Failed to access microphone');
+      const store = useUnifiedChatStore.getState();
+      store.setVoiceMode('error');
+    }
+  };
+
+  const cleanup = () => {
+    stopListening();
+    if (wsManagerRef.current) {
+      wsManagerRef.current.disconnect();
+      wsManagerRef.current = null;
+    }
+    if (audioStreamerRef.current) {
+      audioStreamerRef.current.destroy();
+      audioStreamerRef.current = null;
+    }
+  };
+
+  // Initialize WebSocket + audio streaming
+  useEffect(() => {
+    const handleMessage = (message: VoiceMessage) => {
+      const store = useUnifiedChatStore.getState();
+
+      switch (message.type) {
+        case 'stt_result':
+          store.setVoiceTranscript(message.text);
+          store.setVoiceMode('processing');
+          break;
+        case 'llm_token':
+          store.appendVoiceResponse(message.token);
+          break;
+        case 'audio_chunk':
+          store.setVoiceMode('speaking');
+          audioStreamerRef.current?.appendAudio(base64ToUint8Array(message.data));
+          break;
+        case 'response_complete': {
+          if (store.activeThreadId) {
+            store.finalizeVoiceMessage(store.activeThreadId);
+          }
+          store.setVoiceMode('idle');
+          break;
+        }
+        case 'error':
+          console.error('[VoiceInterface] Server error:', message.error);
+          setError(message.error);
+          store.setVoiceMode('error');
+          break;
       }
     };
-  }, [setVoiceMode, setVoiceConnected]);
 
-  // Start/Stop voice
-  async function handleToggleVoice() {
-    if (mode === 'idle') {
-      // Connect to voice WebSocket
-      if (wsManagerRef.current && activeThread?.id) {
-        try {
-          await wsManagerRef.current.connect();
-          // Send start command with thread context
-          wsManagerRef.current.send({
-            type: 'start',
-            threadId: activeThread.id,
-          });
-          setVoiceMode('listening');
-        } catch (error) {
-          console.error('[VoiceInterface] Failed to connect:', error);
-          setVoiceMode('idle');
-          setVoiceConnected(false);
-        }
-      }
-    } else {
-      // Stop and disconnect
-      if (wsManagerRef.current) {
-        wsManagerRef.current.send({ type: 'stop' });
-        wsManagerRef.current.disconnect();
-      }
-      setVoiceMode('idle');
-      setVoiceConnected(false);
+    const manager = new WebSocketManager({
+      url: '/api/voice/stream',
+      onMessage: handleMessage,
+      onOpen: () => {
+        console.log('[VoiceInterface] WebSocket connected');
+        useUnifiedChatStore.getState().setVoiceConnected(true);
+        setError(null);
+      },
+      onClose: () => {
+        console.log('[VoiceInterface] WebSocket disconnected');
+        useUnifiedChatStore.getState().setVoiceConnected(false);
+      },
+      onError: (socketError) => {
+        console.error('[VoiceInterface] WebSocket error:', socketError);
+        useUnifiedChatStore.getState().setVoiceConnected(false);
+        useUnifiedChatStore.getState().setVoiceMode('error');
+        setError('Connection error');
+      },
+    });
+
+    wsManagerRef.current = manager;
+
+    audioStreamerRef.current = new AudioStreamer({
+      mimeType: 'audio/mpeg',
+      onPlaybackStart: () => useUnifiedChatStore.getState().setVoiceMode('speaking'),
+      onPlaybackEnd: () => useUnifiedChatStore.getState().setVoiceMode('idle'),
+      onError: (err) => {
+        console.error('[VoiceInterface] Audio playback error:', err);
+        setError('Audio playback failed');
+      },
+    });
+
+    return () => {
+      cleanup();
+    };
+  }, []);
+
+  // Stop listening if sheet closes
+  useEffect(() => {
+    if (!isVoiceSheetOpen) {
+      stopListening();
+      setError(null);
     }
-  }
+  }, [isVoiceSheetOpen]);
+
+  // Update VAD threshold when sensitivity changes
+  useEffect(() => {
+    if (vadRef.current) {
+      vadRef.current.setThreshold(vadSensitivity);
+    }
+  }, [vadSensitivity]);
 
   // Finalize and close
   function handleFinalize() {
     if (activeThread?.id && (transcript.trim() || response.trim())) {
       finalizeVoiceMessage(activeThread.id);
     }
+    stopListening();
     toggleVoiceSheet();
+  }
+
+  // Start/Stop voice
+  async function handleToggleVoice() {
+    if (mode === 'idle' || mode === 'error') {
+      await startListening();
+    } else {
+      stopListening();
+    }
   }
 
   // ESC key to close (desktop)
@@ -193,6 +341,7 @@ export function VoiceInterface() {
               connected={connected}
               transcript={transcript}
               response={response}
+              error={error}
               onClose={toggleVoiceSheet}
               onToggleVoice={handleToggleVoice}
               onFinalize={handleFinalize}
@@ -225,6 +374,7 @@ export function VoiceInterface() {
                 connected={connected}
                 transcript={transcript}
                 response={response}
+                error={error}
                 onClose={toggleVoiceSheet}
                 onToggleVoice={handleToggleVoice}
                 onFinalize={handleFinalize}
@@ -246,6 +396,7 @@ interface VoiceInterfaceContentProps {
   connected: boolean;
   transcript: string;
   response: string;
+  error: string | null;
   onClose: () => void;
   onToggleVoice: () => void;
   onFinalize: () => void;
@@ -256,6 +407,7 @@ function VoiceInterfaceContent({
   connected,
   transcript,
   response,
+  error,
   onClose,
   onToggleVoice,
   onFinalize,
@@ -289,6 +441,12 @@ function VoiceInterfaceContent({
           </svg>
         </button>
       </div>
+
+      {error && (
+        <div className="border-b border-border bg-danger/10 px-4 py-3 text-sm text-danger">
+          {error}
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto p-6">
@@ -331,12 +489,12 @@ function VoiceInterfaceContent({
       <div className="flex flex-col gap-3 border-t border-border p-4">
         {/* Voice Toggle Button */}
         <Button
-          variant={mode === 'idle' ? 'primary' : 'outline'}
+          variant={mode === 'idle' || mode === 'error' ? 'primary' : 'outline'}
           size="lg"
           onClick={onToggleVoice}
           className="w-full text-base"
         >
-          {mode === 'idle' && (
+          {(mode === 'idle' || mode === 'error') && (
             <>
               <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />

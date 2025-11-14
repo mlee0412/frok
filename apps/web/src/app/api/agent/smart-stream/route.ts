@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { Agent, AgentInputItem, Runner, withTrace } from '@openai/agents';
 import { performance } from 'perf_hooks';
 import { createAgentSuite, getReasoningEffort, supportsReasoning } from '@/lib/agent/orchestrator';
@@ -22,6 +22,30 @@ type AgentTool = {
 type InputContent =
   | { type: 'input_text'; text: string; providerData?: Record<string, unknown> }
   | { type: 'input_image'; image?: string; detail?: string; providerData?: Record<string, unknown> };
+
+const REQUIRED_AGENT_ENVS = [
+  'OPENAI_API_KEY',
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+] as const;
+
+function validateAgentEnvironment() {
+  const missing = REQUIRED_AGENT_ENVS.filter((key) => !process.env[key]);
+  if (missing.length === 0) {
+    return null;
+  }
+
+  console.error('[smart-stream] Missing required environment variables:', missing);
+  return NextResponse.json(
+    {
+      ok: false,
+      error: 'Agent service misconfiguration',
+      message: `Missing environment variables: ${missing.join(', ')}`,
+      documentation: 'docs/AGENTS.md#environment-configuration',
+    },
+    { status: 500 }
+  );
+}
 
 async function classifyQuery(query: string): Promise<'simple' | 'moderate' | 'complex'> {
   // Ultra-fast pattern matching first
@@ -156,6 +180,9 @@ function selectModelAndTools(
 }
 
 export async function POST(req: NextRequest) {
+  const envError = validateAgentEnvironment();
+  if (envError) return envError;
+
   // Authenticate user
   const auth = await withAuth(req);
   if (!auth.ok) return auth.response;

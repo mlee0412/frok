@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useUnifiedChatStore, useUIState } from '@/store/unifiedChatStore';
 import { ChatSidebar } from './ChatSidebar';
 import { ChatBottomSheet } from './ChatBottomSheet';
-import { VoiceSheet } from './VoiceSheet';
+import { VoiceInterface } from '@/components/voice/VoiceInterface';
 
 // ============================================================================
 // ChatLayout Component
@@ -58,7 +58,7 @@ export function ChatLayout({ children, className }: ChatLayoutProps) {
         setActiveThread(threadId);
       }
 
-      // Escape: Close voice sheet (handled by VoiceSheet)
+      // Escape: Close voice sheet (handled by VoiceInterface)
     }
 
     window.addEventListener('keydown', handleKeyDown);
@@ -104,10 +104,8 @@ export function ChatLayout({ children, className }: ChatLayoutProps) {
         {children}
       </motion.main>
 
-      {/* Voice Sheet (Slides from right on desktop, bottom on mobile) */}
-      <AnimatePresence mode="wait">
-        {isVoiceSheetOpen && <VoiceSheet />}
-      </AnimatePresence>
+      {/* Voice Interface Overlay */}
+      <VoiceInterface />
 
       {/* Mobile Bottom Sheet (<768px) */}
       <div className="md:hidden">

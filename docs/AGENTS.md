@@ -79,6 +79,15 @@ FROK uses a **sophisticated multi-agent orchestration platform** built on OpenAI
    - Orchestrator: `apps/web/src/lib/agent/orchestrator-enhanced.ts`
    - Tools: `apps/web/src/lib/agent/tools-unified.ts`
 
+### Environment & Data Prerequisites
+
+- **OpenAI Models** – Set the GPT-5 family overrides so `smart-stream` never falls back to deprecated defaults:
+  - `OPENAI_FAST_MODEL`, `OPENAI_BALANCED_MODEL`, `OPENAI_COMPLEX_MODEL`, and `OPENAI_AGENT_MODEL`
+- **Supabase** – `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` must be configured for both browser and server helpers.
+- **Chat Persistence Policies** – Apply `packages/db/migrations/0011_chat_rls_policies.sql` to enable row-level security for `chat_threads` and `chat_messages`.
+- **Voice Streaming** – Host `/api/voice/stream` on a WebSocket-capable runtime and expose it via `NEXT_PUBLIC_VOICE_WS_URL`. See [Voice Assistant Design](architecture/VOICE_ASSISTANT_DESIGN.md) and [ElevenLabs Research](../claudedocs/research_elevenlabs_voice_assistant_2025-11-10.md) for Deepgram/ElevenLabs specifics.
+- Missing any of the above will now surface a descriptive error from `/api/agent/smart-stream` linking back to this section.
+
 ### For Users
 
 See the [Agent Features Documentation](archive/AGENT_FEATURES.md) for user-facing capabilities.

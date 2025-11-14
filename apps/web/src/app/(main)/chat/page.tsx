@@ -22,7 +22,7 @@ import { useToast } from '@frok/ui';
  *
  * Features:
  * - Complete layout with sidebar, messages, and input
- * - Voice integration via VoiceSheet
+ * - Voice integration via VoiceInterface overlay
  * - Mobile-responsive with bottom sheet
  * - Real-time message streaming
  * - File upload support
