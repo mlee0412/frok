@@ -110,8 +110,9 @@ export function VoiceInterface() {
         }));
         delete messages[currentThread.id];
 
-        if (drafts[currentThread.id]) {
-          drafts[serverThread.id] = drafts[currentThread.id];
+        const migratedDraft = drafts[currentThread.id];
+        if (typeof migratedDraft === 'string') {
+          drafts[serverThread.id] = migratedDraft;
           delete drafts[currentThread.id];
         }
       } else if (!messages[serverThread.id]) {
