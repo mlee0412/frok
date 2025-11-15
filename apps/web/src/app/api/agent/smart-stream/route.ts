@@ -1,3 +1,20 @@
+/**
+ * Smart Stream Agent Route (Basic)
+ *
+ * This is the BASIC streaming implementation without caching or enhanced features.
+ * For production use, consider using /api/agent/smart-stream-enhanced instead.
+ *
+ * Features:
+ * - Standard OpenAI Agent SDK streaming
+ * - Basic reasoning effort selection (o3-mini vs gpt-5)
+ * - No response caching
+ * - No structured output validation
+ *
+ * Related routes:
+ * - /api/agent/smart-stream-enhanced - Enhanced version with caching, structured outputs, guardrails
+ * - /api/agent/stream-with-progress - Progress indicators and metadata streaming
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { Agent, AgentInputItem, Runner, withTrace } from '@openai/agents';
 import { performance } from 'perf_hooks';

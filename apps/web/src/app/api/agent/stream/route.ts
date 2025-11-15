@@ -1,3 +1,21 @@
+/**
+ * Basic Stream Agent Route (Legacy)
+ *
+ * This is the LEGACY basic streaming implementation.
+ * For production use, consider using /api/agent/stream-with-progress instead.
+ *
+ * Features:
+ * - Simple SSE (Server-Sent Events) streaming
+ * - Basic agent orchestration
+ * - No progress indicators or metadata
+ * - Multimodal support (text + images)
+ *
+ * Related routes:
+ * - /api/agent/stream-with-progress - Enhanced with progress indicators and metadata
+ * - /api/agent/smart-stream - With reasoning effort selection
+ * - /api/agent/smart-stream-enhanced - Production-ready with caching and guardrails
+ */
+
 import { NextRequest } from 'next/server';
 import { AgentInputItem, Runner, withTrace } from '@openai/agents';
 import { performance } from 'perf_hooks';
