@@ -49,18 +49,50 @@ export async function withAuth(req: NextRequest): Promise<AuthResult> {
         created_at: new Date().toISOString(),
       } as User;
 
-      // Create a mock Supabase client for dev
-      const supabase = createServerClient(
+      // CRITICAL FIX: Use service role client to bypass RLS in dev mode
+      // This prevents "Thread not found or access denied" errors when RLS checks auth.uid()
+      const serviceRoleKey = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+
+      if (!serviceRoleKey) {
+        console.error('[withAuth] ❌ DEV_BYPASS_AUTH enabled but SUPABASE_SERVICE_ROLE_KEY is missing!');
+        console.error('[withAuth] Add SUPABASE_SERVICE_ROLE_KEY to .env.local to fix RLS bypass issues');
+
+        // Fallback to anon key with warning
+        const supabase = createServerClient(
+          process.env["NEXT_PUBLIC_SUPABASE_URL"]!,
+          process.env["NEXT_PUBLIC_SUPABASE_ANON_KEY"]!,
+          {
+            cookies: {
+              get(name: string) { return req.cookies.get(name)?.value; },
+              set() {},
+              remove() {},
+            },
+          }
+        );
+
+        return {
+          ok: true,
+          user: {
+            user: mockUser,
+            userId: 'dev-user-id',
+            supabase,
+          },
+        };
+      }
+
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
         process.env["NEXT_PUBLIC_SUPABASE_URL"]!,
-        process.env["NEXT_PUBLIC_SUPABASE_ANON_KEY"]!,
+        serviceRoleKey,  // ✅ Use service role to bypass RLS
         {
-          cookies: {
-            get(name: string) { return req.cookies.get(name)?.value; },
-            set() {},
-            remove() {},
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
           },
         }
       );
+
+      console.warn('[withAuth] ⚠️  Using SERVICE ROLE client - RLS is BYPASSED!');
 
       return {
         ok: true,

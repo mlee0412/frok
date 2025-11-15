@@ -158,14 +158,25 @@ export async function POST(req: NextRequest) {
             const supabase = auth.user.supabase;
 
             // Security: Verify thread belongs to user
-            const { data: thread } = await supabase
+            // Note: RLS policies already filter by user_id, so .eq('user_id') is redundant
+            // but we keep it for explicit security validation
+            const { data: thread, error: threadError } = await supabase
               .from('chat_threads')
-              .select('id')
+              .select('id, user_id')
               .eq('id', threadId)
               .eq('user_id', user_id)
               .single();
 
             if (!thread) {
+              // Enhanced error logging for debugging RLS issues
+              console.error('[stream-with-progress] Thread lookup failed:', {
+                threadId,
+                user_id,
+                error: threadError,
+                isDev: process.env["NODE_ENV"] === 'development',
+                hasDevBypass: process.env["DEV_BYPASS_AUTH"] === 'true',
+              });
+
               emitter.error('Thread not found or access denied');
               emitter.close();
               return;

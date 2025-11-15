@@ -239,15 +239,34 @@ export async function POST(req: NextRequest) {
             const supabase = auth.user.supabase;
 
             // Security: Verify thread belongs to user
-            const { data: thread } = await supabase
+            // Note: RLS policies already filter by user_id, so .eq('user_id') is redundant
+            // but we keep it for explicit security validation
+            const { data: thread, error: threadError } = await supabase
               .from('chat_threads')
-              .select('id')
+              .select('id, user_id')
               .eq('id', threadId)
               .eq('user_id', user_id)
               .single();
 
             if (!thread) {
-              send({ error: 'Thread not found or access denied' });
+              // Enhanced error logging for debugging RLS issues
+              console.error('[smart-stream] Thread lookup failed:', {
+                threadId,
+                user_id,
+                error: threadError,
+                isDev: process.env["NODE_ENV"] === 'development',
+                hasDevBypass: process.env["DEV_BYPASS_AUTH"] === 'true',
+              });
+
+              send({
+                error: 'Thread not found or access denied',
+                debug: process.env.NODE_ENV === 'development' ? {
+                  threadId,
+                  user_id,
+                  errorCode: threadError?.code,
+                  hint: 'Check if thread exists and belongs to user. In dev mode with DEV_BYPASS_AUTH, ensure SUPABASE_SERVICE_ROLE_KEY is set.'
+                } : undefined
+              });
               controller.close();
               return;
             }
