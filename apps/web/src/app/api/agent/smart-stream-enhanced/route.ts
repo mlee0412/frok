@@ -275,19 +275,15 @@ export async function POST(req: NextRequest) {
                 threadId,
                 user_id,
                 error: threadError,
+                errorCode: threadError?.code,
                 isDev: process.env["NODE_ENV"] === 'development',
                 hasDevBypass: process.env["DEV_BYPASS_AUTH"] === 'true',
+                hint: 'Check if thread exists and belongs to user. In dev mode with DEV_BYPASS_AUTH, ensure SUPABASE_SERVICE_ROLE_KEY is set.'
               });
 
               send(createErrorResponse('Thread not found or access denied', {
                 errorCode: 'THREAD_NOT_FOUND',
-                retryable: false,
-                debug: process.env.NODE_ENV === 'development' ? {
-                  threadId,
-                  user_id,
-                  errorCode: threadError?.code,
-                  hint: 'Check if thread exists and belongs to user. In dev mode with DEV_BYPASS_AUTH, ensure SUPABASE_SERVICE_ROLE_KEY is set.'
-                } : undefined
+                retryable: false
               }));
               controller.close();
               return;
