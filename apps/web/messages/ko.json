@@ -391,6 +391,22 @@
       "emptyDescription": "에이전트가 자동으로 중요한 정보를 기억합니다",
       "filter": "에이전트별 필터"
     },
+    "userMemories": {
+      "title": "내 메모리",
+      "description": "개인 메모리 및 환경설정 관리",
+      "addNew": "새 메모리 추가",
+      "allMemories": "모든 메모리",
+      "aboutTitle": "사용자 메모리 정보",
+      "aboutPoint1": "메모리는 어시스턴트가 선호도를 기억하도록 도와줍니다",
+      "aboutPoint2": "태그가 지정된 메모리는 찾고 정리하기 쉽습니다",
+      "aboutPoint3": "더 이상 필요하지 않은 메모리 삭제",
+      "aboutPoint4": "태그로 필터링하여 특정 메모리 카테고리 보기",
+      "filterByTag": "태그로 필터링",
+      "all": "전체",
+      "addError": "메모리 추가 실패",
+      "deleteConfirm": "이 메모리를 삭제하시겠습니까?",
+      "deleteError": "메모리 삭제 실패"
+    },
     "form": {
       "contentLabel": "메모리 내용",
       "contentPlaceholder": "기억하고 싶은 정보를 입력하세요...",

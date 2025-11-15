@@ -243,7 +243,7 @@ export async function POST(req: NextRequest) {
             // but we keep it for explicit security validation
             const { data: thread, error: threadError } = await supabase
               .from('chat_threads')
-              .select('id, user_id')
+              .select('id, user_id, created_at')
               .eq('id', threadId)
               .eq('user_id', user_id)
               .single();
@@ -271,28 +271,39 @@ export async function POST(req: NextRequest) {
               return;
             }
 
-            const { data: messages } = await supabase
-              .from('chat_messages')
-              .select('role, content')
-              .eq('thread_id', threadId)
-              .order('created_at', { ascending: true })
-              .limit(20); // Last 20 messages for context
+            // FIX: Skip history loading for newly created threads to avoid RLS timing issues
+            // Check if thread was created within the last 5 seconds (race condition window)
+            const threadAge = Date.now() - new Date(thread.created_at).getTime();
+            const isNewThread = threadAge < 5000; // 5 seconds threshold
 
-            if (messages && messages.length > 0) {
-              historyItems = messages.map((msg: ChatMessage) => {
-                if (msg.role === 'user') {
-                  return {
-                    role: 'user' as const,
-                    content: [{ type: 'input_text' as const, text: msg.content }],
-                  };
-                } else {
-                  return {
-                    role: 'assistant' as const,
-                    status: 'completed' as const,
-                    content: [{ type: 'output_text' as const, text: msg.content }],
-                  };
-                }
-              });
+            if (isNewThread) {
+              console.log('[smart-stream] Skipping history load for newly created thread (age: ' + threadAge + 'ms)');
+              // Skip history loading for new threads - they have no messages yet anyway
+            } else {
+              // Load conversation history for existing threads
+              const { data: messages } = await supabase
+                .from('chat_messages')
+                .select('role, content')
+                .eq('thread_id', threadId)
+                .order('created_at', { ascending: true })
+                .limit(20); // Last 20 messages for context
+
+              if (messages && messages.length > 0) {
+                historyItems = messages.map((msg: ChatMessage) => {
+                  if (msg.role === 'user') {
+                    return {
+                      role: 'user' as const,
+                      content: [{ type: 'input_text' as const, text: msg.content }],
+                    };
+                  } else {
+                    return {
+                      role: 'assistant' as const,
+                      status: 'completed' as const,
+                      content: [{ type: 'output_text' as const, text: msg.content }],
+                    };
+                  }
+                });
+              }
             }
           } catch (e) {
             console.warn('[history load failed]', e);

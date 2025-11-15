@@ -427,6 +427,22 @@
       "emptyDescription": "The agent will automatically remember important information",
       "filter": "Filter by agent"
     },
+    "userMemories": {
+      "title": "Your Memories",
+      "description": "Manage your personal memories and preferences",
+      "addNew": "Add New Memory",
+      "allMemories": "All Memories",
+      "aboutTitle": "About User Memories",
+      "aboutPoint1": "Memories help the assistant remember your preferences",
+      "aboutPoint2": "Tagged memories are easier to find and organize",
+      "aboutPoint3": "Delete memories you no longer need",
+      "aboutPoint4": "Filter by tags to view specific memory categories",
+      "filterByTag": "Filter by tag",
+      "all": "All",
+      "addError": "Failed to add memory",
+      "deleteConfirm": "Are you sure you want to delete this memory?",
+      "deleteError": "Failed to delete memory"
+    },
     "form": {
       "contentLabel": "Memory Content",
       "contentPlaceholder": "Enter the information you want to remember...",
