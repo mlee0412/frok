@@ -140,17 +140,121 @@ export async function optionalAuth(req: NextRequest): Promise<AuthenticatedUser 
 }
 
 /**
- * Check if user has specific role or permission
- * (Extend this based on your auth schema)
+ * User role type
  */
-export function hasPermission(_user: AuthenticatedUser, _permission: string): boolean {
-  // TODO: Implement based on your user roles/permissions schema
-  // For now, all authenticated users have all permissions
-  return true;
+export type UserRole = 'admin' | 'user' | 'guest';
+
+/**
+ * Check if user has specific permission
+ * Uses Supabase RPC function for efficient permission checking
+ */
+export async function hasPermission(
+  user: AuthenticatedUser,
+  permission: string
+): Promise<boolean> {
+  try {
+    const { data, error } = await user.supabase.rpc('user_has_permission', {
+      p_user_id: user.userId,
+      p_permission_name: permission,
+    });
+
+    if (error) {
+      console.error('[hasPermission] RPC error:', error);
+      return false;
+    }
+
+    return data === true;
+  } catch (error) {
+    console.error('[hasPermission] Exception:', error);
+    return false;
+  }
+}
+
+/**
+ * Check if user has specific role
+ */
+export async function hasRole(
+  user: AuthenticatedUser,
+  role: UserRole
+): Promise<boolean> {
+  try {
+    const { data, error } = await user.supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.userId)
+      .eq('role', role)
+      .eq('is_active', true)
+      .single();
+
+    if (error || !data) {
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('[hasRole] Exception:', error);
+    return false;
+  }
+}
+
+/**
+ * Get all active roles for a user
+ */
+export async function getUserRoles(
+  user: AuthenticatedUser
+): Promise<UserRole[]> {
+  try {
+    const { data, error} = await user.supabase.rpc('get_user_roles', {
+      p_user_id: user.userId,
+    });
+
+    if (error || !data) {
+      console.error('[getUserRoles] Error:', error);
+      return [];
+    }
+
+    return data.map((r: { role: string }) => r.role as UserRole);
+  } catch (error) {
+    console.error('[getUserRoles] Exception:', error);
+    return [];
+  }
+}
+
+/**
+ * Get all permissions for a user
+ */
+export async function getUserPermissions(
+  user: AuthenticatedUser
+): Promise<Array<{ permission_name: string; category: string; source: string }>> {
+  try {
+    const { data, error } = await user.supabase.rpc('get_user_permissions', {
+      p_user_id: user.userId,
+    });
+
+    if (error || !data) {
+      console.error('[getUserPermissions] Error:', error);
+      return [];
+    }
+
+    return data as Array<{ permission_name: string; category: string; source: string }>;
+  } catch (error) {
+    console.error('[getUserPermissions] Exception:', error);
+    return [];
+  }
 }
 
 /**
  * Require specific permission
+ * Combines authentication and permission check in one middleware
+ *
+ * Usage:
+ * ```typescript
+ * export async function DELETE(req: NextRequest) {
+ *   const auth = await requirePermission(req, 'chat.delete');
+ *   if (!auth.ok) return auth.response;
+ *   // User is authenticated and has permission
+ * }
+ * ```
  */
 export async function requirePermission(
   req: NextRequest,
@@ -159,11 +263,45 @@ export async function requirePermission(
   const auth = await withAuth(req);
   if (!auth.ok) return auth;
 
-  if (!hasPermission(auth.user, permission)) {
+  const userHasPermission = await hasPermission(auth.user, permission);
+  if (!userHasPermission) {
     return {
       ok: false,
       response: NextResponse.json(
-        { ok: false, error: 'Forbidden', message: 'Insufficient permissions' },
+        {
+          ok: false,
+          error: 'Forbidden',
+          message: `Insufficient permissions. Required: ${permission}`,
+        },
+        { status: 403 }
+      ),
+    };
+  }
+
+  return auth;
+}
+
+/**
+ * Require specific role
+ * Combines authentication and role check in one middleware
+ */
+export async function requireRole(
+  req: NextRequest,
+  role: UserRole
+): Promise<AuthResult> {
+  const auth = await withAuth(req);
+  if (!auth.ok) return auth;
+
+  const userHasRole = await hasRole(auth.user, role);
+  if (!userHasRole) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        {
+          ok: false,
+          error: 'Forbidden',
+          message: `Insufficient role. Required: ${role}`,
+        },
         { status: 403 }
       ),
     };

@@ -6,6 +6,7 @@ import { getSupabaseServer } from '@/lib/supabase/server';
 import { errorHandler } from '@/lib/errorHandler';
 import { routeMessage, getOpenAIModelId, analyzeMessageComplexity } from '@/lib/agent/routing';
 import type { AgentModel } from '@/components/chat/AgentSelector';
+import { getOpenAIClient } from '@/lib/openai';
 import { z } from 'zod';
 
 // ============================================================================
@@ -193,20 +194,33 @@ function createSSEResponse(
         });
         controller.enqueue(encoder.encode(`data: ${agentInfo}\n\n`));
 
-        // Simulate streaming AI response
-        // TODO: Replace with actual OpenAI API call using openaiModelId
-        const fullResponse = await getAIResponseContent(content, openaiModelId);
-        const words = fullResponse.split(' ');
+        // Stream AI response using OpenAI API
+        const openai = getOpenAIClient();
+        const stream = await openai.chat.completions.create({
+          model: openaiModelId,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are FROK, a helpful AI assistant. Be concise, friendly, and accurate.',
+            },
+            {
+              role: 'user',
+              content,
+            },
+          ],
+          temperature: 0.7,
+          max_tokens: 1000,
+          stream: true,
+        });
 
-        for (let i = 0; i < words.length; i++) {
-          const chunk = words[i] + (i < words.length - 1 ? ' ' : '');
-
-          const data = JSON.stringify({ type: 'content', content: chunk });
-          controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-
-          // Simulate streaming delay based on model speed
-          const delay = selectedModel === 'gpt-5-think' ? 80 : selectedModel === 'gpt-5-mini' ? 50 : 30;
-          await new Promise((resolve) => setTimeout(resolve, delay));
+        let fullResponse = '';
+        for await (const chunk of stream) {
+          const delta = chunk.choices[0]?.delta?.content || '';
+          if (delta) {
+            fullResponse += delta;
+            const data = JSON.stringify({ type: 'content', content: delta });
+            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+          }
         }
 
         // Save complete message to database with agent metadata
@@ -258,7 +272,7 @@ async function getAIResponse(
 ) {
   const supabase = await getSupabaseServer();
 
-  // TODO: Replace with actual OpenAI API call using openaiModelId
+  // Get OpenAI API response
   const responseContent = await getAIResponseContent(content, openaiModelId);
 
   // Insert assistant message with agent metadata
@@ -288,23 +302,42 @@ async function getAIResponse(
 }
 
 /**
- * Generate AI response content
- * TODO: Replace with actual OpenAI API integration
+ * Generate AI response content using OpenAI API
  */
 async function getAIResponseContent(userMessage: string, openaiModelId: string): Promise<string> {
-  // Placeholder AI response with model-aware behavior
-  const modelInfo = openaiModelId.includes('gpt-5') ? 'GPT-5' : 'AI model';
+  const openai = getOpenAIClient();
 
-  const responses = [
-    `I understand you said: "${userMessage}". How can I help you further? (Processing with ${modelInfo})`,
-    `That's an interesting question about "${userMessage}". Let me explain using ${modelInfo}...`,
-    `Based on your message about "${userMessage}", here's what I think using ${modelInfo}...`,
-  ];
+  try {
+    const completion = await openai.chat.completions.create({
+      model: openaiModelId,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are FROK, a helpful AI assistant. Be concise, friendly, and accurate.',
+        },
+        {
+          role: 'user',
+          content: userMessage,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 1000,
+    });
 
-  // Simulate AI processing delay based on model complexity
-  const delay = openaiModelId.includes('think') ? 1000 : openaiModelId.includes('mini') ? 600 : 400;
-  await new Promise((resolve) => setTimeout(resolve, delay));
+    const responseContent = completion.choices[0]?.message?.content?.trim();
+    if (!responseContent) {
+      throw new Error('No response content from OpenAI');
+    }
 
-  const randomIndex = Math.floor(Math.random() * responses.length);
-  return responses[randomIndex] ?? responses[0] ?? `I understand. How can I help you with "${userMessage}"?`;
+    return responseContent;
+  } catch (error) {
+    errorHandler.logError({
+      message: error instanceof Error ? error.message : 'OpenAI API error',
+      severity: 'high',
+      context: { function: 'getAIResponseContent', model: openaiModelId },
+    });
+
+    // Fallback response
+    return "I'm sorry, I encountered an error processing your request. Please try again.";
+  }
 }

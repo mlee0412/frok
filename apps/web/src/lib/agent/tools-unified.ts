@@ -4,12 +4,17 @@
  * Integrates OpenAI's built-in tools (web_search, file_search, code_interpreter,
  * computer_use) with FROK's custom tools (Home Assistant, Memory).
  *
- * ⚠️ TODO: This file needs refactoring to support user-specific memory tools
- * Before using this file, update all memory tool references to use
- * createUserMemoryTools(userId) from './tools-user-specific'
+ * ✅ RESOLVED: User-specific memory tools are now implemented via:
+ * - ./tools-user-specific.ts - createUserMemoryTools(userId)
+ * - ./orchestrator.ts - loadTools(userId) creates user-specific tools
+ * - All active API routes use user-specific memory tools
  *
  * Current status: Not actively used (enhanced orchestrator not integrated yet)
  * Temporarily excluded from build - see .eslintrc.json
+ *
+ * TODO: When this file is activated for enhanced orchestrator:
+ * - Remove hardcoded memory tool imports from tools-improved
+ * - Use createUserMemoryTools(userId) factory pattern
  */
 
 import type { Tool } from '@openai/agents';
