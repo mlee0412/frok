@@ -1,6 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { RealtimeSession } from '@openai/agents/realtime';
 import { useToast } from '@frok/ui';
+
+interface WebRTCSession {
+  pc: RTCPeerConnection;
+  dc: RTCDataChannel;
+  ms: MediaStream;
+}
 
 export interface RealtimeAgentState {
   isConnected: boolean;
@@ -29,7 +34,7 @@ export function useRealtimeAgent(threadId?: string): UseRealtimeAgentReturn {
     audioLevel: 0,
   });
 
-  const sessionRef = useRef<RealtimeSession | null>(null);
+  const sessionRef = useRef<WebRTCSession | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -172,8 +177,7 @@ export function useRealtimeAgent(threadId?: string): UseRealtimeAgentReturn {
       await pc.setRemoteDescription(answer);
 
       // Store cleanup
-      // @ts-ignore - Storing PC for cleanup, though sessionRef type mismatch needs fixing or custom type
-      sessionRef.current = { pc, dc, ms } as any;
+      sessionRef.current = { pc, dc, ms };
     } catch (error: unknown) {
       console.error('Failed to start realtime session:', error);
       setState((prev) => ({
@@ -186,10 +190,10 @@ export function useRealtimeAgent(threadId?: string): UseRealtimeAgentReturn {
   }, [state.isConnected, state.isConnecting, threadId, initializeAudioMonitoring, toast]);
 
   const endSession = useCallback(async () => {
-    const session = sessionRef.current as any;
+    const session = sessionRef.current;
     if (session) {
-      session.pc?.close();
-      session.ms?.getTracks().forEach((t: MediaStreamTrack) => t.stop());
+      session.pc.close();
+      session.ms.getTracks().forEach((t: MediaStreamTrack) => t.stop());
       sessionRef.current = null;
     }
 
@@ -223,7 +227,7 @@ export function useRealtimeAgent(threadId?: string): UseRealtimeAgentReturn {
   const interrupt = useCallback(() => {
     // Send interrupt event via data channel if needed
     // For WebRTC, stopping audio track or sending 'response.cancel' event works
-    const session = sessionRef.current as any;
+    const session = sessionRef.current;
     if (session?.dc?.readyState === 'open') {
       session.dc.send(JSON.stringify({ type: 'response.cancel' }));
     }
