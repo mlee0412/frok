@@ -43,44 +43,44 @@ const MODELS: Record<AgentModel, ModelConfig | null> = {
   'gpt-5.1': {
     id: 'gpt-5.1',
     name: 'GPT-5.1 Thinking',
-    description: 'Most powerful model with extended reasoning capabilities',
+    description: 'Advanced reasoning with adaptive thinking (Nov 2025)',
     capabilities: {
       reasoning: 100,
-      speed: 40,
+      speed: 60, // Faster on simple tasks with adaptive reasoning
       cost: 90,
       contextWindow: 128_000,
     },
-    useCases: ['Complex reasoning', 'Code architecture', 'Research analysis', 'Strategic planning'],
+    useCases: ['Complex reasoning', 'System design', 'Research analysis', 'Strategic planning'],
     costPerMillion: 50,
-    avgResponseTime: 12,
+    avgResponseTime: 8, // Improved from 12s with adaptive reasoning
   },
   'gpt-5.1-codex-mini': {
     id: 'gpt-5.1-codex-mini',
     name: 'GPT-5.1 Codex Mini',
-    description: 'Balanced model optimized for agentic coding tasks',
+    description: 'Balanced model optimized for coding and agentic tasks',
     capabilities: {
       reasoning: 85,
-      speed: 75,
+      speed: 80, // Improved with GPT-5.1 efficiency updates
       cost: 50,
       contextWindow: 64_000,
     },
-    useCases: ['General chat', 'Code review', 'Content creation', 'Q&A'],
+    useCases: ['Code review', 'Debugging', 'API design', 'General chat'],
     costPerMillion: 10,
-    avgResponseTime: 5,
+    avgResponseTime: 4, // Improved from 5s
   },
   'gpt-5.1-chat-latest': {
     id: 'gpt-5.1-chat-latest',
     name: 'GPT-5.1 Instant',
-    description: 'Fast, conversational model for quick responses',
+    description: 'Fastest model with warmer, more conversational tone',
     capabilities: {
-      reasoning: 60,
+      reasoning: 70, // Enhanced instruction following
       speed: 100,
       cost: 20,
       contextWindow: 16_000,
     },
-    useCases: ['Quick answers', 'Simple coding', 'Brainstorming', 'Casual chat'],
+    useCases: ['Quick answers', 'Casual chat', 'Brainstorming', 'Simple tasks'],
     costPerMillion: 2,
-    avgResponseTime: 2,
+    avgResponseTime: 1.5, // Improved from 2s
   },
   auto: null, // Auto-routing doesn't have specific config
 };

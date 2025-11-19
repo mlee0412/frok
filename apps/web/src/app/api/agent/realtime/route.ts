@@ -54,10 +54,10 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5.1-realtime-preview', // Using GPT-5.1 as requested
+        model: 'gpt-realtime', // Latest Realtime API model (Nov 2025, 66.5% ComplexFuncBench)
         voice,
-        instructions: `You are FROK, an advanced AI assistant. Be concise, friendly, and helpful. 
-        You have access to the user's chat history. 
+        instructions: `You are FROK, an advanced AI assistant. Be concise, friendly, and helpful.
+        You have access to the user's chat history.
         ${contextInstructions}`,
         modalities: ['audio', 'text'],
       }),
