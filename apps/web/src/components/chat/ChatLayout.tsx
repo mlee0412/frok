@@ -69,7 +69,8 @@ export function ChatLayout({ children, className }: ChatLayoutProps) {
     <div
       className={`relative flex h-[100dvh] w-full overflow-hidden ${className || ''}`}
       style={{
-        background: 'radial-gradient(circle at 50% 50%, oklch(60% 0.15 250 / 0.05) 0%, var(--background) 70%)',
+        background:
+          'radial-gradient(circle at 50% 50%, oklch(60% 0.15 250 / 0.05) 0%, var(--background) 70%)',
       }}
     >
       {/* Desktop Sidebar (≥768px) */}
@@ -155,12 +156,12 @@ export function ChatHeader({
 
   return (
     <header
-      className={`sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-border px-4 transition-all duration-200 ${
+      className={`sticky top-0 z-10 flex h-14 items-center gap-2 border-b border-border px-4 transition-all duration-200 ${
         isScrolled ? 'bg-surface/80 backdrop-blur-lg shadow-sm' : 'bg-surface/60 backdrop-blur-sm'
       } ${className || ''}`}
     >
       {/* Mobile: Back button OR Sidebar toggle */}
-      <div className="flex items-center gap-2 md:hidden">
+      <div className="flex items-center gap-2 md:hidden shrink-0">
         {showBack && onBack ? (
           <button
             type="button"
@@ -175,11 +176,7 @@ export function ChatHeader({
               strokeWidth={2}
               viewBox="0 0 24 24"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15 19l-7-7 7-7"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
         ) : (
@@ -196,11 +193,7 @@ export function ChatHeader({
               strokeWidth={2}
               viewBox="0 0 24 24"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M4 6h16M4 12h16M4 18h16"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
         )}
@@ -211,7 +204,7 @@ export function ChatHeader({
         type="button"
         onClick={toggleSidebar}
         aria-label={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-        className="hidden h-8 w-8 items-center justify-center rounded-md text-foreground/70 hover:bg-surface hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary md:flex"
+        className="hidden h-8 w-8 items-center justify-center rounded-md text-foreground/70 hover:bg-surface hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary md:flex shrink-0"
       >
         <svg
           className="h-5 w-5"
@@ -221,62 +214,63 @@ export function ChatHeader({
           viewBox="0 0 24 24"
         >
           {isSidebarOpen ? (
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M6 18L18 6M6 6l12 12"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           ) : (
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M4 6h16M4 12h16M4 18h16"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
           )}
         </svg>
       </button>
 
-      {/* Title and Subtitle */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <h1 className="truncate text-sm font-semibold text-foreground">{title}</h1>
+      {/* Title and Subtitle - Truncate properly */}
+      <div className="flex min-w-0 flex-1 flex-col justify-center">
+        <h1 className="truncate text-sm font-semibold text-foreground leading-tight">{title}</h1>
         {subtitle && (
-          <p className="truncate text-xs text-foreground/60">{subtitle}</p>
+          <p className="hidden sm:block truncate text-xs text-foreground/60 leading-tight">
+            {subtitle}
+          </p>
         )}
       </div>
 
-      {/* Voice Toggle Button */}
-      <button
-        type="button"
-        onClick={toggleVoiceSheet}
-        aria-label={isVoiceSheetOpen ? 'Close voice assistant' : 'Open voice assistant'}
-        className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
-          isVoiceSheetOpen
-            ? 'bg-primary text-white'
-            : 'text-foreground/70 hover:bg-surface hover:text-foreground'
-        }`}
-      >
-        <svg
-          className="h-5 w-5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
+      {/* Actions Container - Prevent overflow */}
+      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        {/* Voice Toggle Button */}
+        <button
+          type="button"
+          onClick={toggleVoiceSheet}
+          aria-label={isVoiceSheetOpen ? 'Close voice assistant' : 'Open voice assistant'}
+          className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
+            isVoiceSheetOpen
+              ? 'bg-primary text-white'
+              : 'text-foreground/70 hover:bg-surface hover:text-foreground'
+          }`}
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"
-          />
-        </svg>
-      </button>
+          <svg
+            className="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"
+            />
+          </svg>
+        </button>
 
-      {/* Additional Actions */}
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
+        {/* Additional Actions - Scrollable if too many, or hidden on very small screens */}
+        {actions && (
+          <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar">
+            {actions}
+          </div>
+        )}
+      </div>
     </header>
   );
 }
@@ -316,7 +310,9 @@ export interface ChatFooterProps {
 export function ChatFooter({ children, className }: ChatFooterProps) {
   return (
     <footer
-      className={`sticky bottom-0 z-10 border-t border-border bg-surface/60 backdrop-blur-sm p-4 ${className || ''}`}
+      className={`sticky bottom-0 z-10 border-t border-border bg-surface/60 backdrop-blur-sm p-4 ${
+        className || ''
+      }`}
     >
       {children}
     </footer>
