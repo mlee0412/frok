@@ -9,6 +9,10 @@ import {
   ChatFooter,
   MessageList,
   ChatInput,
+  ProgressIndicator,
+  type MetadataEvent,
+  type ToolEvent,
+  type HandoffEvent,
 } from '@/components/chat';
 import { useUnifiedChatStore, useActiveThread, useThreadMessages } from '@/store/unifiedChatStore';
 import { useToast } from '@frok/ui';
@@ -74,6 +78,15 @@ export default function AgentPage() {
   const [showUserMemories, setShowUserMemories] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>('auto');
 
+  // ===== Progress State =====
+  const [progressPercent, setProgressPercent] = useState(0);
+  const [progressStatus, setProgressStatus] = useState('');
+  const [progressMessage, setProgressMessage] = useState('');
+  const [progressMetadata, setProgressMetadata] = useState<MetadataEvent | undefined>();
+  const [toolEvents, setToolEvents] = useState<ToolEvent[]>([]);
+  const [handoffs, setHandoffs] = useState<HandoffEvent[]>([]);
+  const [progressError, setProgressError] = useState<string | undefined>();
+
   // ===== Message Sending =====
 
   const handleSendMessage = useCallback(
@@ -126,6 +139,15 @@ export default function AgentPage() {
   ) => {
     setIsStreaming(true);
 
+    // Reset progress state
+    setProgressPercent(0);
+    setProgressStatus('');
+    setProgressMessage('');
+    setProgressMetadata(undefined);
+    setToolEvents([]);
+    setHandoffs([]);
+    setProgressError(undefined);
+
     let assistantMessageId: string | null = null;
 
     try {
@@ -139,8 +161,8 @@ export default function AgentPage() {
 
       setStreamingMessageId(assistantMessageId);
 
-      // Call agent API with streaming
-      const response = await fetch('/api/agent/smart-stream', {
+      // Call enhanced agent API with progress streaming
+      const response = await fetch('/api/agent/stream-with-progress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -191,25 +213,103 @@ export default function AgentPage() {
               try {
                 const parsed = JSON.parse(data);
 
-                // Handle streaming delta chunks
-                if (parsed.delta && !parsed.done) {
-                  appendStreamingContent(threadId, assistantMessageId, parsed.delta);
-                }
+                // Handle different event types from stream-with-progress
+                switch (parsed.type) {
+                  case 'metadata':
+                    // Initial metadata (model, complexity, tools, routing)
+                    setProgressMetadata(parsed.data as MetadataEvent);
+                    setProgressPercent(10);
+                    setProgressStatus('initialized');
+                    setProgressMessage('Agent configured');
+                    break;
 
-                // Handle final complete content
-                // Final content already streamed via deltas, just mark as complete
+                  case 'progress':
+                    // Progress update (status message + optional percentage)
+                    setProgressStatus(parsed.data.status);
+                    setProgressMessage(parsed.data.message);
+                    if (parsed.data.progress_percent !== undefined) {
+                      setProgressPercent(parsed.data.progress_percent);
+                    }
+                    break;
 
-                // Handle metadata (model, tools, etc.)
-                if (parsed.metadata) {
-                  // Could update message metadata here if needed
-                  console.log('[Agent] Metadata:', parsed.metadata);
-                }
+                  case 'tool_start':
+                    // Tool execution started
+                    setToolEvents((prev) => [
+                      ...prev,
+                      {
+                        id: `${parsed.data.tool_name}-${Date.now()}`,
+                        tool_name: parsed.data.tool_name,
+                        tool_description: parsed.data.tool_description,
+                        timestamp: parsed.timestamp,
+                        success: undefined, // Pending
+                      },
+                    ]);
+                    break;
 
-                // Handle errors
-                if (parsed.error) {
-                  console.error('[Agent] Error:', parsed.error);
-                  toast.error(`Agent error: ${parsed.error}`);
-                  throw new Error(parsed.error);
+                  case 'tool_end':
+                    // Tool execution completed
+                    setToolEvents((prev) =>
+                      prev.map((event) =>
+                        event.tool_name === parsed.data.tool_name && event.success === undefined
+                          ? {
+                              ...event,
+                              success: parsed.data.success,
+                              duration_ms: parsed.data.duration_ms,
+                            }
+                          : event
+                      )
+                    );
+                    break;
+
+                  case 'handoff':
+                    // Agent handoff (orchestrator routing)
+                    setHandoffs((prev) => [
+                      ...prev,
+                      {
+                        from_agent: parsed.data.from_agent,
+                        to_agent: parsed.data.to_agent,
+                        reason: parsed.data.reason,
+                        timestamp: parsed.timestamp,
+                      },
+                    ]);
+                    break;
+
+                  case 'delta':
+                    // Streaming text chunk
+                    if (parsed.data.content && !parsed.data.done) {
+                      appendStreamingContent(threadId, assistantMessageId, parsed.data.content);
+                    }
+                    break;
+
+                  case 'done':
+                    // Final response complete
+                    setProgressPercent(100);
+                    setProgressStatus('complete');
+                    setProgressMessage('Response complete');
+                    break;
+
+                  case 'error':
+                    // Error occurred
+                    setProgressError(parsed.data.error);
+                    setProgressStatus('error');
+                    console.error('[Agent] Stream error:', parsed.data);
+                    toast.error(`Agent error: ${parsed.data.error}`);
+                    throw new Error(parsed.data.error);
+
+                  default:
+                    // Legacy support for old format (smart-stream fallback)
+                    if (parsed.delta && !parsed.done) {
+                      appendStreamingContent(threadId, assistantMessageId, parsed.delta);
+                    }
+                    if (parsed.metadata) {
+                      console.log('[Agent] Metadata:', parsed.metadata);
+                    }
+                    if (parsed.error) {
+                      console.error('[Agent] Error:', parsed.error);
+                      toast.error(`Agent error: ${parsed.error}`);
+                      throw new Error(parsed.error);
+                    }
+                    break;
                 }
               } catch (parseError) {
                 // Skip invalid JSON
@@ -327,11 +427,30 @@ export default function AgentPage() {
         {/* Messages */}
         <ChatContent>
           {activeThread ? (
-            <MessageList
-              threadId={activeThread.id}
-              isCompact={false}
-              isLoading={false}
-            />
+            <>
+              {/* Progress Indicator - Shown during streaming */}
+              {isStreaming && progressMessage && (
+                <div className="mb-4 px-4">
+                  <ProgressIndicator
+                    percent={progressPercent}
+                    status={progressStatus}
+                    message={progressMessage}
+                    metadata={progressMetadata}
+                    toolEvents={toolEvents}
+                    handoffs={handoffs}
+                    isComplete={progressPercent >= 100}
+                    hasError={!!progressError}
+                    errorMessage={progressError}
+                  />
+                </div>
+              )}
+
+              <MessageList
+                threadId={activeThread.id}
+                isCompact={false}
+                isLoading={false}
+              />
+            </>
           ) : (
             <EmptyState
               onCreateThread={() => {

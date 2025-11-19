@@ -26,3 +26,13 @@ export { StreamingText, type StreamingTextProps } from './StreamingText';
 
 // Input Components
 export { ChatInput, type ChatInputProps } from './ChatInput';
+
+// Progress Components
+export {
+  ProgressIndicator,
+  type ProgressIndicatorProps,
+  type ProgressEvent,
+  type ToolEvent,
+  type HandoffEvent,
+  type MetadataEvent,
+} from './ProgressIndicator';
