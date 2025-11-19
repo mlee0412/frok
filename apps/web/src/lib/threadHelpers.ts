@@ -12,7 +12,7 @@ export const DEFAULT_ENABLED_TOOLS = [
   'image_generation',
 ] as const;
 
-export type ToolName = typeof DEFAULT_ENABLED_TOOLS[number];
+export type ToolName = (typeof DEFAULT_ENABLED_TOOLS)[number];
 
 /**
  * Tool metadata for UI display
@@ -56,21 +56,28 @@ export const AGENT_STYLES = [
   { id: 'casual', name: 'Casual', description: 'Relaxed and conversational' },
 ] as const;
 
-export type AgentStyle = typeof AGENT_STYLES[number]['id'];
+export type AgentStyle = (typeof AGENT_STYLES)[number]['id'];
 
 /**
  * Model options
  */
 export const MODEL_OPTIONS = [
-  { id: 'gpt-5-think', name: 'GPT-5 Think', description: 'Deep reasoning, highest latency' },
-  { id: 'gpt-5', name: 'GPT-5', description: 'Advanced reasoning, slower' },
-  { id: 'gpt-5-mini', name: 'GPT-5 Mini', description: 'Balanced default with strong quality' },
-  { id: 'gpt-5-nano', name: 'GPT-5 Nano', description: 'Fastest responses, lightweight' },
+  { id: 'gpt-5.1', name: 'GPT-5.1 Thinking', description: 'Deep reasoning, highest latency' },
+  {
+    id: 'gpt-5.1-codex-mini',
+    name: 'GPT-5.1 Codex Mini',
+    description: 'Balanced default with strong quality',
+  },
+  {
+    id: 'gpt-5.1-chat-latest',
+    name: 'GPT-5.1 Instant',
+    description: 'Fastest responses, lightweight',
+  },
 ] as const;
 
-export type ModelId = typeof MODEL_OPTIONS[number]['id'];
+export type ModelId = (typeof MODEL_OPTIONS)[number]['id'];
 
-const ALLOWED_MODEL_IDS = MODEL_OPTIONS.map(option => option.id);
+const ALLOWED_MODEL_IDS = MODEL_OPTIONS.map((option) => option.id);
 
 /**
  * Create a new thread with default values
@@ -89,7 +96,7 @@ export function createDefaultThread(overrides?: Partial<Thread>): Thread {
     folder: undefined,
     toolsEnabled: true,
     enabledTools: [...DEFAULT_ENABLED_TOOLS],
-    model: 'gpt-5-mini',
+    model: 'gpt-5.1-codex-mini',
     agentStyle: 'balanced',
     projectContext: undefined,
     agentName: 'FROK Assistant',
@@ -108,7 +115,7 @@ export function filterThreads(
     folder?: string | null;
     tags?: string[];
     showArchived?: boolean;
-  }
+  },
 ): Thread[] {
   let filtered = threads;
 
@@ -131,9 +138,7 @@ export function filterThreads(
 
   // Filter by tags
   if (options.tags && options.tags.length > 0) {
-    filtered = filtered.filter((t) =>
-      options.tags!.every((tag) => t.tags?.includes(tag))
-    );
+    filtered = filtered.filter((t) => options.tags!.every((tag) => t.tags?.includes(tag)));
   }
 
   // Filter by search query
@@ -141,9 +146,7 @@ export function filterThreads(
     const query = options.searchQuery.toLowerCase();
     filtered = filtered.filter((t) => {
       const titleMatch = t.title.toLowerCase().includes(query);
-      const messagesMatch = t.messages?.some((m) =>
-        m.content.toLowerCase().includes(query)
-      );
+      const messagesMatch = t.messages?.some((m) => m.content.toLowerCase().includes(query));
       return titleMatch || messagesMatch;
     });
   }
@@ -251,7 +254,10 @@ export function prepareThreadUpdate(thread: Thread, updates: Partial<Thread>): T
     threadUpdate.folder = updates.folder;
   }
 
-  if (updates.enabledTools !== undefined && JSON.stringify(updates.enabledTools) !== JSON.stringify(thread.enabledTools)) {
+  if (
+    updates.enabledTools !== undefined &&
+    JSON.stringify(updates.enabledTools) !== JSON.stringify(thread.enabledTools)
+  ) {
     threadUpdate.enabledTools = updates.enabledTools;
   }
 
@@ -294,7 +300,7 @@ export function getThreadStats(thread: Thread): {
   hasFiles: boolean;
 } {
   const messages = thread.messages || [];
-  
+
   return {
     messageCount: messages.length,
     userMessageCount: messages.filter((m) => m.role === 'user').length,

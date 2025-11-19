@@ -20,7 +20,7 @@ import { useTranslations } from '@/lib/i18n/I18nProvider';
  * - Preset selectors (coding, research, chat, creative)
  */
 
-export type AgentModel = 'gpt-5-think' | 'gpt-5-mini' | 'gpt-5-nano' | 'auto';
+export type AgentModel = 'gpt-5.1' | 'gpt-5.1-codex-mini' | 'gpt-5.1-chat-latest' | 'auto';
 
 export interface AgentCapabilities {
   reasoning: number; // 0-100
@@ -40,9 +40,9 @@ export interface ModelConfig {
 }
 
 const MODELS: Record<AgentModel, ModelConfig | null> = {
-  'gpt-5-think': {
-    id: 'gpt-5-think',
-    name: 'GPT-5 Think',
+  'gpt-5.1': {
+    id: 'gpt-5.1',
+    name: 'GPT-5.1 Thinking',
     description: 'Most powerful model with extended reasoning capabilities',
     capabilities: {
       reasoning: 100,
@@ -54,12 +54,12 @@ const MODELS: Record<AgentModel, ModelConfig | null> = {
     costPerMillion: 50,
     avgResponseTime: 12,
   },
-  'gpt-5-mini': {
-    id: 'gpt-5-mini',
-    name: 'GPT-5 Mini',
-    description: 'Balanced model for general-purpose tasks',
+  'gpt-5.1-codex-mini': {
+    id: 'gpt-5.1-codex-mini',
+    name: 'GPT-5.1 Codex Mini',
+    description: 'Balanced model optimized for agentic coding tasks',
     capabilities: {
-      reasoning: 75,
+      reasoning: 85,
       speed: 75,
       cost: 50,
       contextWindow: 64_000,
@@ -68,12 +68,12 @@ const MODELS: Record<AgentModel, ModelConfig | null> = {
     costPerMillion: 10,
     avgResponseTime: 5,
   },
-  'gpt-5-nano': {
-    id: 'gpt-5-nano',
-    name: 'GPT-5 Nano',
-    description: 'Fast, lightweight model for quick responses',
+  'gpt-5.1-chat-latest': {
+    id: 'gpt-5.1-chat-latest',
+    name: 'GPT-5.1 Instant',
+    description: 'Fast, conversational model for quick responses',
     capabilities: {
-      reasoning: 50,
+      reasoning: 60,
       speed: 100,
       cost: 20,
       contextWindow: 16_000,
@@ -82,7 +82,7 @@ const MODELS: Record<AgentModel, ModelConfig | null> = {
     costPerMillion: 2,
     avgResponseTime: 2,
   },
-  'auto': null, // Auto-routing doesn't have specific config
+  auto: null, // Auto-routing doesn't have specific config
 };
 
 export interface AgentSelectorProps {
@@ -112,7 +112,7 @@ export function AgentSelector({
         <span className="font-medium">
           {selectedModel === 'auto'
             ? t('auto')
-            : MODELS[selectedModel]?.name || 'GPT-5 Mini'}
+            : MODELS[selectedModel]?.name || 'GPT-5.1 Codex Mini'}
         </span>
         <svg
           className="h-4 w-4 text-foreground/60"
@@ -128,10 +128,7 @@ export function AgentSelector({
   }
 
   return (
-    <motion.div
-      layout
-      className="rounded-lg border border-border bg-surface p-4"
-    >
+    <motion.div layout className="rounded-lg border border-border bg-surface p-4">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -172,21 +169,23 @@ export function AgentSelector({
           showDetails={showDetails}
         />
 
-        {/* GPT-5 Models */}
-        {(['gpt-5-think', 'gpt-5-mini', 'gpt-5-nano'] as AgentModel[]).map((modelId) => {
-          const config = MODELS[modelId];
-          if (!config) return null;
+        {/* GPT-5.1 Models */}
+        {(['gpt-5.1', 'gpt-5.1-codex-mini', 'gpt-5.1-chat-latest'] as AgentModel[]).map(
+          (modelId) => {
+            const config = MODELS[modelId];
+            if (!config) return null;
 
-          return (
-            <ModelCard
-              key={modelId}
-              model={config}
-              isSelected={selectedModel === modelId}
-              onClick={() => onModelChange(modelId)}
-              showDetails={showDetails}
-            />
-          );
-        })}
+            return (
+              <ModelCard
+                key={modelId}
+                model={config}
+                isSelected={selectedModel === modelId}
+                onClick={() => onModelChange(modelId)}
+                showDetails={showDetails}
+              />
+            );
+          },
+        )}
       </div>
 
       {/* Preset Selectors */}
@@ -197,17 +196,17 @@ export function AgentSelector({
             <PresetButton
               label={t('presetCoding')}
               icon="💻"
-              onClick={() => onModelChange('gpt-5-think')}
+              onClick={() => onModelChange('gpt-5.1')}
             />
             <PresetButton
               label={t('presetResearch')}
               icon="🔍"
-              onClick={() => onModelChange('gpt-5-mini')}
+              onClick={() => onModelChange('gpt-5.1-codex-mini')}
             />
             <PresetButton
               label={t('presetChat')}
               icon="💬"
-              onClick={() => onModelChange('gpt-5-nano')}
+              onClick={() => onModelChange('gpt-5.1-chat-latest')}
             />
             <PresetButton
               label={t('presetCreative')}
@@ -261,12 +260,7 @@ function ModelCard({ model, isSelected, onClick, showDetails }: ModelCardProps) 
         <div className="mt-2 space-y-1">
           <CapabilityBar label="Reasoning" value={model.capabilities.reasoning} color="primary" />
           <CapabilityBar label="Speed" value={model.capabilities.speed} color="success" />
-          <CapabilityBar
-            label="Cost"
-            value={100 - model.capabilities.cost}
-            color="info"
-            inverted
-          />
+          <CapabilityBar label="Cost" value={100 - model.capabilities.cost} color="info" inverted />
         </div>
       )}
 

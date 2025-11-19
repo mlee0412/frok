@@ -45,37 +45,48 @@ export function analyzeMessageComplexity(content: string): MessageComplexity {
   const questionMarks = (content.match(/\?/g) || []).length;
   const multipleQuestions = questionMarks > 2;
   const followUpWords = ['why', 'how', 'explain', 'elaborate', 'detail', 'analyze'];
-  const hasFollowUps = followUpWords.some(word => content.toLowerCase().includes(word));
+  const hasFollowUps = followUpWords.some((word) => content.toLowerCase().includes(word));
   const questionDepthScore = (multipleQuestions ? 40 : 0) + (hasFollowUps ? 40 : 0);
 
   // Factor 5: Technical terms
   const technicalKeywords = [
-    'algorithm', 'architecture', 'optimization', 'refactor', 'design pattern',
-    'performance', 'scalability', 'complexity', 'implementation', 'framework',
-    'infrastructure', 'asynchronous', 'concurrent', 'distributed', 'microservice',
+    'algorithm',
+    'architecture',
+    'optimization',
+    'refactor',
+    'design pattern',
+    'performance',
+    'scalability',
+    'complexity',
+    'implementation',
+    'framework',
+    'infrastructure',
+    'asynchronous',
+    'concurrent',
+    'distributed',
+    'microservice',
   ];
-  const technicalTerms = technicalKeywords.filter(term =>
-    content.toLowerCase().includes(term)
+  const technicalTerms = technicalKeywords.filter((term) =>
+    content.toLowerCase().includes(term),
   ).length;
   const technicalScore = Math.min(100, technicalTerms * 15);
 
   // Calculate weighted complexity score
-  const complexityScore = (
+  const complexityScore =
     lengthScore * 0.2 +
     codeScore * 0.3 +
     mathScore * 0.2 +
     questionDepthScore * 0.15 +
-    technicalScore * 0.15
-  );
+    technicalScore * 0.15;
 
   // Determine recommended model
   let recommendedModel: AgentModel;
   if (complexityScore >= 70) {
-    recommendedModel = 'gpt-5-think'; // High complexity
+    recommendedModel = 'gpt-5.1'; // High complexity
   } else if (complexityScore >= 40) {
-    recommendedModel = 'gpt-5-mini'; // Medium complexity
+    recommendedModel = 'gpt-5.1-codex-mini'; // Medium complexity
   } else {
-    recommendedModel = 'gpt-5-nano'; // Low complexity
+    recommendedModel = 'gpt-5.1-chat-latest'; // Low complexity
   }
 
   return {
@@ -97,7 +108,7 @@ export function analyzeMessageComplexity(content: string): MessageComplexity {
 export function routeMessage(
   content: string,
   selectedModel: AgentModel,
-  threadHistory?: Array<{ role: string; content: string }>
+  threadHistory?: Array<{ role: string; content: string }>,
 ): { model: AgentModel; reasoning: string } {
   // If user explicitly selected a model (not auto), use it
   if (selectedModel !== 'auto') {
@@ -115,10 +126,10 @@ export function routeMessage(
     // Long conversations might benefit from more capable model
     if (complexity.score < 70) {
       complexity.score += 10;
-      if (complexity.score >= 70 && complexity.recommendedModel === 'gpt-5-mini') {
-        complexity.recommendedModel = 'gpt-5-think';
-      } else if (complexity.score >= 40 && complexity.recommendedModel === 'gpt-5-nano') {
-        complexity.recommendedModel = 'gpt-5-mini';
+      if (complexity.score >= 70 && complexity.recommendedModel === 'gpt-5.1-codex-mini') {
+        complexity.recommendedModel = 'gpt-5.1';
+      } else if (complexity.score >= 40 && complexity.recommendedModel === 'gpt-5.1-chat-latest') {
+        complexity.recommendedModel = 'gpt-5.1-codex-mini';
       }
     }
   }
@@ -134,16 +145,16 @@ export function routeMessage(
  */
 export function getOpenAIModelId(model: AgentModel): string {
   switch (model) {
-    case 'gpt-5-think':
-      return 'gpt-5-turbo-2024-04-09'; // Placeholder - replace with actual GPT-5 think model
-    case 'gpt-5-mini':
-      return 'gpt-5-turbo-2024-04-09'; // Placeholder - replace with actual GPT-5 mini model
-    case 'gpt-5-nano':
-      return 'gpt-5-turbo-2024-04-09'; // Placeholder - replace with actual GPT-5 nano model
+    case 'gpt-5.1':
+      return 'gpt-5.1'; // Actual GPT-5.1 thinking model
+    case 'gpt-5.1-codex-mini':
+      return 'gpt-5.1-codex-mini'; // Actual GPT-5.1 codex mini model
+    case 'gpt-5.1-chat-latest':
+      return 'gpt-5.1-chat-latest'; // Actual GPT-5.1 instant model
     case 'auto':
-      return 'gpt-5-turbo-2024-04-09'; // Fallback
+      return 'gpt-5.1-codex-mini'; // Fallback
     default:
-      return 'gpt-5-turbo-2024-04-09';
+      return 'gpt-5.1-codex-mini';
   }
 }
 
@@ -158,16 +169,12 @@ export function estimateTokens(text: string): number {
 /**
  * Estimate response cost
  */
-export function estimateCost(
-  model: AgentModel,
-  inputTokens: number,
-  outputTokens: number
-): number {
+export function estimateCost(model: AgentModel, inputTokens: number, outputTokens: number): number {
   const pricing: Record<AgentModel, { input: number; output: number } | null> = {
-    'gpt-5-think': { input: 0.00005, output: 0.00015 }, // $50/1M tokens avg
-    'gpt-5-mini': { input: 0.000005, output: 0.000015 }, // $10/1M tokens avg
-    'gpt-5-nano': { input: 0.000001, output: 0.000003 }, // $2/1M tokens avg
-    'auto': null,
+    'gpt-5.1': { input: 0.00005, output: 0.00015 }, // $50/1M tokens avg
+    'gpt-5.1-codex-mini': { input: 0.00001, output: 0.00003 }, // $10/1M tokens avg
+    'gpt-5.1-chat-latest': { input: 0.000002, output: 0.000006 }, // $2/1M tokens avg
+    auto: null,
   };
 
   const modelPricing = pricing[model];

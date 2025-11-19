@@ -24,17 +24,17 @@ import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 
 const TTSSettingsModal = dynamic(
   () => import('@/components/TTSSettings').then((m) => ({ default: m.TTSSettingsModal })),
-  { ssr: false }
+  { ssr: false },
 );
 
 const AgentMemoryModal = dynamic(
   () => import('@/components/AgentMemoryModal').then((m) => ({ default: m.AgentMemoryModal })),
-  { ssr: false }
+  { ssr: false },
 );
 
 const UserMemoriesModal = dynamic(
   () => import('@/components/UserMemoriesModal').then((m) => ({ default: m.UserMemoriesModal })),
-  { ssr: false }
+  { ssr: false },
 );
 
 // ============================================================================
@@ -127,7 +127,7 @@ export default function AgentPage() {
         throw error;
       }
     },
-    [activeThread, createThread, setActiveThread, addMessage, messages.length, toast]
+    [activeThread, createThread, setActiveThread, addMessage, messages.length, toast],
   );
 
   // ===== Streaming Logic =====
@@ -135,7 +135,7 @@ export default function AgentPage() {
   const sendMessageWithStreaming = async (
     threadId: string,
     content: string,
-    fileUrls: string[]
+    fileUrls: string[],
   ) => {
     setIsStreaming(true);
 
@@ -256,8 +256,8 @@ export default function AgentPage() {
                               success: parsed.data.success,
                               duration_ms: parsed.data.duration_ms,
                             }
-                          : event
-                      )
+                          : event,
+                      ),
                     );
                     break;
 
@@ -392,9 +392,9 @@ export default function AgentPage() {
                 <option value="auto">🤖 Auto (Smart Routing)</option>
                 <optgroup label="GPT-5 Family">
                   <option value="gpt-5">⚡ GPT-5 (Main Model)</option>
-                  <option value="gpt-5-mini">🎯 GPT-5 Mini (Balanced)</option>
-                  <option value="gpt-5-nano">💨 GPT-5 Nano (Fast)</option>
-                  <option value="gpt-5-thinking">🧠 GPT-5 Thinking (Reasoning)</option>
+                  <option value="gpt-5.1-codex-mini">🎯 GPT-5.1 Codex Mini (Balanced)</option>
+                  <option value="gpt-5.1-chat-latest">💨 GPT-5.1 Instant (Fast)</option>
+                  <option value="gpt-5.1">🧠 GPT-5.1 Thinking (Reasoning)</option>
                   <option value="gpt-5-pro">🚀 GPT-5 Pro (Enhanced)</option>
                 </optgroup>
               </select>
@@ -445,11 +445,7 @@ export default function AgentPage() {
                 </div>
               )}
 
-              <MessageList
-                threadId={activeThread.id}
-                isCompact={false}
-                isLoading={false}
-              />
+              <MessageList threadId={activeThread.id} isCompact={false} isLoading={false} />
             </>
           ) : (
             <EmptyState
@@ -489,15 +485,10 @@ export default function AgentPage() {
       )}
 
       {showMemoryModal && (
-        <AgentMemoryModal
-          agentName="default"
-          onClose={() => setShowMemoryModal(false)}
-        />
+        <AgentMemoryModal agentName="default" onClose={() => setShowMemoryModal(false)} />
       )}
 
-      {showUserMemories && (
-        <UserMemoriesModal onClose={() => setShowUserMemories(false)} />
-      )}
+      {showUserMemories && <UserMemoriesModal onClose={() => setShowUserMemories(false)} />}
     </>
   );
 }
@@ -515,9 +506,7 @@ function EmptyState({ onCreateThread }: EmptyStateProps) {
     <div className="flex h-full items-center justify-center p-6">
       <div className="max-w-md text-center">
         <div className="mb-6 text-6xl">🤖</div>
-        <h2 className="mb-3 text-2xl font-semibold text-foreground">
-          Welcome to Agent Chat
-        </h2>
+        <h2 className="mb-3 text-2xl font-semibold text-foreground">Welcome to Agent Chat</h2>
         <p className="mb-6 text-sm text-foreground/60">
           Your AI assistant with access to powerful tools and memory
         </p>

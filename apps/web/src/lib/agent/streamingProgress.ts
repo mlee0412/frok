@@ -142,12 +142,7 @@ export class ProgressEmitter {
   /**
    * Notify tool execution completed
    */
-  toolEnd(
-    toolName: string,
-    success: boolean,
-    durationMs: number,
-    result?: unknown
-  ): void {
+  toolEnd(toolName: string, success: boolean, durationMs: number, result?: unknown): void {
     const event: ToolExecutionEvent = {
       tool_name: toolName,
       success,
@@ -255,7 +250,7 @@ export class ProgressEmitter {
       const keyLower = key.toLowerCase();
 
       // Check if key contains sensitive terms
-      if (sensitiveKeys.some(term => keyLower.includes(term))) {
+      if (sensitiveKeys.some((term) => keyLower.includes(term))) {
         sanitized[key] = '[REDACTED]';
       } else if (typeof value === 'string' && value.length > 100) {
         // Truncate long strings
@@ -325,7 +320,7 @@ export async function executeToolWithProgress(
   toolName: string,
   toolFunction: () => Promise<unknown>,
   parameters?: Record<string, unknown>,
-  description?: string
+  description?: string,
 ): Promise<unknown> {
   const startTime = Date.now();
 
@@ -361,7 +356,7 @@ export async function executeToolWithProgress(
  *
  *     // Send metadata
  *     emitter.metadata({
- *       model: 'gpt-5-mini',
+ *       model: 'gpt-5.1-codex-mini',
  *       complexity: 'moderate',
  *       tools: ['ha_search', 'memory_search'],
  *     });
@@ -384,7 +379,7 @@ export async function executeToolWithProgress(
  *     }
  *
  *     // Done
- *     emitter.done(fullResponse, { model: 'gpt-5-mini' });
+ *     emitter.done(fullResponse, { model: 'gpt-5.1-codex-mini' });
  *     emitter.close();
  *   }
  * });

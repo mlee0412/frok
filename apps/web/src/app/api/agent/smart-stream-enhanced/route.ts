@@ -22,10 +22,7 @@ import {
   recommendTools,
   type ToolType,
 } from '@/lib/agent/tools-unified';
-import {
-  parseAgentResponse,
-  createErrorResponse,
-} from '@/lib/agent/responseSchemas';
+import { parseAgentResponse, createErrorResponse } from '@/lib/agent/responseSchemas';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -41,7 +38,12 @@ type ChatMessage = {
 
 type InputContent =
   | { type: 'input_text'; text: string; providerData?: Record<string, unknown> }
-  | { type: 'input_image'; image?: string; detail?: string; providerData?: Record<string, unknown> };
+  | {
+      type: 'input_image';
+      image?: string;
+      detail?: string;
+      providerData?: Record<string, unknown>;
+    };
 
 // ============================================================================
 // Query Classification
@@ -84,16 +86,18 @@ async function classifyQuery(query: string): Promise<'simple' | 'moderate' | 'co
 // Model & Tool Selection
 // ============================================================================
 
-const FAST_MODEL = process.env['OPENAI_FAST_MODEL'] ?? 'gpt-5-nano';
+const FAST_MODEL = process.env['OPENAI_FAST_MODEL'] ?? 'gpt-5.1-chat-latest';
 const BALANCED_MODEL =
-  process.env['OPENAI_BALANCED_MODEL'] ?? process.env['OPENAI_GENERAL_MODEL'] ?? 'gpt-5-mini';
+  process.env['OPENAI_BALANCED_MODEL'] ??
+  process.env['OPENAI_GENERAL_MODEL'] ??
+  'gpt-5.1-codex-mini';
 const COMPLEX_MODEL =
-  process.env['OPENAI_COMPLEX_MODEL'] ?? process.env['OPENAI_AGENT_MODEL'] ?? 'gpt-5-think';
+  process.env['OPENAI_COMPLEX_MODEL'] ?? process.env['OPENAI_AGENT_MODEL'] ?? 'gpt-5.1';
 
 function selectModelAndTools(
   complexity: 'simple' | 'moderate' | 'complex',
   userModel?: string,
-  query?: string
+  query?: string,
 ) {
   const normalizedPreference = userModel?.toLowerCase();
 
@@ -101,7 +105,8 @@ function selectModelAndTools(
   const recommendedTools = query ? recommendTools(query) : [];
 
   // User preference overrides
-  if (normalizedPreference === 'gpt-5-nano') {
+  // Legacy mapping: nano -> gpt-5.1-chat-latest
+  if (normalizedPreference === 'gpt-5-nano' || normalizedPreference === 'gpt-5.1-chat-latest') {
     return {
       model: FAST_MODEL,
       tools: getDefaultTools('simple'),
@@ -109,7 +114,8 @@ function selectModelAndTools(
     };
   }
 
-  if (normalizedPreference === 'gpt-5-mini') {
+  // Legacy mapping: mini -> gpt-5.1-codex-mini
+  if (normalizedPreference === 'gpt-5-mini' || normalizedPreference === 'gpt-5.1-codex-mini') {
     return {
       model: BALANCED_MODEL,
       tools: getDefaultTools('moderate'),
@@ -117,7 +123,8 @@ function selectModelAndTools(
     };
   }
 
-  if (normalizedPreference === 'gpt-5-think') {
+  // Legacy mapping: think -> gpt-5.1
+  if (normalizedPreference === 'gpt-5-think' || normalizedPreference === 'gpt-5.1') {
     return {
       model: COMPLEX_MODEL,
       tools: getDefaultTools('complex'),
@@ -127,7 +134,7 @@ function selectModelAndTools(
 
   if (normalizedPreference === 'gpt-5') {
     return {
-      model: 'gpt-5',
+      model: 'gpt-5.1',
       tools: getDefaultTools(complexity),
       orchestrate: complexity !== 'simple',
     };
@@ -276,15 +283,17 @@ export async function POST(req: NextRequest) {
                 user_id,
                 error: threadError,
                 errorCode: threadError?.code,
-                isDev: process.env["NODE_ENV"] === 'development',
-                hasDevBypass: process.env["DEV_BYPASS_AUTH"] === 'true',
-                hint: 'Check if thread exists and belongs to user. In dev mode with DEV_BYPASS_AUTH, ensure SUPABASE_SERVICE_ROLE_KEY is set.'
+                isDev: process.env['NODE_ENV'] === 'development',
+                hasDevBypass: process.env['DEV_BYPASS_AUTH'] === 'true',
+                hint: 'Check if thread exists and belongs to user. In dev mode with DEV_BYPASS_AUTH, ensure SUPABASE_SERVICE_ROLE_KEY is set.',
               });
 
-              send(createErrorResponse('Thread not found or access denied', {
-                errorCode: 'THREAD_NOT_FOUND',
-                retryable: false
-              }));
+              send(
+                createErrorResponse('Thread not found or access denied', {
+                  errorCode: 'THREAD_NOT_FOUND',
+                  retryable: false,
+                }),
+              );
               controller.close();
               return;
             }
@@ -324,11 +333,11 @@ export async function POST(req: NextRequest) {
         // ============================================================================
 
         const complexity = await classifyQuery(input_as_text);
-        const { model: selectedModel, tools: selectedTools, orchestrate } = selectModelAndTools(
-          complexity,
-          userModel,
-          input_as_text
-        );
+        const {
+          model: selectedModel,
+          tools: selectedTools,
+          orchestrate,
+        } = selectModelAndTools(complexity, userModel, input_as_text);
 
         // Get tool configuration
         const toolsConfig = getToolConfiguration(enabledTools || selectedTools, {
@@ -505,23 +514,30 @@ export async function POST(req: NextRequest) {
             // ============================================================================
 
             if (useCache && images.length === 0) {
-              await agentCache.set(input_as_text, user_id, {
-                output,
-                metadata: {
-                  model: metadataModel,
-                  complexity,
-                  routing: orchestrate ? 'orchestrator' : 'direct',
-                  toolsUsed: toolsConfig.metadata.map((t) => t.displayName),
-                  toolSource: suite ? 'enhanced' : 'custom',
-                  models: orchestrate ? suite?.models : { general: metadataModel },
+              await agentCache.set(
+                input_as_text,
+                user_id,
+                {
+                  output,
+                  metadata: {
+                    model: metadataModel,
+                    complexity,
+                    routing: orchestrate ? 'orchestrator' : 'direct',
+                    toolsUsed: toolsConfig.metadata.map((t) => t.displayName),
+                    toolSource: suite ? 'enhanced' : 'custom',
+                    models: orchestrate ? suite?.models : { general: metadataModel },
+                  },
                 },
-              }, threadId);
+                threadId,
+              );
             }
           } else {
-            send(createErrorResponse('No response from agent', {
-              errorCode: 'NO_RESPONSE',
-              retryable: true,
-            }));
+            send(
+              createErrorResponse('No response from agent', {
+                errorCode: 'NO_RESPONSE',
+                retryable: true,
+              }),
+            );
           }
         });
 
@@ -530,10 +546,14 @@ export async function POST(req: NextRequest) {
         console.error('[smart-stream-enhanced error]', error);
         const message = error instanceof Error ? error.message : 'Stream failed';
         controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify(createErrorResponse(message, {
-            errorCode: 'STREAM_ERROR',
-            retryable: true,
-          }))}\n\n`)
+          encoder.encode(
+            `data: ${JSON.stringify(
+              createErrorResponse(message, {
+                errorCode: 'STREAM_ERROR',
+                retryable: true,
+              }),
+            )}\n\n`,
+          ),
         );
         controller.close();
       }

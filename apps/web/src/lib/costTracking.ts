@@ -7,48 +7,47 @@
 
 // Model pricing (per 1M tokens)
 // Source: OpenAI pricing as of 2025
-const MODEL_PRICING = {
-  'gpt-5-nano': {
-    input: 0.10,   // $0.10 per 1M input tokens
-    output: 0.20,  // $0.20 per 1M output tokens
+export const MODEL_COSTS = {
+  'gpt-5.1-chat-latest': {
+    input: 0.000001,
+    output: 0.000002,
   },
-  'gpt-5-mini': {
-    input: 0.15,   // $0.15 per 1M input tokens
-    output: 0.60,  // $0.60 per 1M output tokens
+  'gpt-5.1-codex-mini': {
+    input: 0.000005,
+    output: 0.000015,
   },
-  'gpt-5-think': {
-    input: 2.50,   // $2.50 per 1M input tokens
-    output: 10.00, // $10.00 per 1M output tokens
+  'gpt-5.1': {
+    input: 2.5, // $2.50 per 1M input tokens
+    output: 10.0, // $10.00 per 1M output tokens
+  },
+  unknown: {
+    input: 0,
+    output: 0,
   },
   'gpt-5': {
-    input: 5.00,   // $5.00 per 1M input tokens
-    output: 15.00, // $15.00 per 1M output tokens
+    input: 5.0, // $5.00 per 1M input tokens
+    output: 15.0, // $15.00 per 1M output tokens
   },
   'gpt-4': {
-    input: 30.00,  // $30.00 per 1M input tokens
-    output: 60.00, // $60.00 per 1M output tokens
-  },
-  // Fallback for unknown models
-  'unknown': {
-    input: 1.00,
-    output: 2.00,
+    input: 30.0, // $30.00 per 1M input tokens
+    output: 60.0, // $60.00 per 1M output tokens
   },
 } as const;
 
 // Tool usage costs (fixed per use)
 const TOOL_COSTS = {
-  'web_search': 0.001,         // $0.001 per search
-  'code_interpreter': 0.03,     // $0.03 per session
-  'file_search': 0.0025,        // $0.0025 per 1k searches
-  'image_generation': 0.040,    // $0.040 per 1024x1024 image
-  'ha_search': 0,               // Free (local)
-  'ha_call': 0,                 // Free (local)
-  'memory_add': 0,              // Free (database operation)
-  'memory_search': 0,           // Free (database operation)
-  'custom_web_search': 0.001,   // $0.001 per search (Tavily)
+  web_search: 0.001, // $0.001 per search
+  code_interpreter: 0.03, // $0.03 per session
+  file_search: 0.0025, // $0.0025 per 1k searches
+  image_generation: 0.04, // $0.040 per 1024x1024 image
+  ha_search: 0, // Free (local)
+  ha_call: 0, // Free (local)
+  memory_add: 0, // Free (database operation)
+  memory_search: 0, // Free (database operation)
+  custom_web_search: 0.001, // $0.001 per search (Tavily)
 } as const;
 
-type ModelName = keyof typeof MODEL_PRICING;
+type ModelName = keyof typeof MODEL_COSTS;
 type ToolName = keyof typeof TOOL_COSTS;
 
 /**
@@ -61,7 +60,7 @@ function estimateTokens(text: string): number {
 
 /**
  * Calculate cost for a single message interaction
- * @param model - Model name (e.g., 'gpt-5-mini')
+ * @param model - Model name (e.g., 'gpt-5.1-codex-mini')
  * @param inputText - User input text
  * @param outputText - Assistant output text
  * @param tools - Array of tools used in the interaction
@@ -71,11 +70,11 @@ export function calculateMessageCost(
   model: string,
   inputText: string,
   outputText: string,
-  tools: string[] = []
+  tools: string[] = [],
 ): number {
   // Get model pricing (fallback to 'unknown' if model not found)
-  const modelKey = (model in MODEL_PRICING ? model : 'unknown') as ModelName;
-  const pricing = MODEL_PRICING[modelKey];
+  const modelKey = (model in MODEL_COSTS ? model : 'unknown') as ModelName;
+  const pricing = MODEL_COSTS[modelKey];
 
   // Estimate tokens
   const inputTokens = estimateTokens(inputText);
@@ -106,7 +105,7 @@ export function calculateTotalCost(
     content: string;
     model?: string;
     tools?: string[];
-  }>
+  }>,
 ): number {
   let totalCost = 0;
   let currentUserMessage = '';
@@ -117,14 +116,9 @@ export function calculateTotalCost(
       currentUserMessage = message.content;
     } else if (message.role === 'assistant') {
       // Calculate cost for this interaction
-      const model = message.model || 'gpt-5-mini';
+      const model = message.model || 'gpt-5.1-codex-mini';
       const tools = message.tools || [];
-      const cost = calculateMessageCost(
-        model,
-        currentUserMessage,
-        message.content,
-        tools
-      );
+      const cost = calculateMessageCost(model, currentUserMessage, message.content, tools);
       totalCost += cost;
       currentUserMessage = ''; // Reset
     }
@@ -157,7 +151,7 @@ export function getCostBreakdown(
     content: string;
     model?: string;
     tools?: string[];
-  }>
+  }>,
 ): Record<string, number> {
   const breakdown: Record<string, number> = {};
   let currentUserMessage = '';
@@ -166,14 +160,9 @@ export function getCostBreakdown(
     if (message.role === 'user') {
       currentUserMessage = message.content;
     } else if (message.role === 'assistant') {
-      const model = message.model || 'gpt-5-mini';
+      const model = message.model || 'gpt-5.1-codex-mini';
       const tools = message.tools || [];
-      const cost = calculateMessageCost(
-        model,
-        currentUserMessage,
-        message.content,
-        tools
-      );
+      const cost = calculateMessageCost(model, currentUserMessage, message.content, tools);
       breakdown[model] = (breakdown[model] || 0) + cost;
       currentUserMessage = '';
     }
@@ -196,7 +185,7 @@ export function getCostStatistics(
     tools?: string[];
     timestamp: number;
   }>,
-  periodDays: number = 7
+  periodDays: number = 7,
 ): {
   totalCost: number;
   averageCostPerMessage: number;
@@ -234,14 +223,9 @@ export function getCostStatistics(
       const dateStr = new Date(message.timestamp).toISOString().split('T')[0];
       if (!dateStr) continue; // Skip if date parsing fails (shouldn't happen)
 
-      const model = message.model || 'gpt-5-mini';
+      const model = message.model || 'gpt-5.1-codex-mini';
       const tools = message.tools || [];
-      const cost = calculateMessageCost(
-        model,
-        currentUserMessage,
-        message.content,
-        tools
-      );
+      const cost = calculateMessageCost(model, currentUserMessage, message.content, tools);
       dailyCosts[dateStr] = (dailyCosts[dateStr] || 0) + cost;
       currentUserMessage = '';
     }
@@ -270,7 +254,7 @@ export function estimateCost(
   model: string,
   inputText: string,
   estimatedOutputLength: number = 500,
-  tools: string[] = []
+  tools: string[] = [],
 ): number {
   const estimatedOutput = 'x'.repeat(estimatedOutputLength);
   return calculateMessageCost(model, inputText, estimatedOutput, tools);

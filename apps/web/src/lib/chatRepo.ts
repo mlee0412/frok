@@ -17,7 +17,10 @@ type SupabaseArrayResponse<T> = Promise<{ data: T[] | null; error: SupabaseError
 
 type SupabaseQueryBuilder<T> = {
   select: (columns?: string) => SupabaseQueryBuilder<T> & SupabaseArrayResponse<T>;
-  insert: (data: Partial<T> | Partial<T>[], options?: { onConflict?: string; ignoreDuplicates?: boolean }) => SupabaseQueryBuilder<T> & SupabaseResponse<T>;
+  insert: (
+    data: Partial<T> | Partial<T>[],
+    options?: { onConflict?: string; ignoreDuplicates?: boolean },
+  ) => SupabaseQueryBuilder<T> & SupabaseResponse<T>;
   update: (data: Partial<T>) => SupabaseQueryBuilder<T> & SupabaseResponse<T>;
   eq: (column: string, value: unknown) => SupabaseQueryBuilder<T>;
   is: (column: string, value: unknown) => SupabaseQueryBuilder<T>;
@@ -37,9 +40,7 @@ export type Msg = Message;
 const DEFAULT_AGENT_ID = 'default';
 
 function normaliseAgentId(agentId: unknown): string {
-  return typeof agentId === 'string' && agentId.trim().length > 0
-    ? agentId
-    : DEFAULT_AGENT_ID;
+  return typeof agentId === 'string' && agentId.trim().length > 0 ? agentId : DEFAULT_AGENT_ID;
 }
 
 function mapThreadRow(r: ChatThreadRow): ChatThread {
@@ -58,9 +59,14 @@ function mapThreadRow(r: ChatThreadRow): ChatThread {
     tags: r.tags || [],
     folder: r.folder,
     toolsEnabled: r.tools_enabled || false,
-    enabledTools:
-      r.enabled_tools || ['home_assistant', 'memory', 'web_search', 'tavily_search', 'image_generation'],
-    model: r.model || 'gpt-5-mini',
+    enabledTools: r.enabled_tools || [
+      'home_assistant',
+      'memory',
+      'web_search',
+      'tavily_search',
+      'image_generation',
+    ],
+    model: r.model || 'gpt-5.1-codex-mini',
     agentStyle: r.agent_style || 'balanced',
     projectContext: r.project_context ?? undefined,
     agentName: r.agent_name || 'FROK Assistant',
@@ -88,9 +94,9 @@ export async function listThreads(): Promise<ChatThread[]> {
     .is('deleted_at', null)
     .order('updated_at', { ascending: false })
     .limit(100);
-    
+
   if (error) throw error;
-  
+
   return (data || []).map(mapThreadRow);
 }
 
@@ -104,9 +110,9 @@ export async function getThreadMessages(threadId: string): Promise<Message[]> {
     .eq('user_id', uid)
     .order('created_at', { ascending: true })
     .limit(500);
-    
+
   if (error) throw error;
-  
+
   return (data || []).map((r: ChatMessageRow) => ({
     id: r.id,
     role: r.role,
@@ -119,7 +125,7 @@ export async function getThreadMessages(threadId: string): Promise<Message[]> {
 export async function createThread(t: ChatThread): Promise<void> {
   const supa = supabaseClient();
   const uid = await userIdOrAnon();
-  
+
   const row: Partial<ChatThreadRow> = {
     id: t.id,
     title: t.title || 'New Chat',
@@ -131,28 +137,40 @@ export async function createThread(t: ChatThread): Promise<void> {
     tools_enabled: t.toolsEnabled !== undefined ? t.toolsEnabled : true,
     tags: t.tags || [],
     folder: t.folder || null,
-    enabled_tools: t.enabledTools || ['home_assistant', 'memory', 'web_search', 'tavily_search', 'image_generation'],
-    model: t.model || 'gpt-5-mini',
+    enabled_tools: t.enabledTools || [
+      'home_assistant',
+      'memory',
+      'web_search',
+      'tavily_search',
+      'image_generation',
+    ],
+    model: t.model || 'gpt-5.1-codex-mini',
     agent_style: t.agentStyle || 'balanced',
     project_context: t.projectContext || null,
     agent_name: t.agentName || 'FROK Assistant',
   };
-  
-  const { error } = await supaTable<ChatThreadRow>(supa, 'chat_threads')
-    .insert(row, { onConflict: 'id', ignoreDuplicates: true });
-    
+
+  const { error } = await supaTable<ChatThreadRow>(supa, 'chat_threads').insert(row, {
+    onConflict: 'id',
+    ignoreDuplicates: true,
+  });
+
   if (error) throw error;
 }
 
 export async function updateThreadTitle(id: string, title: string): Promise<void> {
   const supa = supabaseClient();
-  const { error } = await supaTable<ChatThreadRow>(supa, 'chat_threads').update({ title }).eq('id', id);
+  const { error } = await supaTable<ChatThreadRow>(supa, 'chat_threads')
+    .update({ title })
+    .eq('id', id);
   if (error) throw error;
 }
 
 export async function updateThreadAgent(id: string, agentId: string): Promise<void> {
   const supa = supabaseClient();
-  const { error } = await supaTable<ChatThreadRow>(supa, 'chat_threads').update({ agent_id: agentId }).eq('id', id);
+  const { error } = await supaTable<ChatThreadRow>(supa, 'chat_threads')
+    .update({ agent_id: agentId })
+    .eq('id', id);
   if (error) throw error;
 }
 
@@ -176,17 +194,25 @@ export async function updateThread(id: string, updates: ThreadUpdate): Promise<v
   if (updates.agentStyle !== undefined) toWrite.agent_style = updates.agentStyle;
   if (updates.projectContext !== undefined) toWrite.project_context = updates.projectContext;
   if (updates.agentName !== undefined) toWrite.agent_name = updates.agentName;
-  
+
   const { error } = await supaTable<ChatThreadRow>(supa, 'chat_threads')
     .update(toWrite)
     .eq('id', id)
     .eq('user_id', uid);
-    
+
   if (error) throw error;
 }
 
 // Legacy function for backwards compatibility
-export async function updateThreadFlags(id: string, flags: { pinned?: boolean; archived?: boolean; deleted_at?: string | null; toolsEnabled?: boolean }): Promise<void> {
+export async function updateThreadFlags(
+  id: string,
+  flags: {
+    pinned?: boolean;
+    archived?: boolean;
+    deleted_at?: string | null;
+    toolsEnabled?: boolean;
+  },
+): Promise<void> {
   return updateThread(id, flags);
 }
 
@@ -198,7 +224,7 @@ export async function deleteThread(id: string): Promise<void> {
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
     .eq('user_id', uid);
-    
+
   if (error) throw error;
 }
 
@@ -214,7 +240,7 @@ export async function insertMessage(threadId: string, msg: Message): Promise<voi
     user_id: uid,
     created_at: msg.created_at || new Date().toISOString(),
   });
-  
+
   if (error) throw error;
 }
 
@@ -226,7 +252,7 @@ export async function updateMessageContent(id: string, content: string): Promise
     .update({ content })
     .eq('id', id)
     .eq('user_id', uid);
-    
+
   if (error) throw error;
 }
 
@@ -236,28 +262,37 @@ export type ChatSubscriptions = {
 
 export function subscribe(
   onThreadUpsert: (t: ChatThread) => void,
-  onMessageUpsert: (threadId: string, m: Message) => void
+  onMessageUpsert: (threadId: string, m: Message) => void,
 ): ChatSubscriptions {
   const supa = supabaseClient();
-  const channel = supa.channel('realtime:chat')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_threads' }, (payload: RealtimePayload<ChatThreadRow>) => {
-      const r = payload.new;
-      if (!r) return;
+  const channel = supa
+    .channel('realtime:chat')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'chat_threads' },
+      (payload: RealtimePayload<ChatThreadRow>) => {
+        const r = payload.new;
+        if (!r) return;
 
-      onThreadUpsert(mapThreadRow(r));
-    })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, (payload: RealtimePayload<ChatMessageRow>) => {
-      const r = payload.new;
-      if (!r) return;
-      
-      onMessageUpsert(r.thread_id, {
-        id: r.id,
-        role: r.role,
-        content: r.content,
-        timestamp: new Date(r.created_at).getTime(),
-        created_at: r.created_at,
-      });
-    })
+        onThreadUpsert(mapThreadRow(r));
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'chat_messages' },
+      (payload: RealtimePayload<ChatMessageRow>) => {
+        const r = payload.new;
+        if (!r) return;
+
+        onMessageUpsert(r.thread_id, {
+          id: r.id,
+          role: r.role,
+          content: r.content,
+          timestamp: new Date(r.created_at).getTime(),
+          created_at: r.created_at,
+        });
+      },
+    )
     .subscribe();
 
   return {

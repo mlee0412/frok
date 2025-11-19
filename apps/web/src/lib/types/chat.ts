@@ -22,24 +22,24 @@ export type Thread = {
   updatedAt?: number;
   created_at?: string;
   updated_at?: string;
-  
+
   // Organization
   pinned?: boolean;
   archived?: boolean;
   deleted_at?: string | null;
   tags?: string[];
   folder?: string | null;
-  
+
   // Configuration
   toolsEnabled?: boolean; // Legacy, kept for backwards compatibility
   enabledTools?: string[]; // New: ['home_assistant', 'memory', 'web_search', 'tavily_search', 'image_generation']
-  model?: string; // gpt-5-think | gpt-5 | gpt-5-mini | gpt-5-nano
+  model?: string; // gpt-5.1 | gpt-5.1-codex-mini | gpt-5.1-chat-latest
   agentStyle?: string; // 'balanced', 'concise', 'detailed', 'technical', 'casual'
-  
+
   // Context
   projectContext?: string; // Detailed project context for agent
   agentName?: string; // Agent name for memory isolation
-  
+
   // Client-side only
   messages?: Message[];
   branchedFrom?: string;

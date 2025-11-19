@@ -2,10 +2,7 @@
 
 import React from 'react';
 import { Card } from '@frok/ui';
-import {
-  getCostStatistics,
-  formatCost,
-} from '@/lib/costTracking';
+import { getCostStatistics, formatCost } from '@/lib/costTracking';
 
 type Message = {
   id: string;
@@ -43,14 +40,16 @@ export default function AnalyticsPage() {
 
           if (messagesData.ok && messagesData.messages) {
             allMessages.push(
-              ...messagesData.messages.map((m: { id: string; role: string; content: string; created_at: string; }) => ({
-                id: m.id,
-                role: m.role as 'user' | 'assistant',
-                content: m.content,
-                model: 'gpt-5-mini', // Default model (would need to store this in DB)
-                tools: [], // Default no tools (would need to store this in DB)
-                timestamp: new Date(m.created_at).getTime(),
-              }))
+              ...messagesData.messages.map(
+                (m: { id: string; role: string; content: string; created_at: string }) => ({
+                  id: m.id,
+                  role: m.role as 'user' | 'assistant',
+                  content: m.content,
+                  model: 'gpt-5.1-codex-mini', // Default model (would need to store this in DB)
+                  tools: [], // Default no tools (would need to store this in DB)
+                  timestamp: new Date(m.created_at).getTime(),
+                }),
+              ),
             );
           }
         }
@@ -102,9 +101,7 @@ export default function AnalyticsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-white">Cost Analytics</h1>
-            <p className="text-foreground/60 text-sm mt-1">
-              Track AI usage and estimated costs
-            </p>
+            <p className="text-foreground/60 text-sm mt-1">Track AI usage and estimated costs</p>
           </div>
 
           {/* Period Selector */}
@@ -129,12 +126,8 @@ export default function AnalyticsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="p-6">
             <div className="text-foreground/60 text-sm mb-1">Total Cost</div>
-            <div className="text-3xl font-bold text-white">
-              {formatCost(stats.totalCost)}
-            </div>
-            <div className="text-xs text-foreground/60 mt-2">
-              Last {period} days
-            </div>
+            <div className="text-3xl font-bold text-white">{formatCost(stats.totalCost)}</div>
+            <div className="text-xs text-foreground/60 mt-2">Last {period} days</div>
           </Card>
 
           <Card className="p-6">
@@ -142,9 +135,7 @@ export default function AnalyticsPage() {
             <div className="text-3xl font-bold text-white">
               {stats.messageCount.toLocaleString()}
             </div>
-            <div className="text-xs text-foreground/60 mt-2">
-              Assistant responses
-            </div>
+            <div className="text-xs text-foreground/60 mt-2">Assistant responses</div>
           </Card>
 
           <Card className="p-6">
@@ -152,9 +143,7 @@ export default function AnalyticsPage() {
             <div className="text-3xl font-bold text-white">
               {formatCost(stats.averageCostPerMessage)}
             </div>
-            <div className="text-xs text-foreground/60 mt-2">
-              Per response
-            </div>
+            <div className="text-xs text-foreground/60 mt-2">Per response</div>
           </Card>
         </div>
 
@@ -201,14 +190,12 @@ export default function AnalyticsPage() {
                       style={{
                         width: `${Math.min(
                           100,
-                          (cost / Math.max(...stats.costByDay.map((d) => d.cost))) * 100
+                          (cost / Math.max(...stats.costByDay.map((d) => d.cost))) * 100,
                         )}%`,
                       }}
                     ></div>
                   </div>
-                  <div className="text-white font-semibold w-20 text-right">
-                    {formatCost(cost)}
-                  </div>
+                  <div className="text-white font-semibold w-20 text-right">{formatCost(cost)}</div>
                 </div>
               ))
             )}
@@ -257,9 +244,7 @@ export default function AnalyticsPage() {
                 </tr>
                 <tr className="border-b border-border">
                   <td className="py-3 px-4 text-foreground/70">Period</td>
-                  <td className="py-3 px-4 text-right text-white font-mono">
-                    {period} days
-                  </td>
+                  <td className="py-3 px-4 text-right text-white font-mono">{period} days</td>
                 </tr>
                 <tr className="border-b border-border">
                   <td className="py-3 px-4 text-foreground/70">Total Cost</td>

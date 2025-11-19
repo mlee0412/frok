@@ -10,17 +10,9 @@
  */
 
 import { Agent, type AgentInputItem, type Tool } from '@openai/agents';
-import {
-  getToolConfiguration,
-  getAgentTools,
-  type ToolType,
-} from './tools-unified';
-import {
-  buildGuardrails,
-} from './guardrails';
-import {
-  ResponseFormats,
-} from './responseSchemas';
+import { getToolConfiguration, getAgentTools, type ToolType } from './tools-unified';
+import { buildGuardrails } from './guardrails';
+import { ResponseFormats } from './responseSchemas';
 import { createFROKAgentHooks } from './agentHooks';
 
 // ============================================================================
@@ -67,10 +59,10 @@ export interface EnhancedAgentSuiteOptions {
 // Model Configuration
 // ============================================================================
 
-const FAST_MODEL_FALLBACK = process.env['OPENAI_FAST_MODEL'] ?? 'gpt-5-nano';
-const BALANCED_MODEL_FALLBACK = process.env['OPENAI_GENERAL_MODEL'] ?? 'gpt-5-mini';
+const FAST_MODEL_FALLBACK = process.env['OPENAI_FAST_MODEL'] ?? 'gpt-5.1-chat-latest';
+const BALANCED_MODEL_FALLBACK = process.env['OPENAI_GENERAL_MODEL'] ?? 'gpt-5.1-codex-mini';
 const COMPLEX_MODEL_FALLBACK =
-  process.env['OPENAI_COMPLEX_MODEL'] ?? process.env['OPENAI_AGENT_MODEL'] ?? 'gpt-5-thinking';
+  process.env['OPENAI_COMPLEX_MODEL'] ?? process.env['OPENAI_AGENT_MODEL'] ?? 'gpt-5.1';
 
 // ============================================================================
 // Helper Functions
@@ -79,8 +71,9 @@ const COMPLEX_MODEL_FALLBACK =
 export function supportsReasoning(model: string): boolean {
   const normalized = model.toLowerCase();
 
+  if (normalized === 'gpt-5.1') return true;
   if (normalized === 'gpt-5') return true;
-  if (normalized.startsWith('gpt-5-')) {
+  if (normalized.startsWith('gpt-5-') || normalized.startsWith('gpt-5.1-')) {
     return /think|reason|pro/.test(normalized);
   }
   if (normalized.startsWith('o3')) return true;
@@ -92,7 +85,12 @@ export function supportsReasoning(model: string): boolean {
 
 export function getReasoningEffort(model: string): 'low' | 'medium' | 'high' {
   const normalized = model.toLowerCase();
-  if (normalized === 'gpt-5' || /think|reason|pro/.test(normalized) || normalized.startsWith('o3')) {
+  if (
+    normalized === 'gpt-5.1' ||
+    normalized === 'gpt-5' ||
+    /think|reason|pro/.test(normalized) ||
+    normalized.startsWith('o3')
+  ) {
     return 'high';
   }
 
@@ -109,7 +107,7 @@ function buildModelSettings(
     temperature?: number;
     store?: boolean;
     reasoningEffort?: 'low' | 'medium' | 'high';
-  } = {}
+  } = {},
 ) {
   const settings: Record<string, unknown> = { store };
   if (typeof temperature === 'number') {
@@ -139,7 +137,7 @@ function buildConversationPrimer(): AgentInputItem[] {
 // ============================================================================
 
 export async function createEnhancedAgentSuite(
-  options: EnhancedAgentSuiteOptions = {}
+  options: EnhancedAgentSuiteOptions = {},
 ): Promise<EnhancedAgentSuite> {
   const primer = buildConversationPrimer();
 
@@ -250,7 +248,8 @@ export async function createEnhancedAgentSuite(
 
   const researchAgent = new Agent({
     name: 'Research Specialist',
-    handoffDescription: 'Performs up-to-date research using web search and file search with citations.',
+    handoffDescription:
+      'Performs up-to-date research using web search and file search with citations.',
     instructions:
       'You handle questions that require web research or factual lookups.\n' +
       '- Use web_search for current information (OpenAI built-in tool).\n' +
@@ -278,7 +277,8 @@ export async function createEnhancedAgentSuite(
 
   const codeAgent = new Agent({
     name: 'Code Execution Specialist',
-    handoffDescription: 'Executes code, performs calculations, and analyzes data using code interpreter.',
+    handoffDescription:
+      'Executes code, performs calculations, and analyzes data using code interpreter.',
     instructions:
       'You handle computational tasks and code execution.\n' +
       '- Use code_interpreter to run Python code in a sandbox.\n' +
@@ -306,7 +306,8 @@ export async function createEnhancedAgentSuite(
 
   const generalAgent = new Agent({
     name: 'General Problem Solver',
-    handoffDescription: 'Handles multi-step reasoning tasks and can coordinate across all available tools.',
+    handoffDescription:
+      'Handles multi-step reasoning tasks and can coordinate across all available tools.',
     instructions:
       'You are the primary assistant for complex or multi-domain requests.\n' +
       '- Decide which tools to use and explain why.\n' +
@@ -338,7 +339,8 @@ export async function createEnhancedAgentSuite(
 
   const orchestrator = new Agent({
     name: 'FROK Orchestrator',
-    handoffDescription: 'Routes requests to the best specialist and ensures a polished final response.',
+    handoffDescription:
+      'Routes requests to the best specialist and ensures a polished final response.',
     instructions:
       'You are the orchestrator for the FROK assistant.\n' +
       '1. Understand the user request and decide whether you can answer directly or should delegate.\n' +

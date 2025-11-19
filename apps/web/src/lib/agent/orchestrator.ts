@@ -1,9 +1,15 @@
-import { Agent, type AgentInputItem, type InputGuardrail, type OutputGuardrail, type Tool } from '@openai/agents';
+import {
+  Agent,
+  type AgentInputItem,
+  type InputGuardrail,
+  type OutputGuardrail,
+  type Tool,
+} from '@openai/agents';
 
-const FAST_MODEL_FALLBACK = process.env["OPENAI_FAST_MODEL"] ?? 'gpt-5-nano';
-const BALANCED_MODEL_FALLBACK = process.env["OPENAI_GENERAL_MODEL"] ?? 'gpt-5-mini';
+const FAST_MODEL_FALLBACK = process.env['OPENAI_FAST_MODEL'] ?? 'gpt-5.1-chat-latest';
+const BALANCED_MODEL_FALLBACK = process.env['OPENAI_GENERAL_MODEL'] ?? 'gpt-5.1-codex-mini';
 const COMPLEX_MODEL_FALLBACK =
-  process.env["OPENAI_COMPLEX_MODEL"] ?? process.env["OPENAI_AGENT_MODEL"] ?? 'gpt-5-think';
+  process.env['OPENAI_COMPLEX_MODEL'] ?? process.env['OPENAI_AGENT_MODEL'] ?? 'gpt-5.1';
 
 type AgentTool = Tool<unknown>;
 
@@ -48,8 +54,9 @@ export interface AgentSuiteOptions {
 export function supportsReasoning(model: string): boolean {
   const normalized = model.toLowerCase();
 
+  if (normalized === 'gpt-5.1') return true;
   if (normalized === 'gpt-5') return true;
-  if (normalized.startsWith('gpt-5-')) {
+  if (normalized.startsWith('gpt-5-') || normalized.startsWith('gpt-5.1-')) {
     return /think|reason|pro/.test(normalized);
   }
   if (normalized.startsWith('o3')) return true;
@@ -61,7 +68,12 @@ export function supportsReasoning(model: string): boolean {
 
 export function getReasoningEffort(model: string): 'low' | 'medium' | 'high' {
   const normalized = model.toLowerCase();
-  if (normalized === 'gpt-5' || /think|reason|pro/.test(normalized) || normalized.startsWith('o3')) {
+  if (
+    normalized === 'gpt-5.1' ||
+    normalized === 'gpt-5' ||
+    /think|reason|pro/.test(normalized) ||
+    normalized.startsWith('o3')
+  ) {
     return 'high';
   }
 
@@ -75,7 +87,7 @@ const sanitizeInputGuardrail: InputGuardrail = {
       typeof input === 'string'
         ? input
         : input
-            .map(item => {
+            .map((item) => {
               const itemType = (item as { type?: string }).type;
               if (itemType === 'input_text') return (item as { text?: string }).text ?? '';
               if (itemType === 'input_image') return '[image]';
@@ -148,7 +160,7 @@ function buildModelSettings(
     temperature?: number;
     store?: boolean;
     reasoningEffort?: 'low' | 'medium' | 'high';
-  } = {}
+  } = {},
 ) {
   const settings: Record<string, unknown> = { store };
   if (typeof temperature === 'number') {
@@ -191,13 +203,14 @@ export async function createAgentSuite(options: AgentSuiteOptions): Promise<Agen
   const primer = buildConversationPrimer();
 
   const routerModel =
-    options.models?.router ?? process.env["OPENAI_ROUTER_MODEL"] ?? FAST_MODEL_FALLBACK;
+    options.models?.router ?? process.env['OPENAI_ROUTER_MODEL'] ?? FAST_MODEL_FALLBACK;
   const generalModel =
-    options.models?.general ?? (options.preferFastGeneral ? BALANCED_MODEL_FALLBACK : COMPLEX_MODEL_FALLBACK);
-  const homeModel = options.models?.home ?? process.env["OPENAI_HOME_MODEL"] ?? routerModel;
-  const memoryModel = options.models?.memory ?? process.env["OPENAI_MEMORY_MODEL"] ?? routerModel;
+    options.models?.general ??
+    (options.preferFastGeneral ? BALANCED_MODEL_FALLBACK : COMPLEX_MODEL_FALLBACK);
+  const homeModel = options.models?.home ?? process.env['OPENAI_HOME_MODEL'] ?? routerModel;
+  const memoryModel = options.models?.memory ?? process.env['OPENAI_MEMORY_MODEL'] ?? routerModel;
   const researchModel =
-    options.models?.research ?? process.env["OPENAI_RESEARCH_MODEL"] ?? BALANCED_MODEL_FALLBACK;
+    options.models?.research ?? process.env['OPENAI_RESEARCH_MODEL'] ?? BALANCED_MODEL_FALLBACK;
 
   const homeAgent = new Agent({
     name: 'Home Control Specialist',
@@ -227,7 +240,8 @@ export async function createAgentSuite(options: AgentSuiteOptions): Promise<Agen
 
   const researchAgent = new Agent({
     name: 'Research Specialist',
-    handoffDescription: 'Performs up-to-date research using web search and summarizes results with citations.',
+    handoffDescription:
+      'Performs up-to-date research using web search and summarizes results with citations.',
     instructions:
       'You handle questions that require web research or factual lookups.\n' +
       '- Use web_search to gather current information.\n' +
@@ -240,7 +254,8 @@ export async function createAgentSuite(options: AgentSuiteOptions): Promise<Agen
 
   const generalAgent = new Agent({
     name: 'General Problem Solver',
-    handoffDescription: 'Handles multi-step reasoning tasks and can coordinate across all available tools.',
+    handoffDescription:
+      'Handles multi-step reasoning tasks and can coordinate across all available tools.',
     instructions:
       'You are the primary assistant for complex or multi-domain requests.\n' +
       '- Decide which tools to use and explain why.\n' +
@@ -257,7 +272,8 @@ export async function createAgentSuite(options: AgentSuiteOptions): Promise<Agen
 
   const orchestrator = new Agent({
     name: 'FROK Orchestrator',
-    handoffDescription: 'Routes requests to the best specialist and ensures a polished final response.',
+    handoffDescription:
+      'Routes requests to the best specialist and ensures a polished final response.',
     instructions:
       'You are the orchestrator for the FROK assistant.\n' +
       '1. Understand the user request and decide whether you can answer directly or should delegate.\n' +
@@ -291,4 +307,3 @@ export async function createAgentSuite(options: AgentSuiteOptions): Promise<Agen
     },
   };
 }
-

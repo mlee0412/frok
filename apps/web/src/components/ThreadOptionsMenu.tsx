@@ -32,11 +32,26 @@ const AVAILABLE_TOOLS = [
 ];
 
 const AVAILABLE_MODELS = [
-  { id: 'auto', name: 'Auto (Recommended)', description: 'Automatically selects the best model based on query complexity' },
-  { id: 'gpt-5-think', name: 'GPT-5 Think', description: 'Most capable, best for complex reasoning' },
-  { id: 'gpt-5', name: 'GPT-5', description: 'Balanced performance and capability' },
-  { id: 'gpt-5-mini', name: 'GPT-5 Mini', description: 'Fast and efficient for most tasks' },
-  { id: 'gpt-5-nano', name: 'GPT-5 Nano', description: 'Fastest, best for simple queries' },
+  {
+    id: 'auto',
+    name: 'Auto (Recommended)',
+    description: 'Automatically selects the best model based on query complexity',
+  },
+  {
+    id: 'gpt-5.1',
+    name: 'GPT-5.1 Thinking',
+    description: 'Most capable, best for complex reasoning',
+  },
+  {
+    id: 'gpt-5.1-codex-mini',
+    name: 'GPT-5.1 Codex Mini',
+    description: 'Fast and efficient for most tasks',
+  },
+  {
+    id: 'gpt-5.1-chat-latest',
+    name: 'GPT-5.1 Instant',
+    description: 'Fastest, best for simple queries',
+  },
 ];
 
 const AGENT_STYLES = [
@@ -52,7 +67,7 @@ export function ThreadOptionsMenu({
   currentTitle = 'Untitled',
   currentTags = [],
   currentFolder,
-  currentTools = AVAILABLE_TOOLS.map(t => t.id),
+  currentTools = AVAILABLE_TOOLS.map((t) => t.id),
   currentModel = 'auto',
   currentStyle = 'balanced',
   allTags,
@@ -90,10 +105,8 @@ export function ThreadOptionsMenu({
   };
 
   const handleToggleTool = (toolId: string) => {
-    setEnabledTools(prev => 
-      prev.includes(toolId) 
-        ? prev.filter(t => t !== toolId)
-        : [...prev, toolId]
+    setEnabledTools((prev) =>
+      prev.includes(toolId) ? prev.filter((t) => t !== toolId) : [...prev, toolId],
     );
   };
 
@@ -110,7 +123,10 @@ export function ThreadOptionsMenu({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
       <div
         className="bg-surface border border-border rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
@@ -152,105 +168,101 @@ export function ThreadOptionsMenu({
         </div>
 
         {/* Organize Tab */}
-        {activeTab === 'organize' && (<div>
-
-        {/* Title */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium mb-2">{t('titleLabel')}</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder={t('titlePlaceholder')}
-            className="w-full px-3 py-2 bg-surface border border-border rounded focus:outline-none focus:border-primary text-sm"
-          />
-          <p className="mt-1 text-xs text-foreground/60">
-            {t('titleDescription')}
-          </p>
-        </div>
-
-        {/* Tags */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">{t('tagsLabel')}</label>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {tags.map((tag) => (
-              <span
-                key={tag}
-                className="bg-primary text-white px-2 py-1 rounded text-sm flex items-center gap-1"
-              >
-                {tag}
-                <button onClick={() => handleRemoveTag(tag)} className="hover:text-danger">
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
-              placeholder={t('tagsPlaceholder')}
-              className="flex-1 px-3 py-2 bg-surface border border-border rounded focus:outline-none focus:border-primary text-sm"
-            />
-            <Button
-              onClick={handleAddTag}
-              variant="primary"
-              size="sm"
-            >
-              {tCommon('add')}
-            </Button>
-          </div>
-          {allTags.length > 0 && (
-            <div className="mt-2">
-              <p className="text-xs text-foreground/60 mb-1">Existing tags:</p>
-              <div className="flex flex-wrap gap-1">
-                {allTags
-                  .filter((t) => !tags.includes(t))
-                  .map((tag) => (
-                    <button
-                      key={tag}
-                      onClick={() => setTags([...tags, tag])}
-                      className="bg-surface text-foreground/70 px-2 py-0.5 rounded text-xs hover:bg-surface/80"
-                    >
-                      + {tag}
-                    </button>
-                  ))}
-              </div>
+        {activeTab === 'organize' && (
+          <div>
+            {/* Title */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">{t('titleLabel')}</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={t('titlePlaceholder')}
+                className="w-full px-3 py-2 bg-surface border border-border rounded focus:outline-none focus:border-primary text-sm"
+              />
+              <p className="mt-1 text-xs text-foreground/60">{t('titleDescription')}</p>
             </div>
-          )}
-        </div>
 
-        {/* Folder */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium mb-2">Folder</label>
-          <div className="flex gap-2 mb-2">
-            <select
-              value={folder}
-              onChange={(e) => setFolder(e.target.value)}
-              className="flex-1 px-3 py-2 bg-surface border border-border rounded focus:outline-none focus:border-primary text-sm"
-            >
-              <option value="">No folder</option>
-              {allFolders.map((f) => (
-                <option key={f} value={f}>
-                  {f}
-                </option>
-              ))}
-              {newFolder && <option value={newFolder}>{newFolder} (new)</option>}
-            </select>
+            {/* Tags */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">{t('tagsLabel')}</label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="bg-primary text-white px-2 py-1 rounded text-sm flex items-center gap-1"
+                  >
+                    {tag}
+                    <button onClick={() => handleRemoveTag(tag)} className="hover:text-danger">
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
+                  placeholder={t('tagsPlaceholder')}
+                  className="flex-1 px-3 py-2 bg-surface border border-border rounded focus:outline-none focus:border-primary text-sm"
+                />
+                <Button onClick={handleAddTag} variant="primary" size="sm">
+                  {tCommon('add')}
+                </Button>
+              </div>
+              {allTags.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-xs text-foreground/60 mb-1">Existing tags:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {allTags
+                      .filter((t) => !tags.includes(t))
+                      .map((tag) => (
+                        <button
+                          key={tag}
+                          onClick={() => setTags([...tags, tag])}
+                          className="bg-surface text-foreground/70 px-2 py-0.5 rounded text-xs hover:bg-surface/80"
+                        >
+                          + {tag}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Folder */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">Folder</label>
+              <div className="flex gap-2 mb-2">
+                <select
+                  value={folder}
+                  onChange={(e) => setFolder(e.target.value)}
+                  className="flex-1 px-3 py-2 bg-surface border border-border rounded focus:outline-none focus:border-primary text-sm"
+                >
+                  <option value="">No folder</option>
+                  {allFolders.map((f) => (
+                    <option key={f} value={f}>
+                      {f}
+                    </option>
+                  ))}
+                  {newFolder && <option value={newFolder}>{newFolder} (new)</option>}
+                </select>
+              </div>
+              <input
+                type="text"
+                value={newFolder}
+                onChange={(e) => {
+                  setNewFolder(e.target.value);
+                  if (e.target.value) setFolder(e.target.value);
+                }}
+                placeholder="Or create new folder..."
+                className="w-full px-3 py-2 bg-surface border border-border rounded focus:outline-none focus:border-primary text-sm"
+              />
+            </div>
           </div>
-          <input
-            type="text"
-            value={newFolder}
-            onChange={(e) => {
-              setNewFolder(e.target.value);
-              if (e.target.value) setFolder(e.target.value);
-            }}
-            placeholder="Or create new folder..."
-            className="w-full px-3 py-2 bg-surface border border-border rounded focus:outline-none focus:border-primary text-sm"
-          />
-        </div></div>)}
+        )}
 
         {/* Tools Tab */}
         {activeTab === 'tools' && (
@@ -300,7 +312,9 @@ export function ThreadOptionsMenu({
                     <div className="flex-1">
                       <div className="text-sm font-medium">
                         {model.name}
-                        {model.id === 'auto' && <span className="ml-2 text-xs text-success">✓ Default</span>}
+                        {model.id === 'auto' && (
+                          <span className="ml-2 text-xs text-success">✓ Default</span>
+                        )}
                       </div>
                       {model.description && (
                         <div className="text-xs text-foreground/60 mt-0.5">{model.description}</div>
@@ -310,7 +324,8 @@ export function ThreadOptionsMenu({
                 ))}
               </div>
               <p className="text-xs text-foreground/60 mt-2">
-                💡 <strong>Auto mode</strong> analyzes your query and selects the optimal model for speed and accuracy
+                💡 <strong>Auto mode</strong> analyzes your query and selects the optimal model for
+                speed and accuracy
               </p>
             </div>
 
@@ -358,16 +373,10 @@ export function ThreadOptionsMenu({
 
         {/* Actions */}
         <div className="flex gap-2 justify-end">
-          <Button
-            onClick={onClose}
-            variant="outline"
-          >
+          <Button onClick={onClose} variant="outline">
             {tCommon('cancel')}
           </Button>
-          <Button
-            onClick={handleSave}
-            variant="primary"
-          >
+          <Button onClick={handleSave} variant="primary">
             {tCommon('save')}
           </Button>
         </div>

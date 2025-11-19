@@ -5,6 +5,7 @@ import { createAgentSuite, getReasoningEffort, supportsReasoning } from '@/lib/a
 import { withAuth } from '@/lib/api/withAuth';
 import { withRateLimit, rateLimitPresets } from '@/lib/api/withRateLimit';
 import { ProgressEmitter } from '@/lib/agent/streamingProgress';
+import { getDefaultTools } from '@/lib/agent/tools-unified';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -43,7 +44,7 @@ async function classifyQuery(query: string): Promise<'simple' | 'moderate' | 'co
     /^(hi|hello|hey)[\s\W]*$/i,
   ];
 
-  if (simplePatterns.some(pattern => pattern.test(query))) {
+  if (simplePatterns.some((pattern) => pattern.test(query))) {
     return 'simple';
   }
 
@@ -54,21 +55,21 @@ async function classifyQuery(query: string): Promise<'simple' | 'moderate' | 'co
     /(compare|contrast|difference between)/i,
   ];
 
-  if (complexPatterns.some(pattern => pattern.test(query))) {
+  if (complexPatterns.some((pattern) => pattern.test(query))) {
     return 'complex';
   }
 
   return 'moderate';
 }
 
-const FAST_MODEL = process.env['OPENAI_FAST_MODEL'] ?? 'gpt-5-nano';
-const BALANCED_MODEL = process.env['OPENAI_BALANCED_MODEL'] ?? 'gpt-5-mini';
-const COMPLEX_MODEL = process.env['OPENAI_COMPLEX_MODEL'] ?? 'gpt-5-think';
+const FAST_MODEL = process.env['OPENAI_FAST_MODEL'] ?? 'gpt-5.1-chat-latest';
+const BALANCED_MODEL = process.env['OPENAI_BALANCED_MODEL'] ?? 'gpt-5.1-codex-mini';
+const COMPLEX_MODEL = process.env['OPENAI_COMPLEX_MODEL'] ?? 'gpt-5.1';
 
 function selectModelAndTools(
   complexity: 'simple' | 'moderate' | 'complex',
   userModel?: string,
-  query?: string
+  query?: string,
 ) {
   const normalizedPreference = userModel?.toLowerCase();
   const queryLower = query?.toLowerCase() || '';
@@ -77,15 +78,23 @@ function selectModelAndTools(
   const isSearchQuery = /\b(search|find|lookup|what is|who is)\b/i.test(queryLower);
 
   // User preference overrides
-  if (normalizedPreference === 'gpt-5-nano') {
-    return { model: FAST_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: false };
+  if (normalizedPreference === 'gpt-5.1-chat-latest') {
+    return {
+      model: FAST_MODEL,
+      tools: getDefaultTools('simple'),
+      orchestrate: false,
+    };
   }
 
-  if (normalizedPreference === 'gpt-5-mini') {
-    return { model: BALANCED_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: false };
+  if (normalizedPreference === 'gpt-5.1-codex-mini') {
+    return {
+      model: BALANCED_MODEL,
+      tools: getDefaultTools('moderate'),
+      orchestrate: false,
+    };
   }
 
-  if (normalizedPreference === 'gpt-5-think') {
+  if (normalizedPreference === 'gpt-5.1') {
     return {
       model: COMPLEX_MODEL,
       tools: ['home_assistant', 'memory', 'web_search'],
@@ -105,7 +114,11 @@ function selectModelAndTools(
       if (isSearchQuery) {
         return { model: BALANCED_MODEL, tools: ['web_search', 'memory'], orchestrate: false };
       }
-      return { model: BALANCED_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: false };
+      return {
+        model: BALANCED_MODEL,
+        tools: ['home_assistant', 'memory', 'web_search'],
+        orchestrate: false,
+      };
 
     case 'complex':
       return {
@@ -115,7 +128,11 @@ function selectModelAndTools(
       };
 
     default:
-      return { model: BALANCED_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: false };
+      return {
+        model: BALANCED_MODEL,
+        tools: ['home_assistant', 'memory', 'web_search'],
+        orchestrate: false,
+      };
   }
 }
 
@@ -173,8 +190,8 @@ export async function POST(req: NextRequest) {
                 threadId,
                 user_id,
                 error: threadError,
-                isDev: process.env["NODE_ENV"] === 'development',
-                hasDevBypass: process.env["DEV_BYPASS_AUTH"] === 'true',
+                isDev: process.env['NODE_ENV'] === 'development',
+                hasDevBypass: process.env['DEV_BYPASS_AUTH'] === 'true',
               });
 
               emitter.error('Thread not found or access denied');
@@ -206,14 +223,26 @@ export async function POST(req: NextRequest) {
               });
             }
 
-            emitter.progress('history_loaded', `Loaded ${historyItems.length} previous messages`, 20);
+            emitter.progress(
+              'history_loaded',
+              `Loaded ${historyItems.length} previous messages`,
+              20,
+            );
           } catch (e) {
             console.warn('[history load failed]', e);
-            emitter.progress('history_error', 'Could not load history, proceeding without context', 20);
+            emitter.progress(
+              'history_error',
+              'Could not load history, proceeding without context',
+              20,
+            );
           }
         } else if (conversationHistory.length > 0) {
           historyItems = conversationHistory;
-          emitter.progress('history_provided', `Using ${historyItems.length} provided messages`, 20);
+          emitter.progress(
+            'history_provided',
+            `Using ${historyItems.length} provided messages`,
+            20,
+          );
         }
 
         // Progress: Classifying query
@@ -222,11 +251,11 @@ export async function POST(req: NextRequest) {
 
         // Progress: Selecting model and tools
         emitter.progress('selecting_model', `Query complexity: ${complexity}`, 40);
-        const { model: selectedModel, tools: selectedTools, orchestrate } = selectModelAndTools(
-          complexity,
-          userModel,
-          input_as_text
-        );
+        const {
+          model: selectedModel,
+          tools: selectedTools,
+          orchestrate,
+        } = selectModelAndTools(complexity, userModel, input_as_text);
 
         emitter.progress('model_selected', `Using ${selectedModel}`, 50);
 
@@ -282,7 +311,7 @@ export async function POST(req: NextRequest) {
         const toolset = suite?.tools ?? (await loadToolset(user_id)); // ✅ Pass user_id
 
         const toolMap: Record<string, unknown> = {
-          'home_assistant': [toolset.haSearch, toolset.haCall],
+          home_assistant: [toolset.haSearch, toolset.haCall],
           memory: [toolset.memoryAdd, toolset.memorySearch],
           web_search: toolset.webSearch,
           haSearch: toolset.haSearch,
@@ -294,11 +323,12 @@ export async function POST(req: NextRequest) {
 
         const flattenTools = (names: string[]): Tool<unknown>[] =>
           names
-            .map(name => toolMap[name])
+            .map((name) => toolMap[name])
             .flat()
             .filter(Boolean) as Tool<unknown>[];
 
-        const requestedToolNames = enabledTools && enabledTools.length > 0 ? enabledTools : selectedTools;
+        const requestedToolNames =
+          enabledTools && enabledTools.length > 0 ? enabledTools : selectedTools;
         const finalTools = flattenTools(requestedToolNames);
 
         // Send metadata
@@ -322,7 +352,11 @@ export async function POST(req: NextRequest) {
         }
 
         // Progress: Running agent
-        emitter.progress('running_agent', orchestrate ? 'Running orchestrator...' : 'Running agent...', 80);
+        emitter.progress(
+          'running_agent',
+          orchestrate ? 'Running orchestrator...' : 'Running agent...',
+          80,
+        );
 
         const runner = new Runner({
           traceMetadata: {
@@ -354,7 +388,8 @@ export async function POST(req: NextRequest) {
               : 'Be helpful and concise. Use tools when needed.';
 
           if (complexity !== 'simple') {
-            instructions += '\n\nUse Markdown formatting for clarity (bold, italics, lists, code blocks, etc.).';
+            instructions +=
+              '\n\nUse Markdown formatting for clarity (bold, italics, lists, code blocks, etc.).';
           }
 
           const modelSettings: Record<string, unknown> = { store: true };
@@ -373,10 +408,7 @@ export async function POST(req: NextRequest) {
             tools: finalTools,
           });
 
-          const directConversation: AgentInputItem[] = [
-            ...historyItems,
-            { role: 'user', content },
-          ];
+          const directConversation: AgentInputItem[] = [...historyItems, { role: 'user', content }];
 
           result = await runner.run(agent, directConversation);
         }
@@ -412,12 +444,9 @@ export async function POST(req: NextRequest) {
         emitter.close();
       } catch (error: unknown) {
         console.error('[stream-with-progress] Error:', error);
-        emitter.error(
-          error instanceof Error ? error.message : 'Unknown error occurred',
-          {
-            stack: error instanceof Error ? error.stack : undefined,
-          }
-        );
+        emitter.error(error instanceof Error ? error.message : 'Unknown error occurred', {
+          stack: error instanceof Error ? error.stack : undefined,
+        });
         emitter.close();
       }
     },

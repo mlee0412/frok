@@ -38,7 +38,12 @@ type AgentTool = {
 
 type InputContent =
   | { type: 'input_text'; text: string; providerData?: Record<string, unknown> }
-  | { type: 'input_image'; image?: string; detail?: string; providerData?: Record<string, unknown> };
+  | {
+      type: 'input_image';
+      image?: string;
+      detail?: string;
+      providerData?: Record<string, unknown>;
+    };
 
 const REQUIRED_AGENT_ENVS = [
   'OPENAI_API_KEY',
@@ -60,7 +65,7 @@ function validateAgentEnvironment() {
       message: `Missing environment variables: ${missing.join(', ')}`,
       documentation: 'docs/AGENTS.md#environment-configuration',
     },
-    { status: 500 }
+    { status: 500 },
   );
 }
 
@@ -75,7 +80,7 @@ async function classifyQuery(query: string): Promise<'simple' | 'moderate' | 'co
     /^(hi|hello|hey)[\s\W]*$/i,
   ];
 
-  if (simplePatterns.some(pattern => pattern.test(query))) {
+  if (simplePatterns.some((pattern) => pattern.test(query))) {
     return 'simple';
   }
 
@@ -88,7 +93,7 @@ async function classifyQuery(query: string): Promise<'simple' | 'moderate' | 'co
     /(debug|fix|solve|troubleshoot).+(code|error|bug)/i,
   ];
 
-  if (complexPatterns.some(pattern => pattern.test(query))) {
+  if (complexPatterns.some((pattern) => pattern.test(query))) {
     return 'complex';
   }
 
@@ -96,33 +101,67 @@ async function classifyQuery(query: string): Promise<'simple' | 'moderate' | 'co
   return 'moderate';
 }
 
-// AI Models - GPT-5 family with fallbacks
-const FAST_MODEL = process.env["OPENAI_FAST_MODEL"] ?? 'gpt-5-nano';
-const BALANCED_MODEL = process.env["OPENAI_BALANCED_MODEL"] ?? process.env["OPENAI_GENERAL_MODEL"] ?? 'gpt-5-mini';
-const COMPLEX_MODEL = process.env["OPENAI_COMPLEX_MODEL"] ?? process.env["OPENAI_AGENT_MODEL"] ?? 'gpt-5-thinking';
+// AI Models - GPT-5.1 family with fallbacks
+const FAST_MODEL = process.env['OPENAI_FAST_MODEL'] ?? 'gpt-5.1-chat-latest'; // GPT-5.1 Instant
+const BALANCED_MODEL =
+  process.env['OPENAI_BALANCED_MODEL'] ??
+  process.env['OPENAI_GENERAL_MODEL'] ??
+  'gpt-5.1-codex-mini'; // GPT-5.1 Codex Mini
+const COMPLEX_MODEL =
+  process.env['OPENAI_COMPLEX_MODEL'] ?? process.env['OPENAI_AGENT_MODEL'] ?? 'gpt-5.1'; // GPT-5.1 Thinking
 
 function selectModelAndTools(
   complexity: 'simple' | 'moderate' | 'complex',
   userModel?: string,
-  query?: string
+  query?: string,
 ) {
   const normalizedPreference = userModel?.toLowerCase();
   const queryLower = query?.toLowerCase() || '';
 
   // Detect query type for smart tool selection
-  const isHomeQuery = /\b(turn|light|lamp|switch|fan|tv|door|window|garage|climate|thermostat|lock|unlock|dim|brighten|open|close)\b/i.test(queryLower);
-  const isSearchQuery = /\b(search|find|lookup|what is|who is|when|where|how to|recipe|news)\b/i.test(queryLower);
+  const isHomeQuery =
+    /\b(turn|light|lamp|switch|fan|tv|door|window|garage|climate|thermostat|lock|unlock|dim|brighten|open|close)\b/i.test(
+      queryLower,
+    );
+  const isSearchQuery =
+    /\b(search|find|lookup|what is|who is|when|where|how to|recipe|news)\b/i.test(queryLower);
 
   // User preference overrides (from thread settings)
-  if (normalizedPreference === 'gpt-5-nano' || normalizedPreference === 'nano' || normalizedPreference === 'fast') {
-    return { model: FAST_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: false };
+  // Legacy mapping: nano/fast -> gpt-5.1-chat-latest
+  if (
+    normalizedPreference === 'gpt-5-nano' ||
+    normalizedPreference === 'nano' ||
+    normalizedPreference === 'fast' ||
+    normalizedPreference === 'gpt-5.1-chat-latest'
+  ) {
+    return {
+      model: FAST_MODEL,
+      tools: ['home_assistant', 'memory', 'web_search'],
+      orchestrate: false,
+    };
   }
 
-  if (normalizedPreference === 'gpt-5-mini' || normalizedPreference === 'mini' || normalizedPreference === 'balanced') {
-    return { model: BALANCED_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: false };
+  // Legacy mapping: mini/balanced -> gpt-5.1-codex-mini
+  if (
+    normalizedPreference === 'gpt-5-mini' ||
+    normalizedPreference === 'mini' ||
+    normalizedPreference === 'balanced' ||
+    normalizedPreference === 'gpt-5.1-codex-mini'
+  ) {
+    return {
+      model: BALANCED_MODEL,
+      tools: ['home_assistant', 'memory', 'web_search'],
+      orchestrate: false,
+    };
   }
 
-  if (normalizedPreference === 'gpt-5-thinking' || normalizedPreference === 'thinking' || normalizedPreference === 'reasoning') {
+  // Legacy mapping: thinking/reasoning -> gpt-5.1
+  if (
+    normalizedPreference === 'gpt-5-thinking' ||
+    normalizedPreference === 'thinking' ||
+    normalizedPreference === 'reasoning' ||
+    normalizedPreference === 'gpt-5.1'
+  ) {
     return {
       model: COMPLEX_MODEL,
       tools: ['home_assistant', 'memory', 'web_search'],
@@ -130,9 +169,13 @@ function selectModelAndTools(
     };
   }
 
-  if (normalizedPreference === 'gpt-5' || normalizedPreference === 'gpt-5-pro' || normalizedPreference === 'pro') {
+  if (
+    normalizedPreference === 'gpt-5' ||
+    normalizedPreference === 'gpt-5-pro' ||
+    normalizedPreference === 'pro'
+  ) {
     return {
-      model: 'gpt-5', // Main GPT-5 model
+      model: 'gpt-5.1', // Main GPT-5.1 model
       tools: ['home_assistant', 'memory', 'web_search'],
       orchestrate: complexity !== 'simple',
     };
@@ -140,11 +183,19 @@ function selectModelAndTools(
 
   // Legacy model support (gpt-4o era)
   if (normalizedPreference === 'gpt-4o' || normalizedPreference === 'gpt-4o-mini') {
-    return { model: BALANCED_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: false };
+    return {
+      model: BALANCED_MODEL,
+      tools: ['home_assistant', 'memory', 'web_search'],
+      orchestrate: false,
+    };
   }
 
   if (normalizedPreference === 'o1') {
-    return { model: COMPLEX_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: true };
+    return {
+      model: COMPLEX_MODEL,
+      tools: ['home_assistant', 'memory', 'web_search'],
+      orchestrate: true,
+    };
   }
 
   // Smart routing based on complexity AND query type
@@ -192,7 +243,11 @@ function selectModelAndTools(
 
     default:
       // Fallback to balanced model
-      return { model: BALANCED_MODEL, tools: ['home_assistant', 'memory', 'web_search'], orchestrate: false };
+      return {
+        model: BALANCED_MODEL,
+        tools: ['home_assistant', 'memory', 'web_search'],
+        orchestrate: false,
+      };
   }
 }
 
@@ -255,15 +310,15 @@ export async function POST(req: NextRequest) {
                 user_id,
                 error: threadError,
                 errorCode: threadError?.code,
-                isDev: process.env["NODE_ENV"] === 'development',
-                hasDevBypass: process.env["DEV_BYPASS_AUTH"] === 'true',
-                hint: 'Check if thread exists and belongs to user. In dev mode with DEV_BYPASS_AUTH, ensure SUPABASE_SERVICE_ROLE_KEY is set.'
+                isDev: process.env['NODE_ENV'] === 'development',
+                hasDevBypass: process.env['DEV_BYPASS_AUTH'] === 'true',
+                hint: 'Check if thread exists and belongs to user. In dev mode with DEV_BYPASS_AUTH, ensure SUPABASE_SERVICE_ROLE_KEY is set.',
               });
 
               send({
                 error: 'Thread not found or access denied',
                 errorCode: 'THREAD_NOT_FOUND',
-                retryable: false
+                retryable: false,
               });
               controller.close();
               return;
@@ -275,7 +330,11 @@ export async function POST(req: NextRequest) {
             const isNewThread = threadAge < 5000; // 5 seconds threshold
 
             if (isNewThread) {
-              console.log('[smart-stream] Skipping history load for newly created thread (age: ' + threadAge + 'ms)');
+              console.log(
+                '[smart-stream] Skipping history load for newly created thread (age: ' +
+                  threadAge +
+                  'ms)',
+              );
               // Skip history loading for new threads - they have no messages yet anyway
             } else {
               // Load conversation history for existing threads
@@ -330,11 +389,11 @@ export async function POST(req: NextRequest) {
 
         // Smart routing: Classify query complexity
         const complexity = await classifyQuery(input_as_text);
-        const { model: selectedModel, tools: selectedTools, orchestrate } = selectModelAndTools(
-          complexity,
-          userModel,
-          input_as_text
-        );
+        const {
+          model: selectedModel,
+          tools: selectedTools,
+          orchestrate,
+        } = selectModelAndTools(complexity, userModel, input_as_text);
 
         const loadToolset = async (userId: string) => {
           // Create user-specific memory tools for proper data isolation
@@ -375,7 +434,7 @@ export async function POST(req: NextRequest) {
                   router: FAST_MODEL,
                   home: FAST_MODEL,
                   memory: FAST_MODEL,
-                  research: process.env["OPENAI_RESEARCH_MODEL"] ?? BALANCED_MODEL,
+                  research: process.env['OPENAI_RESEARCH_MODEL'] ?? BALANCED_MODEL,
                 },
               })
             : null;
@@ -383,7 +442,7 @@ export async function POST(req: NextRequest) {
           const toolset = suite?.tools ?? (await loadToolset(user_id)); // ✅ Pass user_id
 
           const toolMap: Record<string, any> = {
-            'home_assistant': [toolset.haSearch, toolset.haCall],
+            home_assistant: [toolset.haSearch, toolset.haCall],
             memory: [toolset.memoryAdd, toolset.memorySearch],
             web_search: toolset.webSearch,
             tavily_search: toolset.webSearch,
@@ -397,11 +456,12 @@ export async function POST(req: NextRequest) {
 
           const flattenTools = (names: string[]) =>
             names
-              .map(name => toolMap[name])
+              .map((name) => toolMap[name])
               .flat()
               .filter(Boolean);
 
-          const requestedToolNames = enabledTools && enabledTools.length > 0 ? enabledTools : selectedTools;
+          const requestedToolNames =
+            enabledTools && enabledTools.length > 0 ? enabledTools : selectedTools;
           const finalTools = flattenTools(requestedToolNames);
           const finalToolNames = finalTools.map((t: AgentTool) => t?.name || 'unknown');
 
@@ -435,7 +495,7 @@ export async function POST(req: NextRequest) {
           const runner = new Runner({
             traceMetadata: {
               __trace_source__: 'agent-builder',
-              workflow_id: process.env["WORKFLOW_ID"] || 'unknown',
+              workflow_id: process.env['WORKFLOW_ID'] || 'unknown',
             },
           });
 
@@ -591,11 +651,14 @@ Examples of good formatting:
             });
             send({
               error: 'No response from agent',
-              debug: process.env.NODE_ENV === 'development' ? {
-                model: selectedModel,
-                resultType: typeof result.finalOutput,
-                resultValue: result.finalOutput
-              } : undefined
+              debug:
+                process.env.NODE_ENV === 'development'
+                  ? {
+                      model: selectedModel,
+                      resultType: typeof result.finalOutput,
+                      resultValue: result.finalOutput,
+                    }
+                  : undefined,
             });
           }
         });
@@ -604,9 +667,7 @@ Examples of good formatting:
       } catch (error: unknown) {
         console.error('[smart-stream error]', error);
         const message = error instanceof Error ? error.message : 'Stream failed';
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`)
-        );
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`));
         controller.close();
       }
     },
@@ -616,7 +677,7 @@ Examples of good formatting:
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
+      Connection: 'keep-alive',
     },
   });
 }

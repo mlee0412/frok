@@ -32,7 +32,9 @@ const SendMessageSchema = z.object({
   threadId: z.string().uuid(),
   content: z.string().min(1).max(4000),
   fileUrls: z.array(z.string().url()).optional(),
-  agentModel: z.enum(['gpt-5-think', 'gpt-5-mini', 'gpt-5-nano', 'auto']).default('auto'),
+  agentModel: z
+    .enum(['gpt-5.1', 'gpt-5.1-codex-mini', 'gpt-5.1-chat-latest', 'auto'])
+    .default('auto'),
 });
 
 export async function POST(req: NextRequest) {
@@ -66,10 +68,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (threadError || !thread) {
-      return NextResponse.json(
-        { ok: false, error: 'Thread not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ ok: false, error: 'Thread not found' }, { status: 404 });
     }
 
     // Get thread history for routing context
@@ -120,7 +119,7 @@ export async function POST(req: NextRequest) {
         selectedModel,
         openaiModelId,
         routing.reasoning,
-        complexity
+        complexity,
       );
     } else {
       // Return immediate response (non-streaming) with agent info
@@ -131,7 +130,7 @@ export async function POST(req: NextRequest) {
         selectedModel,
         openaiModelId,
         routing.reasoning,
-        complexity
+        complexity,
       );
 
       return NextResponse.json({
@@ -156,10 +155,7 @@ export async function POST(req: NextRequest) {
       context: { route: '/api/chat/messages/send', userId, threadId },
     });
 
-    return NextResponse.json(
-      { ok: false, error: 'Failed to send message' },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: false, error: 'Failed to send message' }, { status: 500 });
   }
 }
 
@@ -177,7 +173,17 @@ function createSSEResponse(
   selectedModel: AgentModel,
   openaiModelId: string,
   routingReasoning: string,
-  complexity: { score: number; factors: { length: number; codeBlocks: number; mathSymbols: number; questionDepth: number; technicalTerms: number; }; recommendedModel: AgentModel; }
+  complexity: {
+    score: number;
+    factors: {
+      length: number;
+      codeBlocks: number;
+      mathSymbols: number;
+      questionDepth: number;
+      technicalTerms: number;
+    };
+    recommendedModel: AgentModel;
+  },
 ): Response {
   const encoder = new TextEncoder();
 
@@ -268,7 +274,17 @@ async function getAIResponse(
   selectedModel: AgentModel,
   openaiModelId: string,
   routingReasoning: string,
-  complexity: { score: number; factors: { length: number; codeBlocks: number; mathSymbols: number; questionDepth: number; technicalTerms: number; }; recommendedModel: AgentModel; }
+  complexity: {
+    score: number;
+    factors: {
+      length: number;
+      codeBlocks: number;
+      mathSymbols: number;
+      questionDepth: number;
+      technicalTerms: number;
+    };
+    recommendedModel: AgentModel;
+  },
 ) {
   const supabase = await getSupabaseServer();
 

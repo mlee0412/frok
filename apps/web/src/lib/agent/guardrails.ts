@@ -62,10 +62,10 @@ function extractText(input: unknown): string {
 // @ts-expect-error - Function is intentionally unused, kept for future implementation
 function calculateCost(model: string, tokens: number): number {
   const pricing: Record<string, number> = {
-    'gpt-5-nano': 0.000001,
-    'gpt-5-mini': 0.000002,
-    'gpt-5-think': 0.000005,
-    'gpt-5': 0.000010,
+    'gpt-5.1-chat-latest': 0.000001,
+    'gpt-5.1-codex-mini': 0.000002,
+    'gpt-5.1': 0.000005,
+    'gpt-5': 0.00001,
     'gpt-4o': 0.000005,
     'gpt-4o-mini': 0.000001,
   };
@@ -198,8 +198,7 @@ export const promptInjectionGuardrail: InputGuardrail = {
     }
 
     // Check for excessive special characters (potential obfuscation)
-    const specialCharRatio =
-      (text.match(/[^a-z0-9\s]/g)?.length || 0) / Math.max(text.length, 1);
+    const specialCharRatio = (text.match(/[^a-z0-9\s]/g)?.length || 0) / Math.max(text.length, 1);
     if (specialCharRatio > 0.3) {
       return {
         tripwireTriggered: true,
@@ -264,7 +263,8 @@ export const outputQualityGuardrail: OutputGuardrail = {
         hasPunctuation,
         hasProperCapitalization,
         isNotAllCaps,
-        qualityScore: [hasPunctuation, hasProperCapitalization, isNotAllCaps].filter(Boolean).length / 3,
+        qualityScore:
+          [hasPunctuation, hasProperCapitalization, isNotAllCaps].filter(Boolean).length / 3,
       },
     };
   },
@@ -490,7 +490,9 @@ export const researchGuardrails = {
 /**
  * Build guardrails based on agent capabilities
  */
-export function buildGuardrails(agentType: 'orchestrator' | 'home' | 'memory' | 'research' | 'general') {
+export function buildGuardrails(
+  agentType: 'orchestrator' | 'home' | 'memory' | 'research' | 'general',
+) {
   switch (agentType) {
     case 'home':
       return smartHomeGuardrails;

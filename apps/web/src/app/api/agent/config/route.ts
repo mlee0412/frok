@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   const auth = await withAuth(req);
   if (!auth.ok) return auth.response;
 
-  const model = process.env["OPENAI_AGENT_MODEL"] || 'gpt-5-mini';
+  const model = process.env['OPENAI_AGENT_MODEL'] || 'gpt-5.1-codex-mini';
 
   return NextResponse.json({
     model,
